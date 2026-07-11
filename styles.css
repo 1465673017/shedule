@@ -2904,6 +2904,32 @@ body {
     margin: 0;
 }
 
+#timeSettingsTab .settings-section {
+    margin-bottom: 0;
+}
+
+#timeSettingsTab .time-management-content {
+    padding: 4px 0 0;
+}
+
+#timeSettingsTab .quick-settings {
+    padding: 14px;
+    margin-bottom: 10px;
+}
+
+#timeSettingsTab .quick-settings-header {
+    margin-bottom: 10px;
+}
+
+#timeSettingsTab .advanced-settings-toggle {
+    margin-bottom: 10px;
+}
+
+#timeSettingsTab .form-actions {
+    margin-top: 0;
+    padding-top: 10px;
+}
+
 .grades-list {
     display: flex;
     flex-direction: column;

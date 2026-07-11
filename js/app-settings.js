@@ -9,7 +9,7 @@ TimetableApp.prototype.closeTutorialModal = function() {
         document.getElementById('tutorialModal').style.display = 'none';
     }
 
-TimetableApp.prototype.openSettingsModal = function() {
+TimetableApp.prototype.openSettingsModal = function(defaultTab = 'theme') {
         const modal = document.getElementById('settingsModal');
         modal.style.display = 'block';
         this.renderGrades();
@@ -17,8 +17,7 @@ TimetableApp.prototype.openSettingsModal = function() {
         // Initialize UI with current theme settings
         this.updateThemeSettingsUI();
 
-        // Activate the default tab (grade settings)
-        this.switchSettingsTab('theme');
+        this.switchSettingsTab(defaultTab);
     }
 
 TimetableApp.prototype.switchSettingsTab = function(tabName) {
@@ -31,6 +30,12 @@ TimetableApp.prototype.switchSettingsTab = function(tabName) {
 
         document.querySelector(`.settings-tab[data-tab="${tabName}"]`).classList.add('active');
         document.getElementById(`${tabName}SettingsTab`).classList.add('active');
+
+        if (tabName === 'time') {
+            this.renderPeriods();
+            this.initQuickSettings();
+            this.updateShowPeriodTimeToggle();
+        }
     }
 
 TimetableApp.prototype.closeSettingsModal = function() {
@@ -455,4 +460,3 @@ TimetableApp.prototype.applyPredefinedTheme = function(themeName) {
         this.saveSettings();
     }
 }
-

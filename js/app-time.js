@@ -2,11 +2,7 @@
 // Auto-split from script.js
 
 TimetableApp.prototype.openTimeManagementModal = function() {
-        const modal = document.getElementById('timeManagementModal');
-        modal.style.display = 'block';
-        this.renderPeriods();
-        this.initQuickSettings();
-        this.updateShowPeriodTimeToggle();
+        this.openSettingsModal('time');
     }
 
 TimetableApp.prototype.updateShowPeriodTimeToggle = function() {
@@ -22,7 +18,7 @@ TimetableApp.prototype.toggleShowPeriodTime = function() {
     }
 
 TimetableApp.prototype.closeTimeManagementModal = function() {
-        document.getElementById('timeManagementModal').style.display = 'none';
+        this.closeSettingsModal();
     }
 
 TimetableApp.prototype.renderPeriods = function() {
@@ -406,7 +402,7 @@ TimetableApp.prototype.saveTimeManagement = function() {
         this.saveSettings();
         this.saveData();
         this.applySettings();
-        this.closeTimeManagementModal();
+        this.closeSettingsModal();
     }
 
 TimetableApp.prototype.saveSettings = function(e) {
@@ -506,5 +502,4 @@ TimetableApp.prototype.startCreatingTimetable = function() {
             }
         }
     }
-
 

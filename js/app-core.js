@@ -204,8 +204,6 @@ class TimetableApp {
         // 教程事件
         bind('tutorialBtn', 'click', () => this.openTutorialModal());
         
-        // 时间管理
-        bind('timeManagementBtn', 'click', () => this.openTimeManagementModal());
         bind('totalPeriodCount', 'change', (e) => {
             this.updateLunchBreakOptions(e.target.value);
             this.updateDinnerBreakOptions(e.target.value);
@@ -486,6 +484,10 @@ class TimetableApp {
     openResetModal() {
         const modal = document.getElementById('resetModal');
         if (modal) {
+            const startInput = document.getElementById('customResetStartDate');
+            const endInput = document.getElementById('customResetEndDate');
+            if (startInput) startInput.value = '';
+            if (endInput) endInput.value = '';
             modal.style.display = 'block';
         }
     }
@@ -495,6 +497,249 @@ class TimetableApp {
         if (modal) {
             modal.style.display = 'none';
         }
+    }
+
+    parseDateInputValue(value) {
+        if (!value) return null;
+        const [year, month, day] = String(value).split('-').map(Number);
+        if (!year || !month || !day) return null;
+        const date = new Date(year, month - 1, day);
+        if (Number.isNaN(date.getTime())) return null;
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
+
+    addDays(date, days) {
+        const next = new Date(date);
+        next.setDate(next.getDate() + days);
+        next.setHours(0, 0, 0, 0);
+        return next;
+    }
+
+    getWeekStartStrForDate(date) {
+        return this.formatLocalDate(this.getWeekRange(date).start);
+    }
+
+    getCellDayOfWeek(cellKey) {
+        const day = parseInt(String(cellKey || '').split('-')[0], 10);
+        return Number.isInteger(day) && day >= 1 && day <= 7 ? day : null;
+    }
+
+    getCellOccurrenceDate(weekStartStr, cellKey) {
+        const day = this.getCellDayOfWeek(cellKey);
+        const weekStart = this.parseDateInputValue(weekStartStr);
+        if (!day || !weekStart) return null;
+        return this.addDays(weekStart, day - 1);
+    }
+
+    getFirstOccurrenceOnOrAfter(cellKey, startDate) {
+        const day = this.getCellDayOfWeek(cellKey);
+        if (!day || !startDate) return null;
+        const targetJsDay = day === 7 ? 0 : day;
+        const result = new Date(startDate);
+        result.setHours(0, 0, 0, 0);
+        const diff = (targetJsDay - result.getDay() + 7) % 7;
+        result.setDate(result.getDate() + diff);
+        return result;
+    }
+
+    getLastOccurrenceOnOrBefore(cellKey, endDate) {
+        const day = this.getCellDayOfWeek(cellKey);
+        if (!day || !endDate) return null;
+        const targetJsDay = day === 7 ? 0 : day;
+        const result = new Date(endDate);
+        result.setHours(0, 0, 0, 0);
+        const diff = (result.getDay() - targetJsDay + 7) % 7;
+        result.setDate(result.getDate() - diff);
+        return result;
+    }
+
+    getSortedCellWeekStarts(cellKey) {
+        const erp = this.erpData && Array.isArray(this.erpData.courseInstances)
+            ? this.erpData.courseInstances
+            : [];
+        return [...new Set(
+            erp
+                .filter(instance => instance && instance.cellKey === cellKey && instance.weekStart)
+                .map(instance => instance.weekStart)
+        )].sort((a, b) => a.localeCompare(b));
+    }
+
+    cloneVersionSnapshot(version) {
+        if (!version) return null;
+        return {
+            ...version,
+            student: Array.isArray(version.student) ? [...version.student] : [],
+            actualMinutesByDate: version.actualMinutesByDate ? { ...version.actualMinutesByDate } : undefined
+        };
+    }
+
+    findFirstWeekWithContent(cellKey, fromWeekStart, toWeekStart = null) {
+        const candidates = [fromWeekStart, ...this.getSortedCellWeekStarts(cellKey)]
+            .filter(Boolean)
+            .filter(weekStart => weekStart >= fromWeekStart && (!toWeekStart || weekStart <= toWeekStart))
+            .filter((weekStart, index, arr) => arr.indexOf(weekStart) === index)
+            .sort((a, b) => a.localeCompare(b));
+
+        for (const weekStart of candidates) {
+            const version = this.getCellVersion(cellKey, weekStart);
+            if (version && (version.subject || (version.student && version.student.length > 0))) {
+                return weekStart;
+            }
+        }
+        return null;
+    }
+
+    findLastWeekWithContent(cellKey, fromWeekStart, toWeekStart) {
+        const candidates = [toWeekStart, ...this.getSortedCellWeekStarts(cellKey)]
+            .filter(Boolean)
+            .filter(weekStart => weekStart >= fromWeekStart && weekStart <= toWeekStart)
+            .filter((weekStart, index, arr) => arr.indexOf(weekStart) === index)
+            .sort((a, b) => b.localeCompare(a));
+
+        for (const weekStart of candidates) {
+            const version = this.getCellVersion(cellKey, weekStart);
+            if (version && (version.subject || (version.student && version.student.length > 0))) {
+                return weekStart;
+            }
+        }
+        return null;
+    }
+
+    isDateWithinCustomResetRange(dateKey, startDate, endDate) {
+        const date = this.parseDateInputValue(dateKey);
+        if (!date) return false;
+        if (startDate && date < startDate) return false;
+        if (endDate && date > endDate) return false;
+        return true;
+    }
+
+    resetScheduleByCustomRange() {
+        const startInput = document.getElementById('customResetStartDate');
+        const endInput = document.getElementById('customResetEndDate');
+        const startDate = this.parseDateInputValue(startInput ? startInput.value : '');
+        const endDate = this.parseDateInputValue(endInput ? endInput.value : '');
+
+        if (!startDate && !endDate) {
+            alert('请至少选择一个日期');
+            return;
+        }
+
+        if (startDate && endDate && startDate > endDate) {
+            alert('开始日期不能晚于结束日期');
+            return;
+        }
+
+        let message = '确定要按所选日期范围清除课程吗？这会清空对应日期的排课、考勤和实际上课时长，其余课程保留。';
+        if (startDate && !endDate) {
+            message = '确定要清除此日期及以后所有课程吗？这会清空对应日期的排课、考勤和实际上课时长，其余课程保留。';
+        } else if (!startDate && endDate) {
+            message = '确定要清除此日期及以前所有课程吗？这会清空对应日期的排课、考勤和实际上课时长，其余课程保留。';
+        }
+
+        if (!confirm(message)) {
+            return;
+        }
+
+        const erp = window.ScheduleErpService.ensureErpData(this);
+        const cellKeys = [...new Set(
+            (erp.courseInstances || [])
+                .map(instance => instance.cellKey)
+                .filter(Boolean)
+        )];
+
+        let changed = false;
+
+        cellKeys.forEach(cellKey => {
+            const weekStarts = this.getSortedCellWeekStarts(cellKey);
+            if (weekStarts.length === 0) return;
+
+            const earliestWeekStart = weekStarts[0];
+            const earliestOccurrenceDate = this.getCellOccurrenceDate(earliestWeekStart, cellKey);
+            if (!earliestOccurrenceDate) return;
+
+            const lowerDate = startDate || earliestOccurrenceDate;
+            const upperDate = endDate || null;
+            const firstCandidateDate = this.getFirstOccurrenceOnOrAfter(cellKey, lowerDate);
+            const lastCandidateDate = upperDate ? this.getLastOccurrenceOnOrBefore(cellKey, upperDate) : null;
+
+            if (!firstCandidateDate) return;
+            if (lastCandidateDate && firstCandidateDate > lastCandidateDate) return;
+            if (!startDate && endDate && earliestOccurrenceDate > endDate) return;
+
+            const searchFromWeekStart = startDate
+                ? this.getWeekStartStrForDate(firstCandidateDate)
+                : earliestWeekStart;
+            const searchToWeekStart = lastCandidateDate
+                ? this.getWeekStartStrForDate(lastCandidateDate)
+                : null;
+
+            const firstAffectedWeekStart = this.findFirstWeekWithContent(cellKey, searchFromWeekStart, searchToWeekStart);
+            if (!firstAffectedWeekStart) return;
+
+            const lastAffectedWeekStart = searchToWeekStart
+                ? this.findLastWeekWithContent(cellKey, firstAffectedWeekStart, searchToWeekStart)
+                : null;
+
+            if (searchToWeekStart && !lastAffectedWeekStart) return;
+
+            const restoreWeekStart = lastAffectedWeekStart
+                ? this.getWeekStartStrForDate(this.addDays(this.parseDateInputValue(lastAffectedWeekStart), 7))
+                : null;
+            const restoreSnapshot = restoreWeekStart
+                ? this.cloneVersionSnapshot(this.getCellVersion(cellKey, restoreWeekStart))
+                : null;
+
+            this.setCellVersion(cellKey, firstAffectedWeekStart, null, [], { cutoff: true });
+            changed = true;
+
+            if (restoreWeekStart && restoreSnapshot && (restoreSnapshot.subject || restoreSnapshot.student.length > 0)) {
+                this.setCellVersion(cellKey, restoreWeekStart, restoreSnapshot.subject, restoreSnapshot.student || []);
+                const restoredVersion = this.getCellVersion(cellKey, restoreWeekStart);
+                if (restoredVersion) {
+                    window.ScheduleErpService.inheritStudentBranchState(
+                        this,
+                        restoreSnapshot,
+                        restoredVersion,
+                        restoreSnapshot.student || [],
+                        restoreWeekStart
+                    );
+                    const restoredInstance = window.ScheduleErpService.getCourseInstanceForVersion(this, restoredVersion);
+                    if (restoredInstance && restoreSnapshot.actualMinutesByDate) {
+                        restoredInstance.actualMinutesByDate = Object.fromEntries(
+                            Object.entries(restoreSnapshot.actualMinutesByDate).filter(([dateKey]) =>
+                                !this.isDateWithinCustomResetRange(dateKey, startDate, endDate)
+                            )
+                        );
+                    }
+                }
+            }
+        });
+
+        if (!changed) {
+            alert('所选日期范围内没有可清除的课程');
+            return;
+        }
+
+        erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
+            !this.isDateWithinCustomResetRange(record.dateKey, startDate, endDate)
+        );
+
+        (erp.courseInstances || []).forEach(instance => {
+            if (!instance.actualMinutesByDate) return;
+            instance.actualMinutesByDate = Object.fromEntries(
+                Object.entries(instance.actualMinutesByDate).filter(([dateKey]) =>
+                    !this.isDateWithinCustomResetRange(dateKey, startDate, endDate)
+                )
+            );
+            instance.updatedAt = new Date().toISOString();
+        });
+
+        window.ScheduleErpService.buildTimetableProjection(this);
+        this.closeResetModal();
+        this.closeAttendanceModal();
+        this.closeAddLessonModal();
+        this.syncRealtime({ weekRange: true });
     }
 
     resetScheduleOnly() {

@@ -11,7 +11,6 @@
     <div class="top-menu-bar">
         <div class="menu-buttons">
             <button id="tutorialBtn" class="btn danger">查看教程</button>
-            <button id="timeManagementBtn" class="btn secondary">时间管理</button>
             <button id="resetBtn" class="btn secondary">重置课表</button>
             <button id="saveImageBtn" class="btn tertiary">保存图片</button>
             <button id="exportWordBtn" class="btn tertiary">导出Word</button>
@@ -322,73 +321,6 @@
         </div>
     </div>
 
-    <!-- 时间管理弹窗 -->
-    <div id="timeManagementModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>时间管理</h3>
-                <button class="modal-close" onclick="app.closeTimeManagementModal()">×</button>
-            </div>
-            <div class="time-management-content">
-                <div class="quick-settings">
-                    <div class="quick-settings-header">
-                        <h4>快速设置</h4>
-                        <button id="showPeriodTimeToggle" class="toggle-switch" onclick="app.toggleShowPeriodTime()">
-                            显示课时时间
-                        </button>
-                    </div>
-                    <div class="quick-setting-grid">
-                        <div class="form-group">
-                            <label>每日节次数量</label>
-                            <input type="number" id="totalPeriodCount" value="7" min="1" max="12" class="setting-input">
-                        </div>
-                        <div class="form-group">
-                            <label>第一节开始时间</label>
-                            <input type="time" id="firstPeriodStart" value="08:00" class="setting-input">
-                        </div>
-                        <div class="form-group">
-                            <label>单节课时长(分钟)</label>
-                            <input type="number" id="periodDuration" value="40" min="10" max="120" class="setting-input">
-                        </div>
-                        <div class="form-group">
-                            <label>课间时长(分钟)</label>
-                            <input type="number" id="breakDuration" value="10" min="0" max="60" class="setting-input">
-                        </div>
-                        <div class="form-group">
-                            <label>午休插入位置</label>
-                            <select id="lunchBreakPosition" class="setting-input"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>午休时长(分钟)</label>
-                            <input type="number" id="lunchBreakDuration" value="120" min="30" max="180" class="setting-input">
-                        </div>
-                        <div class="form-group">
-                            <label>晚饭插入位置</label>
-                            <select id="dinnerBreakPosition" class="setting-input"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>晚饭时长(分钟)</label>
-                            <input type="number" id="dinnerBreakDuration" value="60" min="30" max="120" class="setting-input">
-                        </div>
-                    </div>
-                    <button onclick="app.applyQuickSettings()" class="btn primary" style="margin-top: 12px; width: 100%;">应用快速设置</button>
-                </div>
-
-                <div class="advanced-settings-toggle" onclick="app.toggleAdvancedSettings()">
-                    <span class="toggle-icon">▶</span>
-                    <span>高级设置 (自定义课时)</span>
-                </div>
-                <div class="advanced-settings" id="advancedSettings">
-                    <div class="time-periods-list" id="periodsList"></div>
-                </div>
-            </div>
-            <div class="form-actions">
-                <button onclick="app.saveTimeManagement()" class="btn primary">保存</button>
-                <button onclick="app.closeTimeManagementModal()" class="btn secondary">取消</button>
-            </div>
-        </div>
-    </div>
-
     <!-- 添加课程弹窗 -->
     <div id="addLessonModal" class="modal">
         <div class="modal-content">
@@ -569,6 +501,7 @@
                 <div class="settings-tabs">
                     <button class="settings-tab active" data-tab="theme">主题设置</button>
                     <button class="settings-tab" data-tab="grade">年级设置</button>
+                    <button class="settings-tab" data-tab="time">时间设置</button>
                 </div>
 
                 <div id="themeSettingsTab" class="settings-tab-pane active">
@@ -608,6 +541,67 @@
                         <div id="gradesList" class="grades-list"></div>
                         <div class="period-add-zone" onclick="app.addGrade()">
                             <span>+ 添加年级</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="timeSettingsTab" class="settings-tab-pane">
+                    <div class="settings-section">
+                        <div class="time-management-content">
+                            <div class="quick-settings">
+                                <div class="quick-settings-header">
+                                    <h4>快速设置</h4>
+                                    <button id="showPeriodTimeToggle" class="toggle-switch" onclick="app.toggleShowPeriodTime()">
+                                        显示课时时间
+                                    </button>
+                                </div>
+                                <div class="quick-setting-grid">
+                                    <div class="form-group">
+                                        <label>每日节次数量</label>
+                                        <input type="number" id="totalPeriodCount" value="7" min="1" max="12" class="setting-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>第一节开始时间</label>
+                                        <input type="time" id="firstPeriodStart" value="08:00" class="setting-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>单节课时长(分钟)</label>
+                                        <input type="number" id="periodDuration" value="40" min="10" max="120" class="setting-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>课间时长(分钟)</label>
+                                        <input type="number" id="breakDuration" value="10" min="0" max="60" class="setting-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>午休插入位置</label>
+                                        <select id="lunchBreakPosition" class="setting-input"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>午休时长(分钟)</label>
+                                        <input type="number" id="lunchBreakDuration" value="120" min="30" max="180" class="setting-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>晚饭插入位置</label>
+                                        <select id="dinnerBreakPosition" class="setting-input"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>晚饭时长(分钟)</label>
+                                        <input type="number" id="dinnerBreakDuration" value="60" min="30" max="120" class="setting-input">
+                                    </div>
+                                </div>
+                                <button onclick="app.applyQuickSettings()" class="btn primary" style="margin-top: 12px; width: 100%;">应用快速设置</button>
+                            </div>
+
+                            <div class="advanced-settings-toggle" onclick="app.toggleAdvancedSettings()">
+                                <span class="toggle-icon">▼</span>
+                                <span>高级设置 (自定义课时)</span>
+                            </div>
+                            <div class="advanced-settings" id="advancedSettings">
+                                <div class="time-periods-list" id="periodsList"></div>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button onclick="app.saveTimeManagement()" class="btn primary">保存</button>
                         </div>
                     </div>
                 </div>
@@ -673,6 +667,25 @@
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 <button type="button" class="btn danger" onclick="app.resetTimetable()" style="width: 100%;">全部重置</button>
                 <button type="button" class="btn secondary" onclick="app.resetScheduleOnly()" style="width: 100%;">重置课表</button>
+            </div>
+            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee;">
+                <div style="font-size: 14px; font-weight: 600; color: #444; margin-bottom: 10px;">自定义重置</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label for="customResetStartDate" style="display: block; font-size: 12px; color: #666; margin-bottom: 6px;">开始日期</label>
+                        <input type="date" id="customResetStartDate" class="setting-input">
+                    </div>
+                    <div>
+                        <label for="customResetEndDate" style="display: block; font-size: 12px; color: #666; margin-bottom: 6px;">结束日期</label>
+                        <input type="date" id="customResetEndDate" class="setting-input">
+                    </div>
+                </div>
+                <button type="button" class="btn secondary" onclick="app.resetScheduleByCustomRange()" style="width: 100%; margin-top: 12px;">按日期范围清除课程</button>
+                <div style="margin-top: 8px; color: #888; font-size: 12px; line-height: 1.6;">
+                    只选开始日期：清除此日期及以后所有课程。<br>
+                    只选结束日期：清除此日期及以前所有课程。<br>
+                    同时选择开始和结束日期：只清除该区间内课程。
+                </div>
             </div>
             <div style="margin-top: 12px; color: #888; font-size: 12px; line-height: 1.6;">
                 全部重置：清空课表、学生、手动课程、考勤和循环数据。<br>
