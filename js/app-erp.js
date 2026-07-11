@@ -245,6 +245,43 @@
         });
     }
 
+    function ensureRecurringStudentFuture(app, cellKey, studentId, weekStart) {
+        if (!cellKey || !studentId || !weekStart) return;
+
+        const currentVersion = window.ScheduleErpService.getCellVersion(app, cellKey, weekStart);
+        if (!currentVersion || !normalizeIds(currentVersion.student).includes(String(studentId))) return;
+
+        const nextWeekStart = addWeeks(weekStart, 1);
+        const nextVersion = window.ScheduleErpService.getCellVersion(app, cellKey, nextWeekStart);
+        if (nextVersion && nextVersion.courseInstanceId === currentVersion.courseInstanceId) {
+            return;
+        }
+        if (nextVersion && nextVersion.subject && currentVersion.subject && nextVersion.subject !== currentVersion.subject) {
+            return;
+        }
+
+        const existingNextStudents = nextVersion ? normalizeIds(nextVersion.student) : [];
+        const nextStudents = [...new Set([...existingNextStudents, String(studentId)])];
+        const nextSubject = nextVersion && nextVersion.subject ? nextVersion.subject : (currentVersion.subject || null);
+
+        window.ScheduleErpService.setCellVersion(app, cellKey, nextWeekStart, nextSubject, nextStudents);
+
+        if (nextVersion && existingNextStudents.length > 0) {
+            const updatedNextVersion = window.ScheduleErpService.getCellVersion(app, cellKey, nextWeekStart);
+            if (updatedNextVersion) {
+                copyStudentBranchState(
+                    app,
+                    nextVersion.courseInstanceId,
+                    updatedNextVersion.courseInstanceId,
+                    existingNextStudents,
+                    nextWeekStart,
+                    updatedNextVersion.cellKey
+                );
+                buildTimetableProjection(app);
+            }
+        }
+    }
+
     function copyStudentBranchState(app, fromInstanceId, toInstanceId, studentIds, fromWeekStart, targetCellKey) {
         if (!fromInstanceId || !toInstanceId || fromInstanceId === toInstanceId) return;
         const erp = ensureErpData(app);
@@ -509,6 +546,7 @@
                     });
                 } else if (type === 'recurring') {
                     clearFutureEmptyRecurringStops(app, cellKey, effectiveWeekStart);
+                    ensureRecurringStudentFuture(app, cellKey, studentId, weekStart);
                 }
             }
             buildTimetableProjection(app);

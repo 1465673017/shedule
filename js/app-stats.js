@@ -455,6 +455,34 @@ TimetableApp.prototype.getLessonActualMinutesForStats = function (lesson) {
     return undefined;
 }
 
+TimetableApp.prototype.getLessonDurationMinutesForStats = function (lesson) {
+    const actualMinutes = this.getLessonActualMinutesForStats(lesson);
+    if (actualMinutes !== undefined) {
+        return Math.max(0, actualMinutes);
+    }
+    if (lesson.time) {
+        const parts = lesson.time.split('-');
+        if (parts.length === 2) {
+            return Math.max(0, this.timeToMinutes(parts[1]) - this.timeToMinutes(parts[0]));
+        }
+    }
+    return 0;
+}
+
+TimetableApp.prototype.getLessonTypeKeyForStats = function (lesson) {
+    const presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+    if (presentNonAuditionCount <= 0) return '';
+
+    if (presentNonAuditionCount === 1) {
+        const presentStudent = lesson.students ? lesson.students.find(student =>
+            student && !student.isAudition && (!student.status || (student.status !== 'leave' && student.status !== 'absent'))
+        ) : null;
+        return presentStudent && presentStudent.is1v1 ? '1v1' : '1v1(0.8)';
+    }
+
+    return `1v${presentNonAuditionCount}`;
+}
+
 TimetableApp.prototype.getAttendanceStatusForStats = function (lesson, studentId, dateKey) {
     if (this.erpData && Array.isArray(this.erpData.attendanceRecords)) {
         const dates = dateKey ? [dateKey] : (lesson.dates || []);
@@ -505,6 +533,8 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     courseInstanceId: lesson.courseInstanceId || null,
                     studentIds: [...lesson.studentIds],
                     students: [...(lesson.students || [])],
+                    typeStats: {},
+                    sessionTypeCounts: {},
                     lessonCount: 0,
                     dates: []
                 };
@@ -520,6 +550,11 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                         aggregated[aggKey].students.push(s);
                     }
                 });
+            }
+            const typeKey = this.getLessonTypeKeyForStats(lesson);
+            if (typeKey) {
+                aggregated[aggKey].sessionTypeCounts[typeKey] = (aggregated[aggKey].sessionTypeCounts[typeKey] || 0) + 1;
+                aggregated[aggKey].typeStats[typeKey] = (aggregated[aggKey].typeStats[typeKey] || 0) + this.getLessonDurationMinutesForStats(lesson);
             }
             aggregated[aggKey].lessonCount++;
             aggregated[aggKey].dates.push(dateStr);
@@ -586,6 +621,29 @@ TimetableApp.prototype.getStatsStudentLabel = function (lesson) {
     }
     if (studentLabel && lessonCount > 1) {
         studentLabel += ` ×${lessonCount}`;
+    }
+
+    return studentLabel ? `(${studentLabel})` : '';
+}
+
+TimetableApp.prototype.getStatsStudentLabel = function (lesson) {
+    const lessonCount = lesson.lessonCount || 1;
+    let studentLabel = '';
+    const typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+
+    if (lesson.sessionTypeCounts && Object.keys(lesson.sessionTypeCounts).length > 0) {
+        studentLabel = typeOrder
+            .filter(type => lesson.sessionTypeCounts[type] > 0)
+            .map(type => lesson.sessionTypeCounts[type] > 1 ? `${type}×${lesson.sessionTypeCounts[type]}` : type)
+            .join(' + ');
+    } else {
+        const typeKey = this.getLessonTypeKeyForStats(lesson);
+        if (typeKey) {
+            studentLabel = typeKey;
+            if (lessonCount > 1) {
+                studentLabel += ` 脳${lessonCount}`;
+            }
+        }
     }
 
     return studentLabel ? `(${studentLabel})` : '';
@@ -1201,7 +1259,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
             labels: data.labels,
             datasets: [
                 {
-                    label: '出勤',
+                    label: '\u51fa\u52e4',
                     type: 'bar',
                     data: data.presentNonAuditionData,
                     backgroundColor: '#0ca30c',
@@ -1213,7 +1271,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     order: 2
                 },
                 {
-                    label: '试听',
+                    label: '\u8bd5\u542c',
                     type: 'bar',
                     data: data.auditionData,
                     backgroundColor: '#2a78d6',
@@ -1225,7 +1283,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     order: 2
                 },
                 {
-                    label: '请假',
+                    label: '\u8bf7\u5047',
                     type: 'bar',
                     data: data.leaveData,
                     backgroundColor: '#fab219',
@@ -1237,7 +1295,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     order: 2
                 },
                 {
-                    label: '缺勤',
+                    label: '\u7f3a\u52e4',
                     type: 'bar',
                     data: data.absentData,
                     backgroundColor: '#d03b3b',
@@ -1271,7 +1329,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
-                            return ctx.dataset.label + ': ' + ctx.parsed.y + '人';
+                            return ctx.dataset.label + ': ' + ctx.parsed.y + '\u4eba';
                         }
                     }
                 }
@@ -1289,7 +1347,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     ticks: {
                         color: textColor,
                         font: { size: 10 },
-                        callback: function (v) { return v + '人'; }
+                        callback: function (v) { return v + '\u4eba'; }
                     }
                 }
             }
@@ -1303,28 +1361,83 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
 TimetableApp.prototype.renderStudentPieChart = function (ctx, data) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var centerTextColor = isDark ? '#f8fafc' : '#0f172a';
 
     var totalPresent = data.presentData.reduce(function (a, b) { return a + b; }, 0);
     var totalAudition = data.auditionData.reduce(function (a, b) { return a + b; }, 0);
     var totalNonAudition = totalPresent - totalAudition;
     var totalLeave = data.leaveData.reduce(function (a, b) { return a + b; }, 0);
     var totalAbsent = data.absentData.reduce(function (a, b) { return a + b; }, 0);
-    var totalStudents = totalPresent + totalLeave + totalAbsent;
 
     var labels = [];
     var values = [];
     var colors = [];
 
-    if (totalNonAudition > 0) { labels.push('出勤'); values.push(totalNonAudition); colors.push('#0ca30c'); }
-    if (totalAudition > 0) { labels.push('试听'); values.push(totalAudition); colors.push('#2a78d6'); }
-    if (totalLeave > 0) { labels.push('请假'); values.push(totalLeave); colors.push('#fab219'); }
-    if (totalAbsent > 0) { labels.push('缺勤'); values.push(totalAbsent); colors.push('#d03b3b'); }
+    if (totalNonAudition > 0) { labels.push('\u51fa\u52e4'); values.push(totalNonAudition); colors.push('#0ca30c'); }
+    if (totalAudition > 0) { labels.push('\u8bd5\u542c'); values.push(totalAudition); colors.push('#2a78d6'); }
+    if (totalLeave > 0) { labels.push('\u8bf7\u5047'); values.push(totalLeave); colors.push('#fab219'); }
+    if (totalAbsent > 0) { labels.push('\u7f3a\u52e4'); values.push(totalAbsent); colors.push('#d03b3b'); }
 
     if (labels.length === 0) {
-        labels = ['暂无数据'];
+        labels = ['\u6682\u65e0\u6570\u636e'];
         values = [1];
         colors = ['#e1e0d9'];
     }
+
+    var chartHasData = labels.length > 0 && labels[0] !== '\u6682\u65e0\u6570\u636e';
+    var getVisibleTotalStudents = function (chart) {
+        if (!chartHasData) return 0;
+        return values.reduce(function (sum, value, index) {
+            return chart.getDataVisibility(index) ? sum + value : sum;
+        }, 0);
+    };
+
+    var doughnutLabelPlugin = {
+        id: 'studentPieLabelPluginClean',
+        afterDatasetsDraw: function (chart) {
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data || !meta.data.length) return;
+
+            var drawCtx = chart.ctx;
+            var visibleTotalStudents = getVisibleTotalStudents(chart);
+            drawCtx.save();
+
+            if (chartHasData) {
+                var centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                var centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'middle';
+                drawCtx.fillStyle = textColor;
+                drawCtx.font = '600 11px sans-serif';
+                drawCtx.fillText('\u603b\u4eba\u6570', centerX, centerY - 12);
+                drawCtx.fillStyle = centerTextColor;
+                drawCtx.font = '700 22px sans-serif';
+                drawCtx.fillText(String(visibleTotalStudents), centerX, centerY + 10);
+            }
+
+            meta.data.forEach(function (arc, index) {
+                if (!chartHasData) return;
+                if (!chart.getDataVisibility(index)) return;
+                var value = values[index] || 0;
+                var pct = visibleTotalStudents > 0 ? (value / visibleTotalStudents * 100) : 0;
+                if (pct < 8) return;
+
+                var angle = (arc.startAngle + arc.endAngle) / 2;
+                var radius = arc.innerRadius + (arc.outerRadius - arc.innerRadius) * 0.58;
+                var x = arc.x + Math.cos(angle) * radius;
+                var y = arc.y + Math.sin(angle) * radius;
+
+                drawCtx.fillStyle = '#ffffff';
+                drawCtx.font = '700 12px sans-serif';
+                drawCtx.shadowColor = 'rgba(15, 23, 42, 0.24)';
+                drawCtx.shadowBlur = 6;
+                drawCtx.fillText(Math.round(pct) + '%', x, y);
+                drawCtx.shadowBlur = 0;
+            });
+
+            drawCtx.restore();
+        }
+    };
 
     var chart = new Chart(ctx, {
         type: 'doughnut',
@@ -1341,23 +1454,25 @@ TimetableApp.prototype.renderStudentPieChart = function (ctx, data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '50%',
+            cutout: '56%',
             plugins: {
                 legend: this.getChartLegendOptions(textColor),
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
-                            if (labels[0] === '暂无数据') return '暂无数据';
-                            var pct = totalStudents > 0 ? (ctx.parsed / totalStudents * 100).toFixed(1) : '0';
-                            return ctx.label + ': ' + ctx.parsed + '人 (' + pct + '%)';
+                            if (labels[0] === '\u6682\u65e0\u6570\u636e') return '\u6682\u65e0\u6570\u636e';
+                            var visibleTotalStudents = getVisibleTotalStudents(ctx.chart);
+                            var pct = visibleTotalStudents > 0 ? (ctx.parsed / visibleTotalStudents * 100).toFixed(1) : '0';
+                            return ctx.label + ': ' + ctx.parsed + '\u4eba (' + pct + '%)';
                         }
                     }
                 }
             }
-        }
+        },
+        plugins: [doughnutLabelPlugin]
     });
 
-    this.setChartLegendNote('');
+    this.setChartLegendNote(chartHasData ? '' : '\u6682\u65e0\u4eba\u6570\u6570\u636e');
     return chart;
 };
 
@@ -1924,6 +2039,120 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     fixedTypeOrder.forEach(function (type) {
         var minutes = typeStatsMap[type] || 0;
         cards.push('<div class="stats-card"><div class="st-num">' + (minutes / 60).toFixed(2) + 'h</div><div class="st-label">' + type + ' \u8bfe\u65f6</div></div>');
+    });
+
+    container.innerHTML = cards.join('');
+
+    return {
+        empty: false,
+        lessonCount: validLessons.length,
+        totalPresentStudents: totalPresentStudents,
+        totalScheduledStudents: totalScheduledStudents,
+        totalHours: totalHours,
+        totalAuditionCount: totalAuditionCount,
+        classDays: classDays,
+        topType: topType,
+        typeEntries: typeEntries
+    };
+};
+
+TimetableApp.prototype.renderStatsCards = function (lessons, options) {
+    var config = typeof options === 'boolean' ? { showClassDays: options } : (options || {});
+    var showClassDays = config.showClassDays !== false;
+    var useDashForEmpty = true;
+    var container = document.getElementById(config.targetId || 'statsCards');
+    if (!container) return { empty: true };
+
+    container.classList.toggle('stats-grid-compact', !!config.compact);
+
+    var validLessons = lessons.filter(function (lesson) {
+        return (lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0)) > 0;
+    });
+
+    if (validLessons.length === 0) {
+        container.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px">' + (config.emptyText || '\u5f53\u524d\u8303\u56f4\u5185\u6682\u65e0\u6709\u6548\u8bfe\u65f6') + '</div>';
+        return { empty: true };
+    }
+
+    var totalPresentStudents = 0;
+    var totalScheduledStudents = 0;
+    var totalMinutes = 0;
+    var totalAuditionCount = 0;
+    var allDates = new Set();
+    var typeStats = {};
+
+    validLessons.forEach(function (lesson) {
+        var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+        var auditionCount = lesson.auditionStudentCount || 0;
+        var presentCount = lesson.studentCount || 0;
+        var totalCount = presentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+
+        totalAuditionCount += auditionCount;
+        totalPresentStudents += presentCount;
+        totalScheduledStudents += totalCount;
+
+        if (lesson.typeStats && Object.keys(lesson.typeStats).length > 0) {
+            Object.keys(lesson.typeStats).forEach(function (type) {
+                var minutes = lesson.typeStats[type] || 0;
+                if (minutes <= 0) return;
+                totalMinutes += minutes;
+                typeStats[type] = (typeStats[type] || 0) + minutes;
+            });
+        } else if (presentNonAuditionCount > 0) {
+            var totalDuration = this.getLessonDurationMinutesForStats(lesson) * (lesson.lessonCount || 1);
+            var type = this.getLessonTypeKeyForStats(lesson);
+            totalMinutes += totalDuration;
+            if (type) {
+                typeStats[type] = (typeStats[type] || 0) + totalDuration;
+            }
+        }
+
+        if (lesson.dates && lesson.dates.length > 0) {
+            lesson.dates.forEach(function (dateKey) { allDates.add(dateKey); });
+        }
+    }, this);
+
+    var totalHours = (totalMinutes / 60).toFixed(2);
+    var classDays = allDates.size;
+    var topTypeEntry = Object.keys(typeStats).map(function (type) {
+        return { type: type, minutes: typeStats[type] };
+    }).sort(function (a, b) {
+        return b.minutes - a.minutes;
+    })[0] || null;
+    var topType = topTypeEntry ? topTypeEntry.type : '';
+    var typeDisplayOrder = {
+        '1v1(0.8)': 0,
+        '1v1': 1,
+        '1v2': 2,
+        '1v3': 3,
+        '1v4': 4
+    };
+    var typeEntries = Object.keys(typeStats).map(function (type) {
+        return { type: type, minutes: typeStats[type] };
+    }).sort(function (a, b) {
+        return (typeDisplayOrder[a.type] || 99) - (typeDisplayOrder[b.type] || 99);
+    });
+
+    var cards = [];
+    var displayHours = totalMinutes > 0 ? totalHours + 'h' : (useDashForEmpty ? '-' : totalHours + 'h');
+    var displayClassDays = classDays > 0 ? String(classDays) : (useDashForEmpty ? '-' : '0');
+    var displayAuditionCount = totalAuditionCount > 0 ? String(totalAuditionCount) : (useDashForEmpty ? '-' : '0');
+    cards.push('<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">\u5230\u8bfe / \u6392\u8bfe\u4eba\u6b21</div></div>');
+    cards.push('<div class="stats-card"><div class="st-num">' + displayHours + '</div><div class="st-label">\u7d2f\u8ba1\u8bfe\u65f6</div></div>');
+    if (showClassDays) {
+        cards.push('<div class="stats-card"><div class="st-num">' + displayClassDays + '</div><div class="st-label">\u4e0a\u8bfe\u5929\u6570</div></div>');
+    }
+    cards.push('<div class="stats-card"><div class="st-num">' + displayAuditionCount + '</div><div class="st-label">\u8bd5\u542c\u4eba\u6b21</div></div>');
+
+    var fixedTypeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var typeStatsMap = {};
+    typeEntries.forEach(function (entry) {
+        typeStatsMap[entry.type] = entry.minutes;
+    });
+    fixedTypeOrder.forEach(function (type) {
+        var minutes = typeStatsMap[type] || 0;
+        var display = minutes > 0 ? (minutes / 60).toFixed(2) + 'h' : (useDashForEmpty ? '-' : '0.00h');
+        cards.push('<div class="stats-card"><div class="st-num">' + display + '</div><div class="st-label">' + type + ' \u8bfe\u65f6</div></div>');
     });
 
     container.innerHTML = cards.join('');

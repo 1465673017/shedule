@@ -1042,6 +1042,25 @@ body {
     background-clip: padding-box;
 }
 
+/* 隐藏弹窗内滚动条两端箭头，避免出现上下按钮影响观感 */
+.modal-content::-webkit-scrollbar-button,
+.modal-content *::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/* 隐藏弹窗内 number 输入框自带的上下调节箭头 */
+.modal-content input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.modal-content input[type="number"]::-webkit-outer-spin-button,
+.modal-content input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .time-management-content {
     padding: 10px 0;
 }
