@@ -243,6 +243,37 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         this.setCellVersion(sourceKey, weekStartStr, sourceVersion.subject, sourceStudents);
         this.setCellVersion(targetKey, weekStartStr, targetSubject, targetStudents);
 
+        const branchedSourceVersion = this.getCellVersion(sourceKey, weekStartStr);
+        const branchedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
+
+        if (branchedSourceVersion && sourceStudents.length > 0) {
+            window.ScheduleErpService.inheritStudentBranchState(
+                this,
+                sourceVersion,
+                branchedSourceVersion,
+                sourceStudents,
+                weekStartStr
+            );
+        }
+        if (branchedTargetVersion) {
+            if (targetVersion && targetVersion.student && targetVersion.student.length > 0) {
+                window.ScheduleErpService.inheritStudentBranchState(
+                    this,
+                    targetVersion,
+                    branchedTargetVersion,
+                    targetVersion.student,
+                    weekStartStr
+                );
+            }
+            window.ScheduleErpService.inheritStudentBranchState(
+                this,
+                sourceVersion,
+                branchedTargetVersion,
+                [studentId],
+                weekStartStr
+            );
+        }
+
         // 试听学生自动设为临时模式（只出现在当前周）
         if (draggedStudent && draggedStudent.isAudition) {
             this.ensureAuditionStudentsTemporary(targetKey, [studentId]);
@@ -311,10 +342,31 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
             }
         }
 
-        // 将源版本内容移到目标版本：源清空，目标合并
-        this.setCellVersion(sourceKey, weekStartStr, null, []);
+        // 将源版本从当前周起截断，目标从当前周起成为新的循环起点
+        this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
         this.setCellVersion(targetKey, weekStartStr, subjectId, mergedStudents);
         const movedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
+
+        if (movedTargetVersion) {
+            if (targetVersion && targetVersion.student && targetVersion.student.length > 0) {
+                window.ScheduleErpService.inheritStudentBranchState(
+                    this,
+                    targetVersion,
+                    movedTargetVersion,
+                    targetVersion.student,
+                    weekStartStr
+                );
+            }
+            if (sourceStudents.length > 0) {
+                window.ScheduleErpService.inheritStudentBranchState(
+                    this,
+                    sourceVersion,
+                    movedTargetVersion,
+                    sourceStudents,
+                    weekStartStr
+                );
+            }
+        }
         window.ScheduleErpService.transferMovedCourseData(this, sourceVersion, targetKey, movedTargetVersion);
 
         this.ensureAuditionStudentsTemporary(targetKey, mergedStudents);

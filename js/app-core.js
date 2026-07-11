@@ -1,6 +1,82 @@
 // app-core.js - Core class definition and data management
 // Auto-split from script.js
 
+function createDefaultSubjects() {
+    return [
+        { id: '1', name: '语文', teacher: '', color: '#FFE4E1' },
+        { id: '2', name: '数学', teacher: '', color: '#E3F2FD' },
+        { id: '3', name: '英语', teacher: '', color: '#FCE4EC' },
+        { id: '4', name: '美术', teacher: '', color: '#FFF3E0' },
+        { id: '5', name: '健康与体育', teacher: '', color: '#E8EAF6' },
+        { id: '6', name: '道德与法治', teacher: '', color: '#FEF9E7' },
+        { id: '7', name: '音乐', teacher: '', color: '#FFECB3' },
+        { id: '8', name: '劳动', teacher: '', color: '#F5F5F5' },
+        { id: '9', name: '班队会', teacher: '', color: '#F3E5F5' },
+        { id: '10', name: '值日', teacher: '', color: '#FFE0B2' },
+        { id: '11', name: '历史', teacher: '', color: '#FFCDBA' },
+        { id: '12', name: '地理', teacher: '', color: '#D1C4E9' },
+        { id: '13', name: '政治', teacher: '', color: '#FFEBEE' },
+        { id: '14', name: '物理', teacher: '', color: '#EFEBE9' },
+        { id: '15', name: '化学', teacher: '', color: '#B3E5FC' },
+        { id: '16', name: '生物', teacher: '', color: '#F8BBD9' }
+    ];
+}
+
+function createDefaultPeriods() {
+    return {
+        morning: [
+            { name: '第1节', time: '08:00-08:40' },
+            { name: '第2节', time: '08:50-09:30' },
+            { name: '第3节', time: '10:00-10:40' },
+            { name: '第4节', time: '10:50-11:30' }
+        ],
+        afternoon: [
+            { name: '第5节', time: '14:00-14:40' },
+            { name: '第6节', time: '14:50-15:30' },
+            { name: '第7节', time: '15:40-16:20' }
+        ],
+        evening: [
+            { name: '第8节', time: '19:00-19:40' },
+            { name: '第9节', time: '19:50-20:30' }
+        ]
+    };
+}
+
+function createDefaultSettings() {
+    return {
+        showEvening: true,
+        showSaturday: true,
+        showSunday: true,
+        showPeriodTime: true,
+        theme: 'default',
+        menuColor: '#ffffff',
+        scheduleColor: '#ffffff',
+        backgroundColor: '#f0f7ff',
+        primaryColor: '#60a5fa',
+        primaryHover: '#93c5fd',
+        primaryPressed: '#3b82f6',
+        primaryBg: '#e0f2fe',
+        shadowColor: 'rgba(96, 165, 250, 0.15)'
+    };
+}
+
+function createDefaultGrades() {
+    return [
+        { id: 'g1', name: '一年级', color: '#FFE4E1' },
+        { id: 'g2', name: '二年级', color: '#E3F2FD' },
+        { id: 'g3', name: '三年级', color: '#FCE4EC' },
+        { id: 'g4', name: '四年级', color: '#FFF3E0' },
+        { id: 'g5', name: '五年级', color: '#E8EAF6' },
+        { id: 'g6', name: '六年级', color: '#FEF9E7' },
+        { id: 'g7', name: '七年级', color: '#FFECB3' },
+        { id: 'g8', name: '八年级', color: '#F3E5F5' },
+        { id: 'g9', name: '九年级', color: '#FFE0B2' },
+        { id: 'g10', name: '高一', color: '#B3E5FC' },
+        { id: 'g11', name: '高二', color: '#F8BBD9' },
+        { id: 'g12', name: '高三', color: '#D1C4E9' }
+    ];
+}
+
 class TimetableApp {
     constructor() {
         this.MAX_STUDENTS_PER_COURSE = 4;
@@ -136,7 +212,7 @@ class TimetableApp {
         });
         
         // 重置和打印
-        bind('resetBtn', 'click', () => this.resetTimetable());
+        bind('resetBtn', 'click', () => this.openResetModal());
         bind('saveImageBtn', 'click', () => this.saveAsImage());
         bind('exportWordBtn', 'click', () => this.exportToWord());
         bind('exportExcelBtn', 'click', () => this.exportToExcel());
@@ -234,7 +310,8 @@ class TimetableApp {
             statsModal: () => this.closeStatsModal(),
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
-            tutorialModal: () => this.closeTutorialModal()
+            tutorialModal: () => this.closeTutorialModal(),
+            resetModal: () => this.closeResetModal()
         };
         
         Object.keys(modalCloseHandlers).forEach(modalId => {
@@ -402,6 +479,114 @@ class TimetableApp {
 
     saveTableTitle(title) {
         localStorage.setItem('tableTitle', title);
+    }
+
+    openResetModal() {
+        const modal = document.getElementById('resetModal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    }
+
+    closeResetModal() {
+        const modal = document.getElementById('resetModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    resetScheduleOnly() {
+        if (!confirm('确定要重置课表吗？这会清空当前排课、循环和考勤数据，但保留科目、学生、手动课程、年级、课时和设置。')) {
+            return;
+        }
+
+        this.timetable = {};
+        this.erpData = window.createEmptyErpData ? window.createEmptyErpData() : null;
+        this.currentPool = 'subject';
+        this.currentStudentFilter = 'all';
+        this.draggedItem = null;
+        this.editingCell = null;
+        this.selectedCell = null;
+        this._attModalStudents = null;
+        this._attModalKey = null;
+        this._attModalCellKey = null;
+        this._attModalCourseInstanceId = null;
+        this._attModalRecurrence = null;
+        this._courseEditMatchedKeys = null;
+
+        window.ScheduleErpService.ensureErpData(this);
+        window.ScheduleErpService.buildTimetableProjection(this);
+
+        this.closeResetModal();
+        this.closeAttendanceModal();
+        this.closeAddLessonModal();
+        this.syncRealtime({ weekRange: true });
+    }
+
+    resetTimetable() {
+        if (!confirm('确定要重置课表吗？这会清空当前课表、学生、手动课程、考勤和循环数据。')) {
+            return;
+        }
+
+        this.subjects = createDefaultSubjects();
+        this.students = [];
+        this.manualCourses = [];
+        this.timetable = {};
+        this.periods = createDefaultPeriods();
+        this.settings = createDefaultSettings();
+        this.grades = createDefaultGrades();
+        this.erpData = window.createEmptyErpData ? window.createEmptyErpData() : null;
+        this.quickSettingsState = null;
+        this.currentPool = 'subject';
+        this.currentStudentFilter = 'all';
+        this.currentDate = new Date();
+        this.draggedItem = null;
+        this.editingCell = null;
+        this.editingSubject = null;
+        this.editingGrade = null;
+        this.editingPeriod = null;
+        this.selectedCell = null;
+        this._attModalStudents = null;
+        this._attModalKey = null;
+        this._attModalCellKey = null;
+        this._attModalCourseInstanceId = null;
+        this._attModalRecurrence = null;
+        this._courseEditMatchedKeys = null;
+
+        localStorage.removeItem('timetableData');
+        localStorage.removeItem('timetableGrades');
+        localStorage.removeItem('timetableSettings');
+        localStorage.removeItem('timetableTitle');
+        localStorage.removeItem('tableTitle');
+        const timetableTitleInput = document.getElementById('timetableTitle');
+        if (timetableTitleInput) {
+            timetableTitleInput.value = '';
+        }
+        const tableTitleInput = document.getElementById('tableTitle');
+        if (tableTitleInput) {
+            tableTitleInput.value = '';
+        }
+
+        window.ScheduleErpService.ensureErpData(this);
+        window.ScheduleErpService.buildTimetableProjection(this);
+
+        this.saveGrades();
+        this.saveSettings();
+        this.syncRealtime({ weekRange: true });
+
+        if (typeof this.renderGrades === 'function') {
+            this.renderGrades();
+        }
+        this.applySettings();
+        this.updateThemeSettingsUI();
+        this.closeResetModal();
+        this.closeAttendanceModal();
+        this.closeAddLessonModal();
+        this.closeSubjectModal();
+        this.closeTimeModal();
+        this.closeTimeManagementModal();
+        this.closeSettingsModal();
+        this.closeGradeModal();
     }
 
     loadTableTitle() {

@@ -608,6 +608,26 @@
     </div>
 
     <!-- 教程弹窗 -->
+    <div id="resetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>重置选项</h3>
+                <button class="modal-close" onclick="app.closeResetModal()">×</button>
+            </div>
+            <div style="margin-bottom: 16px; color: #666; font-size: 14px; line-height: 1.7;">
+                请选择要执行的重置范围。
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button type="button" class="btn danger" onclick="app.resetTimetable()" style="width: 100%;">全部重置</button>
+                <button type="button" class="btn secondary" onclick="app.resetScheduleOnly()" style="width: 100%;">重置课表</button>
+            </div>
+            <div style="margin-top: 12px; color: #888; font-size: 12px; line-height: 1.6;">
+                全部重置：清空课表、学生、手动课程、考勤和循环数据。<br>
+                重置课表：只清空已排课程和相关循环/考勤数据，保留其他内容。
+            </div>
+        </div>
+    </div>
+
     <div id="tutorialModal" class="modal" style="background: rgba(0, 0, 0, 0.7);" onclick="if(event.target===this)app.closeTutorialModal()">
         <div class="modal-content" style="max-width: 800px; max-height: 85vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); margin: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 20px 25px 15px; margin: 0 -25px 20px;">

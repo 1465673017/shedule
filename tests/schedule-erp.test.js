@@ -88,6 +88,35 @@ assert.deepStrictEqual(
     ['s1', 's2'],
     'paused student should reappear after switching back to recurring'
 );
+assert.strictEqual(
+    app.erpData.exceptionRules.some(rule =>
+        rule.courseInstanceId === ScheduleErpService.getCellVersion(app, '3-afternoon-0', '2026-07-06').courseInstanceId &&
+        rule.studentId === 's1' &&
+        rule.type === 'pause-student' &&
+        rule.weekStart >= '2026-07-13'
+    ),
+    false,
+    'switching back to recurring should clear future pause rules for that student'
+);
+
+const appRecurring = makeApp();
+ScheduleErpService.setCellVersion(appRecurring, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
+ScheduleErpService.setRecurrenceStatus(appRecurring, '3-afternoon-0', 's1', 'temporary', '2026-07-06');
+ScheduleErpService.setRecurrenceStatus(appRecurring, '3-afternoon-0', 's1', 'recurring', '2026-07-06');
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(appRecurring, '3-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'a student switched back to recurring should continue into following weeks'
+);
+assert.strictEqual(
+    appRecurring.erpData.exceptionRules.some(rule =>
+        rule.studentId === 's1' &&
+        rule.type === 'temporary-student' &&
+        rule.weekStart >= '2026-07-06'
+    ),
+    false,
+    'switching back to recurring should clear temporary rules for that student'
+);
 
 const app2 = makeApp();
 ScheduleErpService.setCellVersion(app2, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
@@ -180,6 +209,74 @@ assert.strictEqual(
     movedTargetInstance.actualMinutesByDate['2026-07-08'],
     80,
     'moving a course should preserve actual minutes on the target instance'
+);
+
+const app7 = makeApp();
+ScheduleErpService.setCellVersion(app7, '1-afternoon-0', '2026-07-06', 'math', ['s1']);
+ScheduleErpService.setRecurrenceStatus(app7, '1-afternoon-0', 's1', 'stopped', '2026-07-20');
+const originalOccurrence = ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-13');
+ScheduleErpService.setCellVersion(app7, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
+ScheduleErpService.setCellVersion(app7, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
+const branchedOccurrence = ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-13');
+ScheduleErpService.inheritStudentBranchState(app7, originalOccurrence, branchedOccurrence, ['s1'], '2026-07-13');
+
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-06')),
+    ['s1'],
+    'the original starting week should remain unchanged before a dragged split'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-13'),
+    null,
+    'the original cell should stop recurring from the dragged week onward'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'the dragged week should become the new recurring starting point at the target cell'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-20')),
+    ['s1'],
+    'the branched recurrence should continue into the following week from the dragged lesson'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-27'),
+    null,
+    'future stop rules should still apply after the dragged lesson becomes a new branch'
+);
+
+const app8 = makeApp();
+ScheduleErpService.setCellVersion(app8, '1-afternoon-0', '2026-07-06', 'math', ['s1']);
+ScheduleErpService.setCellVersion(app8, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(app8, '1-afternoon-0', '2026-07-13'),
+    null,
+    'a cutoff week should hide the course before it is restored'
+);
+ScheduleErpService.setCellVersion(app8, '1-afternoon-0', '2026-07-13', 'math', ['s1']);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app8, '1-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'restoring a course into a previously cut off week should clear the stale delete rule'
+);
+
+const app9 = makeApp();
+ScheduleErpService.setCellVersion(app9, '1-afternoon-0', '2026-07-06', 'math', ['s1']);
+const splitSource = ScheduleErpService.getCellVersion(app9, '1-afternoon-0', '2026-07-13');
+ScheduleErpService.setCellVersion(app9, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
+ScheduleErpService.setCellVersion(app9, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
+const splitTarget = ScheduleErpService.getCellVersion(app9, '2-afternoon-0', '2026-07-13');
+ScheduleErpService.inheritStudentBranchState(app9, splitSource, splitTarget, ['s1'], '2026-07-13');
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(app9, '1-afternoon-0', '2026-07-13'),
+    null,
+    'a dragged course should stop recurring at the original cell from the dragged week onward'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app9, '2-afternoon-0', '2026-07-20')),
+    ['s1'],
+    'a dragged course should continue recurring from the target cell in following weeks'
 );
 
 console.log('Schedule ERP tests passed');

@@ -192,6 +192,90 @@
         return rule;
     }
 
+    function clearInstanceDeletionRules(app, courseInstanceId, weekStartStr) {
+        if (!courseInstanceId || !weekStartStr) return;
+        const erp = ensureErpData(app);
+        erp.exceptionRules = erp.exceptionRules.filter(rule => {
+            if (rule.courseInstanceId !== courseInstanceId) return true;
+            if (rule.weekStart !== weekStartStr) return true;
+            return rule.type !== 'delete-instance';
+        });
+    }
+
+    function clearStudentRecurrenceExceptions(app, courseInstanceId, studentId, fromWeekStart) {
+        if (!courseInstanceId || !studentId || !fromWeekStart) return;
+        const erp = ensureErpData(app);
+        const clearableRuleTypes = new Set([
+            'pause-student',
+            'temporary-student',
+            'complete-student'
+        ]);
+        erp.exceptionRules = erp.exceptionRules.filter(rule => {
+            if (rule.courseInstanceId !== courseInstanceId) return true;
+            if (String(rule.studentId || '') !== String(studentId)) return true;
+            if (!clearableRuleTypes.has(rule.type)) return true;
+            if (!rule.weekStart) return true;
+            return rule.weekStart < fromWeekStart;
+        });
+    }
+
+    function copyStudentBranchState(app, fromInstanceId, toInstanceId, studentIds, fromWeekStart, targetCellKey) {
+        if (!fromInstanceId || !toInstanceId || fromInstanceId === toInstanceId) return;
+        const erp = ensureErpData(app);
+        const ids = new Set(normalizeIds(studentIds));
+        if (ids.size === 0) return;
+
+        const sourceRelations = erp.studentCourseRelations.filter(rel =>
+            rel.courseInstanceId === fromInstanceId && ids.has(String(rel.studentId))
+        );
+        const targetRelations = erp.studentCourseRelations.filter(rel =>
+            rel.courseInstanceId === toInstanceId && ids.has(String(rel.studentId))
+        );
+
+        targetRelations.forEach(targetRel => {
+            const sourceRel = sourceRelations.find(rel => rel.studentId === targetRel.studentId);
+            if (!sourceRel) return;
+            targetRel.studentType = sourceRel.studentType;
+            targetRel.relationStatus = sourceRel.relationStatus;
+            targetRel.accountStatus = sourceRel.accountStatus;
+            targetRel.updatedAt = new Date().toISOString();
+        });
+
+        const copyableRuleTypes = new Set([
+            'pause-student',
+            'temporary-student',
+            'complete-student',
+            'remove-student'
+        ]);
+
+        erp.exceptionRules = erp.exceptionRules.filter(rule => {
+            if (rule.courseInstanceId !== toInstanceId) return true;
+            if (!copyableRuleTypes.has(rule.type)) return true;
+            if (!rule.weekStart || rule.weekStart < fromWeekStart) return true;
+            return !ids.has(String(rule.studentId || ''));
+        });
+
+        erp.exceptionRules
+            .filter(rule =>
+                rule.courseInstanceId === fromInstanceId &&
+                copyableRuleTypes.has(rule.type) &&
+                rule.weekStart &&
+                rule.weekStart >= fromWeekStart &&
+                ids.has(String(rule.studentId || ''))
+            )
+            .forEach(rule => {
+                upsertExceptionRule(app, {
+                    courseInstanceId: toInstanceId,
+                    cellKey: targetCellKey,
+                    weekStart: rule.weekStart,
+                    studentId: String(rule.studentId),
+                    type: rule.type,
+                    scope: rule.scope,
+                    reason: rule.reason
+                });
+            });
+    }
+
     function addWeeks(dateStr, count) {
         const parts = String(dateStr || '').split('-').map(Number);
         const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
@@ -335,6 +419,9 @@
                 syncRelations(app, instance, normalizedStudents);
                 makeRepeatRule(app, instance);
                 syncAttendanceInstanceIds(app, existing ? existing.id : null, instance.id);
+                if (!options.cutoff) {
+                    clearInstanceDeletionRules(app, instance.id, weekStartStr);
+                }
                 if (options.cutoff) {
                     upsertExceptionRule(app, {
                         courseInstanceId: instance.id,
@@ -368,6 +455,7 @@
                         rule.status = type === 'stopped' ? 'paused' : 'active';
                         rule.updatedAt = new Date().toISOString();
                     });
+                clearStudentRecurrenceExceptions(app, instance.id, studentId, effectiveWeekStart);
                 if (type === 'stopped' || type === 'temporary') {
                     upsertExceptionRule(app, {
                         courseInstanceId: instance.id,
@@ -545,6 +633,19 @@
                 };
                 targetInstance.updatedAt = new Date().toISOString();
             }
+        },
+
+        inheritStudentBranchState(app, fromVersion, toVersion, studentIds, fromWeekStart) {
+            if (!fromVersion || !toVersion) return;
+            copyStudentBranchState(
+                app,
+                fromVersion.courseInstanceId,
+                toVersion.courseInstanceId,
+                studentIds,
+                fromWeekStart,
+                toVersion.cellKey
+            );
+            buildTimetableProjection(app);
         },
 
         upsertAttendance(app, cellKey, studentId, status, dateKey) {
