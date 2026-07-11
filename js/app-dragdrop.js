@@ -384,15 +384,10 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                 if (this.draggedItem.type === 'subject') {
 
-                    // 回收整节科目：仅从课表移除，不再生成课程池卡片
+                    // 回收科目背景时，整节课连同学生一起删除
 
                     if (sourceVersion && sourceVersion.subject) {
-
-                        const studentIds = (sourceVersion.student || []).slice();
-
-                        // 清除该版本的科目
-
-                        this.setCellVersion(sourceKey, weekStartStr, null, studentIds);
+                        this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
 
                     }
 

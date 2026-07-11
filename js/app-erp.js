@@ -219,6 +219,32 @@
         });
     }
 
+    function clearFutureEmptyRecurringStops(app, cellKey, fromWeekStart) {
+        if (!cellKey || !fromWeekStart) return;
+        const erp = ensureErpData(app);
+        const removedInstanceIds = new Set();
+
+        erp.courseInstances = erp.courseInstances.filter(instance => {
+            if (instance.cellKey !== cellKey) return true;
+            if (!instance.weekStart || instance.weekStart < fromWeekStart) return true;
+            const hasSubject = !!instance.subjectId;
+            const hasStudents = normalizeIds(instance.studentIds).length > 0 ||
+                erp.studentCourseRelations.some(rel => rel.courseInstanceId === instance.id);
+            const isEmptyStop = instance.isDeleted || (!hasSubject && !hasStudents);
+            if (!isEmptyStop) return true;
+            removedInstanceIds.add(instance.id);
+            return false;
+        });
+
+        if (removedInstanceIds.size === 0) return;
+
+        erp.repeatRules = erp.repeatRules.filter(rule => !removedInstanceIds.has(rule.courseInstanceId));
+        erp.exceptionRules = erp.exceptionRules.filter(rule => {
+            if (!removedInstanceIds.has(rule.courseInstanceId)) return true;
+            return rule.type !== 'delete-instance';
+        });
+    }
+
     function copyStudentBranchState(app, fromInstanceId, toInstanceId, studentIds, fromWeekStart, targetCellKey) {
         if (!fromInstanceId || !toInstanceId || fromInstanceId === toInstanceId) return;
         const erp = ensureErpData(app);
@@ -284,6 +310,21 @@
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
+    }
+
+    function isDateKeyInWeek(dateKey, weekStartStr) {
+        if (!dateKey || !weekStartStr) return false;
+        if (dateKey === weekStartStr) return true;
+        const parts = String(weekStartStr).split('-').map(Number);
+        const start = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 7);
+        const dateParts = String(dateKey).split('-').map(Number);
+        if (dateParts.length !== 3 || dateParts.some(n => Number.isNaN(n))) return false;
+        const date = new Date(dateParts[0], (dateParts[1] || 1) - 1, dateParts[2] || 1);
+        date.setHours(0, 0, 0, 0);
+        return date >= start && date < end;
     }
 
     function applyRelationRules(app, version, requestedWeekStart) {
@@ -466,8 +507,11 @@
                         scope: type === 'stopped' ? 'future' : 'single-week',
                         reason: 'attendance-recurrence'
                     });
+                } else if (type === 'recurring') {
+                    clearFutureEmptyRecurringStops(app, cellKey, effectiveWeekStart);
                 }
             }
+            buildTimetableProjection(app);
         },
 
         completeStudentFromWeek(app, cellKey, studentId, weekStart) {
@@ -606,7 +650,7 @@
             return getInstanceForVersion(app, version);
         },
 
-        transferMovedCourseData(app, sourceVersion, targetKey, targetVersion) {
+        transferMovedCourseData(app, sourceVersion, targetKey, targetVersion, weekStartStr = null) {
             if (!sourceVersion || !targetVersion) return;
             const erp = ensureErpData(app);
             const sourceInstance = getInstanceForVersion(app, sourceVersion);
@@ -616,7 +660,8 @@
             if (!sourceInstanceId || !targetInstanceId) return;
 
             erp.attendanceRecords.forEach(record => {
-                if (record.courseInstanceId === sourceInstanceId || record.cellKey === sourceVersion.cellKey) {
+                const matchesWeek = !weekStartStr || isDateKeyInWeek(record.dateKey, weekStartStr);
+                if (matchesWeek && (record.courseInstanceId === sourceInstanceId || record.cellKey === sourceVersion.cellKey)) {
                     record.courseInstanceId = targetInstanceId;
                     record.cellKey = targetKey;
                     record.updatedAt = new Date().toISOString();
@@ -627,9 +672,15 @@
                 ? sourceInstance.actualMinutesByDate
                 : sourceVersion.actualMinutesByDate;
             if (targetInstance && movedActualMinutes) {
+                const scopedActualMinutes = Object.fromEntries(
+                    Object.entries(movedActualMinutes).filter(([dateKey]) =>
+                        !weekStartStr || isDateKeyInWeek(dateKey, weekStartStr)
+                    )
+                );
+                if (Object.keys(scopedActualMinutes).length === 0) return;
                 targetInstance.actualMinutesByDate = {
                     ...(targetInstance.actualMinutesByDate || {}),
-                    ...movedActualMinutes
+                    ...scopedActualMinutes
                 };
                 targetInstance.updatedAt = new Date().toISOString();
             }

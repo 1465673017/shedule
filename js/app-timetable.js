@@ -203,6 +203,7 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
 
 TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const nextWeekStr = this.formatLocalDate(this.getWeekRange(new Date(new Date(this.getWeekRange(this.currentDate).start).getTime() + 7 * 24 * 60 * 60 * 1000)).start);
         const sourceVersion = this.getCellVersion(sourceKey, weekStartStr);
         if (!sourceVersion || !sourceVersion.student || !sourceVersion.student.includes(studentId)) return;
 
@@ -237,7 +238,10 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
 
         targetStudents.push(studentId);
 
-        // 从源版本移除学生
+        const sourceNextVersion = this.getCellVersion(sourceKey, nextWeekStr);
+        const targetNextVersion = this.getCellVersion(targetKey, nextWeekStr);
+
+        // 只改当前这一周：源课位本周移除学生，下一周恢复原本未来状态
         const sourceStudents = (sourceVersion.student || []).filter(id => id !== studentId);
 
         this.setCellVersion(sourceKey, weekStartStr, sourceVersion.subject, sourceStudents);
@@ -245,33 +249,40 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
 
         const branchedSourceVersion = this.getCellVersion(sourceKey, weekStartStr);
         const branchedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
+        const sourceRestoreSubject = sourceNextVersion ? sourceNextVersion.subject : sourceVersion.subject;
+        const sourceRestoreStudents = sourceNextVersion ? (sourceNextVersion.student || []) : (sourceVersion.student || []);
 
-        if (branchedSourceVersion && sourceStudents.length > 0) {
-            window.ScheduleErpService.inheritStudentBranchState(
-                this,
-                sourceVersion,
-                branchedSourceVersion,
-                sourceStudents,
-                weekStartStr
-            );
-        }
-        if (branchedTargetVersion) {
-            if (targetVersion && targetVersion.student && targetVersion.student.length > 0) {
+        if (sourceRestoreSubject || sourceRestoreStudents.length > 0) {
+            this.setCellVersion(sourceKey, nextWeekStr, sourceRestoreSubject, sourceRestoreStudents);
+            const restoredSourceVersion = this.getCellVersion(sourceKey, nextWeekStr);
+            if (restoredSourceVersion) {
+                const sourceStateOrigin = sourceNextVersion || sourceVersion;
                 window.ScheduleErpService.inheritStudentBranchState(
                     this,
-                    targetVersion,
-                    branchedTargetVersion,
-                    targetVersion.student,
-                    weekStartStr
+                    sourceStateOrigin,
+                    restoredSourceVersion,
+                    sourceRestoreStudents,
+                    nextWeekStr
                 );
             }
-            window.ScheduleErpService.inheritStudentBranchState(
-                this,
-                sourceVersion,
-                branchedTargetVersion,
-                [studentId],
-                weekStartStr
-            );
+        } else {
+            this.setCellVersion(sourceKey, nextWeekStr, null, [], { cutoff: true });
+        }
+
+        if (targetNextVersion && (targetNextVersion.subject || (targetNextVersion.student || []).length > 0)) {
+            this.setCellVersion(targetKey, nextWeekStr, targetNextVersion.subject, targetNextVersion.student || []);
+            const restoredTargetVersion = this.getCellVersion(targetKey, nextWeekStr);
+            if (restoredTargetVersion) {
+                window.ScheduleErpService.inheritStudentBranchState(
+                    this,
+                    targetNextVersion,
+                    restoredTargetVersion,
+                    targetNextVersion.student || [],
+                    nextWeekStr
+                );
+            }
+        } else {
+            this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
         }
 
         // 试听学生自动设为临时模式（只出现在当前周）
@@ -288,6 +299,7 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
 
 TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const nextWeekStr = this.formatLocalDate(this.getWeekRange(new Date(new Date(this.getWeekRange(this.currentDate).start).getTime() + 7 * 24 * 60 * 60 * 1000)).start);
         const sourceVersion = this.getCellVersion(sourceKey, weekStartStr);
         if (!sourceVersion || !sourceVersion.subject) return;
 
@@ -342,32 +354,46 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
             }
         }
 
-        // 将源版本从当前周起截断，目标从当前周起成为新的循环起点
+        const sourceNextVersion = this.getCellVersion(sourceKey, nextWeekStr);
+        const targetNextVersion = this.getCellVersion(targetKey, nextWeekStr);
+
+        // 只改当前这一节：源课位本周隐藏，目标课位本周显示，下一周恢复双方原来的未来状态
         this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
         this.setCellVersion(targetKey, weekStartStr, subjectId, mergedStudents);
         const movedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
 
-        if (movedTargetVersion) {
-            if (targetVersion && targetVersion.student && targetVersion.student.length > 0) {
+        if (sourceNextVersion && (sourceNextVersion.subject || (sourceNextVersion.student || []).length > 0)) {
+            this.setCellVersion(sourceKey, nextWeekStr, sourceNextVersion.subject, sourceNextVersion.student || []);
+            const restoredSourceVersion = this.getCellVersion(sourceKey, nextWeekStr);
+            if (restoredSourceVersion) {
                 window.ScheduleErpService.inheritStudentBranchState(
                     this,
-                    targetVersion,
-                    movedTargetVersion,
-                    targetVersion.student,
-                    weekStartStr
+                    sourceNextVersion,
+                    restoredSourceVersion,
+                    sourceNextVersion.student || [],
+                    nextWeekStr
                 );
             }
-            if (sourceStudents.length > 0) {
-                window.ScheduleErpService.inheritStudentBranchState(
-                    this,
-                    sourceVersion,
-                    movedTargetVersion,
-                    sourceStudents,
-                    weekStartStr
-                );
-            }
+        } else {
+            this.setCellVersion(sourceKey, nextWeekStr, null, [], { cutoff: true });
         }
-        window.ScheduleErpService.transferMovedCourseData(this, sourceVersion, targetKey, movedTargetVersion);
+
+        if (targetNextVersion && (targetNextVersion.subject || (targetNextVersion.student || []).length > 0)) {
+            this.setCellVersion(targetKey, nextWeekStr, targetNextVersion.subject, targetNextVersion.student || []);
+            const restoredTargetVersion = this.getCellVersion(targetKey, nextWeekStr);
+            if (restoredTargetVersion) {
+                window.ScheduleErpService.inheritStudentBranchState(
+                    this,
+                    targetNextVersion,
+                    restoredTargetVersion,
+                    targetNextVersion.student || [],
+                    nextWeekStr
+                );
+            }
+        } else {
+            this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
+        }
+        window.ScheduleErpService.transferMovedCourseData(this, sourceVersion, targetKey, movedTargetVersion, weekStartStr);
 
         this.ensureAuditionStudentsTemporary(targetKey, mergedStudents);
 

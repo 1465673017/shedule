@@ -420,7 +420,6 @@ TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
             if (relation) {
                 if (relation.relationStatus === 'temporary') return 'temporary';
                 if (relation.relationStatus === 'paused' || relation.relationStatus === 'ended') return 'stopped';
-                return 'recurring';
             }
         }
 
@@ -435,15 +434,11 @@ TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
             return 'none';
         }
 
-        const versions = this.erpData && Array.isArray(this.erpData.courseInstances)
-            ? this.erpData.courseInstances
-                .filter(instance => instance.cellKey === cellKey && !instance.isDeleted)
-                .sort((a, b) => a.weekStart.localeCompare(b.weekStart))
-            : [];
-        if (versions.length === 0) return 'recurring';
-
-        const nextVersion = versions.find(v => v.weekStart > curVersion.weekStart);
-        if (!nextVersion) return 'recurring';
+        const nextWeekDate = new Date(weekRange.start);
+        nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+        const nextWeekStr = this.formatLocalDate(this.getWeekRange(nextWeekDate).start);
+        const nextVersion = this.getCellVersion(cellKey, nextWeekStr);
+        if (!nextVersion) return 'stopped';
 
         const sameSubject = curVersion.subject === nextVersion.subject;
         const inNext = nextVersion.student && nextVersion.student.includes(studentId);

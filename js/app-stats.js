@@ -2,13 +2,15 @@
 // Auto-split from script.js
 
 TimetableApp.prototype.openStatsModal = function(date, showCharts) {
+        if (showCharts === false) {
+            this.openTextStatsModal(date);
+            return;
+        }
+
         this._statsDate = date || new Date();
-        this.currentStatsDate = new Date(this._statsDate);
-        this._statsShowCharts = showCharts !== false; // 默认 true（顶部日期范围入口），课表表头入口传 false
-        // Set default date range for day tab: current month
+        this._statsShowCharts = true;
         const now = new Date();
         this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
-        // Always show date range picker
         document.getElementById('statsCustomRange').style.display = 'flex';
         document.getElementById('statsModal').style.display = 'block';
         this.switchStatsTab('day');
@@ -17,6 +19,61 @@ TimetableApp.prototype.openStatsModal = function(date, showCharts) {
 TimetableApp.prototype.closeStatsModal = function() {
         document.getElementById('statsModal').style.display = 'none';
         this.closeStatsDatePicker();
+    }
+
+TimetableApp.prototype.openTextStatsModal = function(date) {
+        this._textStatsTab = this._textStatsTab || 'day';
+        this._textStatsAnchorDate = new Date(date || new Date());
+        this._textStatsAnchorDate.setHours(0, 0, 0, 0);
+        document.getElementById('textStatsModal').style.display = 'block';
+        this.switchTextStatsTab(this._textStatsTab, { preserveDate: true });
+    }
+
+TimetableApp.prototype.closeTextStatsModal = function() {
+        document.getElementById('textStatsModal').style.display = 'none';
+    }
+
+TimetableApp.prototype.switchTextStatsTab = function(tab, options) {
+        const opts = options || {};
+        this._textStatsTab = tab;
+
+        document.querySelectorAll('#textStatsTabs .stats-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+
+        if (!opts.preserveDate || !this._textStatsAnchorDate) {
+            this._textStatsAnchorDate = new Date();
+            this._textStatsAnchorDate.setHours(0, 0, 0, 0);
+        }
+
+        this.renderTextStatsModal();
+    }
+
+TimetableApp.prototype.changeTextStatsRange = function(delta) {
+        if (!this._textStatsAnchorDate) {
+            this._textStatsAnchorDate = new Date();
+            this._textStatsAnchorDate.setHours(0, 0, 0, 0);
+        }
+
+        const nextDate = new Date(this._textStatsAnchorDate);
+        switch (this._textStatsTab) {
+            case 'day':
+                nextDate.setDate(nextDate.getDate() + delta);
+                break;
+            case 'week':
+                nextDate.setDate(nextDate.getDate() + (delta * 7));
+                break;
+            case 'month':
+                nextDate.setMonth(nextDate.getMonth() + delta, 1);
+                break;
+            case 'year':
+                nextDate.setFullYear(nextDate.getFullYear() + delta, 0, 1);
+                break;
+        }
+
+        nextDate.setHours(0, 0, 0, 0);
+        this._textStatsAnchorDate = nextDate;
+        this.renderTextStatsModal();
     }
 
 TimetableApp.prototype.formatStatsInputDate = function(date) {
@@ -190,6 +247,103 @@ TimetableApp.prototype.onStatsDateChange = function() {
             case 'month': this.renderMonthStats(); break;
             case 'year': this.renderYearStats(); break;
         }
+    }
+
+TimetableApp.prototype.getTextStatsRange = function() {
+        const anchor = new Date(this._textStatsAnchorDate || new Date());
+        anchor.setHours(0, 0, 0, 0);
+
+        switch (this._textStatsTab) {
+            case 'day':
+                return { start: new Date(anchor), end: new Date(anchor) };
+            case 'week': {
+                const week = this.getWeekRange(anchor);
+                const start = new Date(week.start);
+                const end = new Date(week.end);
+                end.setDate(end.getDate() - 1);
+                end.setHours(0, 0, 0, 0);
+                return { start, end };
+            }
+            case 'month':
+                return {
+                    start: new Date(anchor.getFullYear(), anchor.getMonth(), 1),
+                    end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
+                };
+            case 'year':
+                return {
+                    start: new Date(anchor.getFullYear(), 0, 1),
+                    end: new Date(anchor.getFullYear(), 11, 31)
+                };
+            default:
+                return { start: new Date(anchor), end: new Date(anchor) };
+        }
+    }
+
+TimetableApp.prototype.getTextStatsRangeLabel = function(range) {
+        const start = range.start;
+        const end = range.end;
+        const formatMD = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
+
+        switch (this._textStatsTab) {
+            case 'day':
+                return `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`;
+            case 'week':
+                return `${formatMD(start)} - ${formatMD(end)}`;
+            case 'month':
+                return `${start.getFullYear()}年${start.getMonth() + 1}月`;
+            case 'year':
+                return `${start.getFullYear()}年`;
+            default:
+                return `${formatMD(start)} - ${formatMD(end)}`;
+        }
+    }
+
+TimetableApp.prototype.getTextStatsTitle = function(range) {
+        const tabLabelMap = {
+            day: '日统计',
+            week: '周统计',
+            month: '月统计',
+            year: '年统计'
+        };
+        return `课时统计 · ${tabLabelMap[this._textStatsTab] || '统计'} · ${this.getTextStatsRangeLabel(range)}`;
+    }
+
+TimetableApp.prototype.updateTextStatsNavButtons = function() {
+        const labelMap = {
+            day: ['上一日', '下一日'],
+            week: ['上一周', '下一周'],
+            month: ['上一月', '下一月'],
+            year: ['上一年', '下一年']
+        };
+        const [prevLabel, nextLabel] = labelMap[this._textStatsTab] || ['上一项', '下一项'];
+        const prevBtn = document.getElementById('textStatsPrevBtn');
+        const nextBtn = document.getElementById('textStatsNextBtn');
+        if (prevBtn) prevBtn.textContent = prevLabel;
+        if (nextBtn) nextBtn.textContent = nextLabel;
+    }
+
+TimetableApp.prototype.renderTextStatsModal = function() {
+        const range = this.getTextStatsRange();
+        const lessons = this.aggregateLessons(range.start, range.end);
+        const isDayView = this._textStatsTab === 'day';
+
+        const title = document.getElementById('textStatsTitle');
+        const rangeLabel = document.getElementById('textStatsRangeLabel');
+        if (title) title.textContent = this.getTextStatsTitle(range);
+        if (rangeLabel) rangeLabel.textContent = this.getTextStatsRangeLabel(range);
+        this.updateTextStatsNavButtons();
+
+        this.renderStatsCards(lessons, {
+            targetId: 'textStatsCards',
+            showClassDays: !isDayView,
+            compact: true,
+            emptyText: '当前范围内暂无有效课时'
+        });
+        this.renderStatsByGrade(lessons, {
+            targetId: 'textStatsByGrade',
+            showDates: true,
+            emptyText: '当前范围内暂无课程明细'
+        });
     }
 
 TimetableApp.prototype.collectLessonsForDate = function(date) {
@@ -460,17 +614,23 @@ TimetableApp.prototype.aggregateLessons = function(startDate, endDate) {
     }
 
 TimetableApp.prototype.showDayStats = function(date) {
-        // 课表表头点击入口 — 不显示图形统计，仅显示原数字统计
-        this.openStatsModal(date, false);
+        this.openTextStatsModal(date);
     }
     
-TimetableApp.prototype.renderStatsCards = function(lessons, showClassDays = true) {
-        const container = document.getElementById('statsCards');
+TimetableApp.prototype.renderStatsCards = function(lessons, options) {
+        const config = typeof options === 'boolean'
+            ? { showClassDays: options }
+            : (options || {});
+        const showClassDays = config.showClassDays !== false;
+        const container = document.getElementById(config.targetId || 'statsCards');
+        if (!container) return;
+
+        container.classList.toggle('stats-grid-compact', !!config.compact);
 
         const validLessons = lessons.filter(l => (l.studentCount + (l.leaveCount || 0) + (l.absentCount || 0)) > 0);
 
         if (validLessons.length === 0) {
-            container.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px">当天无有效课时</div>';
+            container.innerHTML = `<div class="text-muted" style="text-align:center;padding:20px">${config.emptyText || '当天无有效课时'}</div>`;
             return;
         }
 
@@ -690,11 +850,16 @@ TimetableApp.prototype.syncLessonAttendanceSummary = function(lesson) {
         lesson.auditionStudentCount = auditionStudentCount;
     }
 
-TimetableApp.prototype.renderStatsByGrade = function(lessons, showDates = true) {
-        const container = document.getElementById('statsByGrade');
+TimetableApp.prototype.renderStatsByGrade = function(lessons, options) {
+        const config = typeof options === 'boolean'
+            ? { showDates: options }
+            : (options || {});
+        const showDates = config.showDates !== false;
+        const container = document.getElementById(config.targetId || 'statsByGrade');
+        if (!container) return;
 
         if (lessons.length === 0) {
-            container.innerHTML = '<div class="text-muted">暂无课时明细</div>';
+            container.innerHTML = `<div class="text-muted">${config.emptyText || '暂无课时明细'}</div>`;
             return;
         }
 
@@ -863,6 +1028,12 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function(panel, lesson) {
     }
 
 TimetableApp.prototype.refreshStatsAfterAttendanceChange = function() {
+        const textStatsModal = document.getElementById('textStatsModal');
+        if (textStatsModal && textStatsModal.style.display === 'block') {
+            this.renderTextStatsModal();
+            return;
+        }
+
         if (!this.currentStatsDate) return;
 
         const formatLocalDate = d => {
@@ -894,7 +1065,7 @@ TimetableApp.prototype.refreshStatsAfterAttendanceChange = function() {
             }
         });
 
-        this.renderStatsCards(lessons, false);
+        this.renderStatsCards(lessons, { showClassDays: false });
     }
     
 TimetableApp.prototype.getInlineOneV1Badge = function() {

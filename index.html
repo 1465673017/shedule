@@ -505,6 +505,31 @@
         </div>
     </div>
 
+    <div id="textStatsModal" class="modal">
+        <div class="modal-content text-stats-modal-content">
+            <div class="modal-header">
+                <h3 id="textStatsTitle">课时统计</h3>
+                <button class="modal-close" onclick="app.closeTextStatsModal()">×</button>
+            </div>
+            <div class="stats-tabs" id="textStatsTabs">
+                <button class="stats-tab active" data-tab="day" onclick="app.switchTextStatsTab('day')">日统计</button>
+                <button class="stats-tab" data-tab="week" onclick="app.switchTextStatsTab('week')">周统计</button>
+                <button class="stats-tab" data-tab="month" onclick="app.switchTextStatsTab('month')">月统计</button>
+                <button class="stats-tab" data-tab="year" onclick="app.switchTextStatsTab('year')">年统计</button>
+            </div>
+            <div class="text-stats-range-row">
+                <div class="text-stats-navigator">
+                    <button type="button" class="text-stats-nav-btn" id="textStatsPrevBtn" onclick="app.changeTextStatsRange(-1)">上一项</button>
+                    <div class="text-stats-range-display" id="textStatsRangeLabel"></div>
+                    <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" onclick="app.changeTextStatsRange(1)">下一项</button>
+                </div>
+            </div>
+            <div class="stats-grid stats-grid-compact" id="textStatsCards"></div>
+            <div class="text-stats-detail-title">课程明细</div>
+            <div class="stats-by-grade" id="textStatsByGrade"></div>
+        </div>
+    </div>
+
     <!-- 设置弹窗 -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">

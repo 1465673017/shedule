@@ -7,6 +7,9 @@ global.window = global;
 
 const erpSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-erp.js'), 'utf8');
 vm.runInThisContext(erpSource, { filename: 'app-erp.js' });
+global.TimetableApp = function TimetableApp() {};
+const attendanceSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-attendance.js'), 'utf8');
+vm.runInThisContext(attendanceSource, { filename: 'app-attendance.js' });
 
 function makeApp() {
     return {
@@ -218,7 +221,10 @@ const originalOccurrence = ScheduleErpService.getCellVersion(app7, '1-afternoon-
 ScheduleErpService.setCellVersion(app7, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
 ScheduleErpService.setCellVersion(app7, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
 const branchedOccurrence = ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-13');
-ScheduleErpService.inheritStudentBranchState(app7, originalOccurrence, branchedOccurrence, ['s1'], '2026-07-13');
+ScheduleErpService.setCellVersion(app7, '1-afternoon-0', '2026-07-20', 'math', ['s1']);
+const restoredOriginalOccurrence = ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-20');
+ScheduleErpService.inheritStudentBranchState(app7, originalOccurrence, restoredOriginalOccurrence, ['s1'], '2026-07-20');
+ScheduleErpService.setCellVersion(app7, '2-afternoon-0', '2026-07-20', null, [], { cutoff: true });
 
 assert.deepStrictEqual(
     studentIds(ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-06')),
@@ -233,17 +239,22 @@ assert.strictEqual(
 assert.deepStrictEqual(
     studentIds(ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-13')),
     ['s1'],
-    'the dragged week should become the new recurring starting point at the target cell'
-);
-assert.deepStrictEqual(
-    studentIds(ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-20')),
-    ['s1'],
-    'the branched recurrence should continue into the following week from the dragged lesson'
+    'the dragged week should appear at the target cell'
 );
 assert.strictEqual(
     ScheduleErpService.getCellVersion(app7, '2-afternoon-0', '2026-07-27'),
     null,
-    'future stop rules should still apply after the dragged lesson becomes a new branch'
+    'the moved lesson should not keep recurring at the target cell'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-20')),
+    ['s1'],
+    'the original cell should resume in the following week as a new recurrence start'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(app7, '1-afternoon-0', '2026-07-27'),
+    null,
+    'future stop rules should still apply on the restored original branch'
 );
 
 const app8 = makeApp();
@@ -267,16 +278,67 @@ const splitSource = ScheduleErpService.getCellVersion(app9, '1-afternoon-0', '20
 ScheduleErpService.setCellVersion(app9, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
 ScheduleErpService.setCellVersion(app9, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
 const splitTarget = ScheduleErpService.getCellVersion(app9, '2-afternoon-0', '2026-07-13');
-ScheduleErpService.inheritStudentBranchState(app9, splitSource, splitTarget, ['s1'], '2026-07-13');
+ScheduleErpService.setCellVersion(app9, '1-afternoon-0', '2026-07-20', 'math', ['s1']);
+ScheduleErpService.inheritStudentBranchState(
+    app9,
+    splitSource,
+    ScheduleErpService.getCellVersion(app9, '1-afternoon-0', '2026-07-20'),
+    ['s1'],
+    '2026-07-20'
+);
+ScheduleErpService.setCellVersion(app9, '2-afternoon-0', '2026-07-20', null, [], { cutoff: true });
 assert.strictEqual(
     ScheduleErpService.getCellVersion(app9, '1-afternoon-0', '2026-07-13'),
     null,
     'a dragged course should stop recurring at the original cell from the dragged week onward'
 );
 assert.deepStrictEqual(
-    studentIds(ScheduleErpService.getCellVersion(app9, '2-afternoon-0', '2026-07-20')),
+    studentIds(ScheduleErpService.getCellVersion(app9, '1-afternoon-0', '2026-07-20')),
     ['s1'],
-    'a dragged course should continue recurring from the target cell in following weeks'
+    'a dragged course should resume at the original cell in the following week'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(app9, '2-afternoon-0', '2026-07-20'),
+    null,
+    'a dragged course should not keep recurring from the target cell in following weeks'
+);
+
+const recurrenceApp = makeApp();
+Object.setPrototypeOf(recurrenceApp, TimetableApp.prototype);
+recurrenceApp.currentDate = new Date(2026, 6, 7);
+recurrenceApp.getCellVersion = function(cellKey, weekStartStr) {
+    return ScheduleErpService.getCellVersion(this, cellKey, weekStartStr);
+};
+ScheduleErpService.setCellVersion(recurrenceApp, '1-afternoon-0', '2026-06-29', 'math', ['s1']);
+ScheduleErpService.setCellVersion(recurrenceApp, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
+ScheduleErpService.setCellVersion(recurrenceApp, '1-afternoon-0', '2026-07-20', 'math', ['s1']);
+ScheduleErpService.setCellVersion(recurrenceApp, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
+assert.strictEqual(
+    recurrenceApp.getStudentRecurrenceType('1-afternoon-0', 's1'),
+    'stopped',
+    'a previous lesson should show stopped when the next week at the same cell was split away'
+);
+
+const app10 = makeApp();
+ScheduleErpService.setCellVersion(app10, '1-afternoon-0', '2026-06-29', 'math', ['s1']);
+ScheduleErpService.setCellVersion(app10, '1-afternoon-0', '2026-07-13', null, [], { cutoff: true });
+ScheduleErpService.setCellVersion(app10, '1-afternoon-0', '2026-07-20', null, [], { cutoff: true });
+ScheduleErpService.setCellVersion(app10, '1-afternoon-0', '2026-07-27', 'math', ['s2']);
+ScheduleErpService.setRecurrenceStatus(app10, '1-afternoon-0', 's1', 'recurring', '2026-07-06');
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app10, '1-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'switching recurring back on should refill later empty recurring weeks from the current lesson'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app10, '1-afternoon-0', '2026-07-20')),
+    ['s1'],
+    'switching recurring back on should continue through consecutive empty future weeks'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(app10, '1-afternoon-0', '2026-07-27')),
+    ['s2'],
+    'switching recurring back on should not overwrite a later explicit course instance'
 );
 
 console.log('Schedule ERP tests passed');

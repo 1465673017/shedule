@@ -297,6 +297,7 @@ class TimetableApp {
                 this.closeSettingsModal();
                 this.closeGradeModal();
                 this.closeStatsModal();
+                this.closeTextStatsModal();
             }
         });
         
@@ -308,6 +309,7 @@ class TimetableApp {
             addLessonModal: () => this.closeAddLessonModal(),
             attendanceModal: () => this.closeAttendanceModal(),
             statsModal: () => this.closeStatsModal(),
+            textStatsModal: () => this.closeTextStatsModal(),
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
             tutorialModal: () => this.closeTutorialModal(),
