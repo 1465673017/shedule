@@ -1,685 +1,685 @@
 // app-stats.js - Statistics views
 // Auto-split from script.js
 
-TimetableApp.prototype.closeStatsModal = function() {
-        document.getElementById('statsModal').style.display = 'none';
-        this.closeStatsDatePicker();
-    }
+TimetableApp.prototype.closeStatsModal = function () {
+    document.getElementById('statsModal').style.display = 'none';
+    this.closeStatsDatePicker();
+}
 
-TimetableApp.prototype.openTextStatsModal = function(date) {
-        this._textStatsTab = this._textStatsTab || 'day';
-        this._textStatsAnchorDate = new Date(date || new Date());
+TimetableApp.prototype.openTextStatsModal = function (date) {
+    this._textStatsTab = this._textStatsTab || 'day';
+    this._textStatsAnchorDate = new Date(date || new Date());
+    this._textStatsAnchorDate.setHours(0, 0, 0, 0);
+    document.getElementById('textStatsModal').style.display = 'block';
+    this.switchTextStatsTab(this._textStatsTab, { preserveDate: true });
+}
+
+TimetableApp.prototype.closeTextStatsModal = function () {
+    document.getElementById('textStatsModal').style.display = 'none';
+}
+
+TimetableApp.prototype.switchTextStatsTab = function (tab, options) {
+    const opts = options || {};
+    this._textStatsTab = tab;
+
+    document.querySelectorAll('#textStatsTabs .stats-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+
+    if (!opts.preserveDate || !this._textStatsAnchorDate) {
+        this._textStatsAnchorDate = new Date();
         this._textStatsAnchorDate.setHours(0, 0, 0, 0);
-        document.getElementById('textStatsModal').style.display = 'block';
-        this.switchTextStatsTab(this._textStatsTab, { preserveDate: true });
     }
 
-TimetableApp.prototype.closeTextStatsModal = function() {
-        document.getElementById('textStatsModal').style.display = 'none';
+    this.renderTextStatsModal();
+}
+
+TimetableApp.prototype.changeTextStatsRange = function (delta) {
+    if (!this._textStatsAnchorDate) {
+        this._textStatsAnchorDate = new Date();
+        this._textStatsAnchorDate.setHours(0, 0, 0, 0);
     }
 
-TimetableApp.prototype.switchTextStatsTab = function(tab, options) {
-        const opts = options || {};
-        this._textStatsTab = tab;
-
-        document.querySelectorAll('#textStatsTabs .stats-tab').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
-        });
-
-        if (!opts.preserveDate || !this._textStatsAnchorDate) {
-            this._textStatsAnchorDate = new Date();
-            this._textStatsAnchorDate.setHours(0, 0, 0, 0);
-        }
-
-        this.renderTextStatsModal();
+    const nextDate = new Date(this._textStatsAnchorDate);
+    switch (this._textStatsTab) {
+        case 'day':
+            nextDate.setDate(nextDate.getDate() + delta);
+            break;
+        case 'week':
+            nextDate.setDate(nextDate.getDate() + (delta * 7));
+            break;
+        case 'month':
+            nextDate.setMonth(nextDate.getMonth() + delta, 1);
+            break;
+        case 'year':
+            nextDate.setFullYear(nextDate.getFullYear() + delta, 0, 1);
+            break;
     }
 
-TimetableApp.prototype.changeTextStatsRange = function(delta) {
-        if (!this._textStatsAnchorDate) {
-            this._textStatsAnchorDate = new Date();
-            this._textStatsAnchorDate.setHours(0, 0, 0, 0);
-        }
+    nextDate.setHours(0, 0, 0, 0);
+    this._textStatsAnchorDate = nextDate;
+    this.renderTextStatsModal();
+}
 
-        const nextDate = new Date(this._textStatsAnchorDate);
-        switch (this._textStatsTab) {
-            case 'day':
-                nextDate.setDate(nextDate.getDate() + delta);
-                break;
-            case 'week':
-                nextDate.setDate(nextDate.getDate() + (delta * 7));
-                break;
-            case 'month':
-                nextDate.setMonth(nextDate.getMonth() + delta, 1);
-                break;
-            case 'year':
-                nextDate.setFullYear(nextDate.getFullYear() + delta, 0, 1);
-                break;
-        }
+TimetableApp.prototype.formatStatsInputDate = function (date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
 
-        nextDate.setHours(0, 0, 0, 0);
-        this._textStatsAnchorDate = nextDate;
-        this.renderTextStatsModal();
-    }
+TimetableApp.prototype.parseStatsInputDate = function (value) {
+    return value ? new Date(value + 'T00:00:00') : null;
+}
 
-TimetableApp.prototype.formatStatsInputDate = function(date) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
+TimetableApp.prototype.formatStatsRangeLabel = function (startDate, endDate) {
+    const format = d => `${d.getFullYear()}年${d.getMonth() + 1}月${String(d.getDate()).padStart(2, '0')}日`;
+    return `${format(startDate)}-${format(endDate)}`;
+}
 
-TimetableApp.prototype.parseStatsInputDate = function(value) {
-        return value ? new Date(value + 'T00:00:00') : null;
-    }
+TimetableApp.prototype.setStatsDateRange = function (startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    const rangeStart = start <= end ? start : end;
+    const rangeEnd = start <= end ? end : start;
 
-TimetableApp.prototype.formatStatsRangeLabel = function(startDate, endDate) {
-        const format = d => `${d.getFullYear()}年${d.getMonth() + 1}月${String(d.getDate()).padStart(2, '0')}日`;
-        return `${format(startDate)}-${format(endDate)}`;
-    }
+    document.getElementById('statsStartDate').value = this.formatStatsInputDate(rangeStart);
+    document.getElementById('statsEndDate').value = this.formatStatsInputDate(rangeEnd);
+    const label = document.getElementById('statsDateRangeText');
+    if (label) label.textContent = this.formatStatsRangeLabel(rangeStart, rangeEnd);
+}
 
-TimetableApp.prototype.setStatsDateRange = function(startDate, endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        start.setHours(0, 0, 0, 0);
-        end.setHours(0, 0, 0, 0);
-        const rangeStart = start <= end ? start : end;
-        const rangeEnd = start <= end ? end : start;
-
-        document.getElementById('statsStartDate').value = this.formatStatsInputDate(rangeStart);
-        document.getElementById('statsEndDate').value = this.formatStatsInputDate(rangeEnd);
-        const label = document.getElementById('statsDateRangeText');
-        if (label) label.textContent = this.formatStatsRangeLabel(rangeStart, rangeEnd);
-    }
-
-TimetableApp.prototype.toggleStatsDatePicker = function() {
-        const popover = document.getElementById('statsDatePopover');
-        if (!popover) return;
-        if (popover.style.display === 'none' || !popover.style.display) {
-            const start = this.parseStatsInputDate(document.getElementById('statsStartDate').value) || new Date();
-            this._statsCalendarMonth = new Date(start.getFullYear(), start.getMonth(), 1);
-            this._pendingStatsStartDate = null;
-            popover.style.display = 'block';
-            this.renderStatsDatePicker();
-            setTimeout(() => this.bindStatsDatePickerOutsideClick(), 0);
-        } else {
-            this.closeStatsDatePicker();
-        }
-    }
-
-TimetableApp.prototype.closeStatsDatePicker = function() {
-        const popover = document.getElementById('statsDatePopover');
-        if (popover) popover.style.display = 'none';
+TimetableApp.prototype.toggleStatsDatePicker = function () {
+    const popover = document.getElementById('statsDatePopover');
+    if (!popover) return;
+    if (popover.style.display === 'none' || !popover.style.display) {
+        const start = this.parseStatsInputDate(document.getElementById('statsStartDate').value) || new Date();
+        this._statsCalendarMonth = new Date(start.getFullYear(), start.getMonth(), 1);
         this._pendingStatsStartDate = null;
-        if (this._statsDatePickerOutsideHandler) {
-            document.removeEventListener('mousedown', this._statsDatePickerOutsideHandler);
-            this._statsDatePickerOutsideHandler = null;
-        }
-    }
-
-TimetableApp.prototype.bindStatsDatePickerOutsideClick = function() {
-        if (this._statsDatePickerOutsideHandler) {
-            document.removeEventListener('mousedown', this._statsDatePickerOutsideHandler);
-        }
-        this._statsDatePickerOutsideHandler = (event) => {
-            const picker = document.getElementById('statsCustomRange');
-            const popover = document.getElementById('statsDatePopover');
-            if (!popover || popover.style.display === 'none') return;
-            if (picker && picker.contains(event.target)) return;
-            this.closeStatsDatePicker();
-        };
-        document.addEventListener('mousedown', this._statsDatePickerOutsideHandler);
-    }
-
-TimetableApp.prototype.changeStatsCalendarMonth = function(delta) {
-        const base = this._statsCalendarMonth || new Date();
-        this._statsCalendarMonth = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+        popover.style.display = 'block';
         this.renderStatsDatePicker();
-    }
-
-TimetableApp.prototype.renderStatsDatePicker = function() {
-        const title = document.getElementById('statsCalendarTitle');
-        const grid = document.getElementById('statsCalendarGrid');
-        if (!title || !grid) return;
-
-        const month = this._statsCalendarMonth || new Date();
-        const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
-        const gridStart = new Date(monthStart);
-        gridStart.setDate(monthStart.getDate() - monthStart.getDay());
-        const startDate = this._pendingStatsStartDate || this.parseStatsInputDate(document.getElementById('statsStartDate').value);
-        const endDate = this._pendingStatsStartDate ? this._pendingStatsStartDate : this.parseStatsInputDate(document.getElementById('statsEndDate').value);
-
-        title.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
-        grid.innerHTML = '';
-
-        for (let i = 0; i < 42; i++) {
-            const day = new Date(gridStart);
-            day.setDate(gridStart.getDate() + i);
-            day.setHours(0, 0, 0, 0);
-            const dayKey = this.formatStatsInputDate(day);
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'stats-calendar-day';
-            btn.textContent = String(day.getDate());
-            btn.dataset.date = dayKey;
-            if (day.getMonth() !== month.getMonth()) btn.classList.add('other-month');
-            if (startDate && endDate && day >= startDate && day <= endDate) btn.classList.add('in-range');
-            if ((startDate && day.getTime() === startDate.getTime()) || (endDate && day.getTime() === endDate.getTime())) {
-                btn.classList.add('range-edge');
-            }
-            btn.addEventListener('click', () => this.selectStatsCalendarDate(dayKey));
-            grid.appendChild(btn);
-        }
-    }
-
-TimetableApp.prototype.selectStatsCalendarDate = function(dateValue) {
-        const picked = this.parseStatsInputDate(dateValue);
-        if (!picked) return;
-
-        if (!this._pendingStatsStartDate) {
-            this._pendingStatsStartDate = picked;
-            const label = document.getElementById('statsDateRangeText');
-            if (label) label.textContent = `${picked.getFullYear()}年${picked.getMonth() + 1}月${String(picked.getDate()).padStart(2, '0')}日-请选择结束日期`;
-            this.renderStatsDatePicker();
-            return;
-        }
-
-        this.setStatsDateRange(this._pendingStatsStartDate, picked);
+        setTimeout(() => this.bindStatsDatePickerOutsideClick(), 0);
+    } else {
         this.closeStatsDatePicker();
-        this.onStatsDateChange();
+    }
+}
+
+TimetableApp.prototype.closeStatsDatePicker = function () {
+    const popover = document.getElementById('statsDatePopover');
+    if (popover) popover.style.display = 'none';
+    this._pendingStatsStartDate = null;
+    if (this._statsDatePickerOutsideHandler) {
+        document.removeEventListener('mousedown', this._statsDatePickerOutsideHandler);
+        this._statsDatePickerOutsideHandler = null;
+    }
+}
+
+TimetableApp.prototype.bindStatsDatePickerOutsideClick = function () {
+    if (this._statsDatePickerOutsideHandler) {
+        document.removeEventListener('mousedown', this._statsDatePickerOutsideHandler);
+    }
+    this._statsDatePickerOutsideHandler = (event) => {
+        const picker = document.getElementById('statsCustomRange');
+        const popover = document.getElementById('statsDatePopover');
+        if (!popover || popover.style.display === 'none') return;
+        if (picker && picker.contains(event.target)) return;
+        this.closeStatsDatePicker();
+    };
+    document.addEventListener('mousedown', this._statsDatePickerOutsideHandler);
+}
+
+TimetableApp.prototype.changeStatsCalendarMonth = function (delta) {
+    const base = this._statsCalendarMonth || new Date();
+    this._statsCalendarMonth = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+    this.renderStatsDatePicker();
+}
+
+TimetableApp.prototype.renderStatsDatePicker = function () {
+    const title = document.getElementById('statsCalendarTitle');
+    const grid = document.getElementById('statsCalendarGrid');
+    if (!title || !grid) return;
+
+    const month = this._statsCalendarMonth || new Date();
+    const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+    const gridStart = new Date(monthStart);
+    gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+    const startDate = this._pendingStatsStartDate || this.parseStatsInputDate(document.getElementById('statsStartDate').value);
+    const endDate = this._pendingStatsStartDate ? this._pendingStatsStartDate : this.parseStatsInputDate(document.getElementById('statsEndDate').value);
+
+    title.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+    grid.innerHTML = '';
+
+    for (let i = 0; i < 42; i++) {
+        const day = new Date(gridStart);
+        day.setDate(gridStart.getDate() + i);
+        day.setHours(0, 0, 0, 0);
+        const dayKey = this.formatStatsInputDate(day);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'stats-calendar-day';
+        btn.textContent = String(day.getDate());
+        btn.dataset.date = dayKey;
+        if (day.getMonth() !== month.getMonth()) btn.classList.add('other-month');
+        if (startDate && endDate && day >= startDate && day <= endDate) btn.classList.add('in-range');
+        if ((startDate && day.getTime() === startDate.getTime()) || (endDate && day.getTime() === endDate.getTime())) {
+            btn.classList.add('range-edge');
+        }
+        btn.addEventListener('click', () => this.selectStatsCalendarDate(dayKey));
+        grid.appendChild(btn);
+    }
+}
+
+TimetableApp.prototype.selectStatsCalendarDate = function (dateValue) {
+    const picked = this.parseStatsInputDate(dateValue);
+    if (!picked) return;
+
+    if (!this._pendingStatsStartDate) {
+        this._pendingStatsStartDate = picked;
+        const label = document.getElementById('statsDateRangeText');
+        if (label) label.textContent = `${picked.getFullYear()}年${picked.getMonth() + 1}月${String(picked.getDate()).padStart(2, '0')}日-请选择结束日期`;
+        this.renderStatsDatePicker();
+        return;
     }
 
-TimetableApp.prototype.switchStatsTab = function(tab) {
-        this.closeStatsDatePicker();
-        const previousTab = this._statsTab;
-        const isRepeatedWeekClick = previousTab === 'week' && tab === 'week';
-        this._statsTab = tab;
+    this.setStatsDateRange(this._pendingStatsStartDate, picked);
+    this.closeStatsDatePicker();
+    this.onStatsDateChange();
+}
 
-        if (tab === 'week') {
-            this._statsWeekMode = isRepeatedWeekClick && this._statsWeekMode === 'monthWeeks'
-                ? 'naturalWeeks'
-                : 'monthWeeks';
-        } else {
-            this._statsWeekMode = 'monthWeeks';
-        }
+TimetableApp.prototype.switchStatsTab = function (tab) {
+    this.closeStatsDatePicker();
+    const previousTab = this._statsTab;
+    const isRepeatedWeekClick = previousTab === 'week' && tab === 'week';
+    this._statsTab = tab;
 
-        document.querySelectorAll('.stats-tab').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === tab);
-        });
-        this.updateStatsWeekModeBadge();
+    if (tab === 'week') {
+        this._statsWeekMode = isRepeatedWeekClick && this._statsWeekMode === 'monthWeeks'
+            ? 'naturalWeeks'
+            : 'monthWeeks';
+    } else {
+        this._statsWeekMode = 'monthWeeks';
+    }
 
-        // Always show the date range picker for all tabs
-        document.getElementById('statsCustomRange').style.display = 'flex';
+    document.querySelectorAll('.stats-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    this.updateStatsWeekModeBadge();
 
-        const now = new Date();
-        // Set default date range based on tab
-        switch (tab) {
-            case 'day':
-                // Default: current month
+    // Always show the date range picker for all tabs
+    document.getElementById('statsCustomRange').style.display = 'flex';
+
+    const now = new Date();
+    // Set default date range based on tab
+    switch (tab) {
+        case 'day':
+            // Default: current month
+            this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+            this.renderDayStats();
+            break;
+        case 'week':
+            if (previousTab !== 'week') {
                 this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
-                this.renderDayStats();
-                break;
-            case 'week':
-                if (previousTab !== 'week') {
-                    this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+            }
+            this.renderWeekStats();
+            break;
+        case 'month':
+            // Default: current year (Jan 1 - Dec 31)
+            this.setStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+            this.renderMonthStats();
+            break;
+        case 'year':
+            // Default: current year (Jan 1 - Dec 31)
+            this.setStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+            this.renderYearStats();
+            break;
+    }
+}
+
+TimetableApp.prototype.updateStatsWeekModeBadge = function () {
+    var badge = document.getElementById('statsWeekModeBadge');
+    if (!badge) return;
+    badge.hidden = !(this._statsTab === 'week' && this._statsWeekMode === 'naturalWeeks');
+};
+
+TimetableApp.prototype.onStatsDateChange = function () {
+    // Unified handler for date input changes — routes to the active tab's renderer
+    switch (this._statsTab) {
+        case 'day': this.renderDayStats(); break;
+        case 'week': this.renderWeekStats(); break;
+        case 'month': this.renderMonthStats(); break;
+        case 'year': this.renderYearStats(); break;
+    }
+}
+
+TimetableApp.prototype.getTextStatsRange = function () {
+    const anchor = new Date(this._textStatsAnchorDate || new Date());
+    anchor.setHours(0, 0, 0, 0);
+
+    switch (this._textStatsTab) {
+        case 'day':
+            return { start: new Date(anchor), end: new Date(anchor) };
+        case 'week': {
+            const week = this.getWeekRange(anchor);
+            const start = new Date(week.start);
+            const end = new Date(week.end);
+            end.setDate(end.getDate() - 1);
+            end.setHours(0, 0, 0, 0);
+            return { start, end };
+        }
+        case 'month':
+            return {
+                start: new Date(anchor.getFullYear(), anchor.getMonth(), 1),
+                end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
+            };
+        case 'year':
+            return {
+                start: new Date(anchor.getFullYear(), 0, 1),
+                end: new Date(anchor.getFullYear(), 11, 31)
+            };
+        default:
+            return { start: new Date(anchor), end: new Date(anchor) };
+    }
+}
+
+TimetableApp.prototype.getTextStatsRangeLabel = function (range) {
+    const start = range.start;
+    const end = range.end;
+    const formatMD = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
+
+    switch (this._textStatsTab) {
+        case 'day':
+            return `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`;
+        case 'week':
+            return `${formatMD(start)} - ${formatMD(end)}`;
+        case 'month':
+            return `${start.getFullYear()}年${start.getMonth() + 1}月`;
+        case 'year':
+            return `${start.getFullYear()}年`;
+        default:
+            return `${formatMD(start)} - ${formatMD(end)}`;
+    }
+}
+
+TimetableApp.prototype.getTextStatsTitle = function (range) {
+    const tabLabelMap = {
+        day: '日统计',
+        week: '周统计',
+        month: '月统计',
+        year: '年统计'
+    };
+    return `课时统计 · ${tabLabelMap[this._textStatsTab] || '统计'} · ${this.getTextStatsRangeLabel(range)}`;
+}
+
+TimetableApp.prototype.updateTextStatsNavButtons = function () {
+    const labelMap = {
+        day: ['上一日', '下一日'],
+        week: ['上一周', '下一周'],
+        month: ['上一月', '下一月'],
+        year: ['上一年', '下一年']
+    };
+    const [prevLabel, nextLabel] = labelMap[this._textStatsTab] || ['上一项', '下一项'];
+    const prevBtn = document.getElementById('textStatsPrevBtn');
+    const nextBtn = document.getElementById('textStatsNextBtn');
+    if (prevBtn) prevBtn.textContent = prevLabel;
+    if (nextBtn) nextBtn.textContent = nextLabel;
+}
+
+TimetableApp.prototype.renderTextStatsModal = function () {
+    const range = this.getTextStatsRange();
+    const lessons = this.aggregateLessons(range.start, range.end);
+    const isDayView = this._textStatsTab === 'day';
+
+    const title = document.getElementById('textStatsTitle');
+    const rangeLabel = document.getElementById('textStatsRangeLabel');
+    if (title) title.textContent = this.getTextStatsTitle(range);
+    if (rangeLabel) rangeLabel.textContent = this.getTextStatsRangeLabel(range);
+    this.updateTextStatsNavButtons();
+
+    this.renderStatsCards(lessons, {
+        targetId: 'textStatsCards',
+        showClassDays: !isDayView,
+        compact: true,
+        emptyText: '当前范围内暂无有效课时'
+    });
+    this.renderStatsByGrade(lessons, {
+        targetId: 'textStatsByGrade',
+        showDates: true,
+        emptyText: '当前范围内暂无课程明细'
+    });
+}
+
+TimetableApp.prototype.collectLessonsForDate = function (date) {
+    const dayIndex = date.getDay();
+    const dayNum = dayIndex === 0 ? 7 : dayIndex;
+    const formatLocalDate = d => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+    const dateKey = formatLocalDate(date);
+
+    const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
+    const lessons = [];
+
+    cells.forEach(cell => {
+        const section = cell.dataset.section;
+        const period = cell.dataset.period;
+        const key = `${dayNum}-${section}-${period}`;
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
+        const cellData = this.getCellVersion(key, weekStartStr);
+
+        const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
+        if (lesson) {
+            lessons.push({
+                ...lesson,
+                dates: [dateKey]
+            });
+        }
+    });
+
+    return lessons;
+}
+
+TimetableApp.prototype.buildLessonStats = function (cellData, { key, section, period, date, dateKey }) {
+    if (!cellData) return null;
+
+    // 统计课时只统计当前时间之前已上完的课程，后续未上的课程不统计
+    if (!this.isClassFinished(key, date)) return null;
+
+    const studentIds = cellData.student && Array.isArray(cellData.student) ? cellData.student : [];
+    if (studentIds.length === 0) return null;
+
+    // 课程已结束（过去的日期），即使没有考勤记录也纳入统计
+    // 没有记录的学生默认视为"出勤"
+
+    const subject = cellData.subject ? this.subjects.find(s => s.id == cellData.subject) : null;
+    const periodInfo = this.periods[section] && this.periods[section][period]
+        ? this.periods[section][period] : null;
+
+    let studentCount = 0, leaveCount = 0, absentCount = 0;
+    let presentNonAuditionCount = 0, auditionStudentCount = 0;
+    const students = studentIds.map(id => {
+        const student = this.students.find(s => s.id === id);
+        if (!student) return null;
+        const status = this.getAttendanceStatusForStats(
+            { key, courseInstanceId: cellData.courseInstanceId },
+            id,
+            dateKey
+        );
+        if (status === 'leave') leaveCount++;
+        else if (status === 'absent') absentCount++;
+        else studentCount++;
+        if (student.isAudition && (!status || (status !== 'leave' && status !== 'absent'))) {
+            auditionStudentCount++;
+        } else if (!status || status !== 'leave' && status !== 'absent') {
+            presentNonAuditionCount++;
+        }
+        return { ...student, status };
+    }).filter(Boolean);
+
+    return {
+        subject: subject ? subject.name : '未分类',
+        color: subject ? subject.color : '#888',
+        time: periodInfo ? periodInfo.time : '',
+        studentCount,
+        leaveCount,
+        absentCount,
+        presentNonAuditionCount,
+        auditionStudentCount,
+        section,
+        period,
+        key,
+        courseInstanceId: cellData.courseInstanceId || null,
+        studentIds,
+        students
+    };
+}
+
+TimetableApp.prototype.getLessonActualMinutesForStats = function (lesson) {
+    if (this.erpData && Array.isArray(this.erpData.courseInstances)) {
+        const instance = this.erpData.courseInstances.find(ci => ci.id === lesson.courseInstanceId);
+        if (instance && instance.actualMinutesByDate) {
+            const dates = lesson.dates || [];
+            for (const dateKey of dates) {
+                if (instance.actualMinutesByDate[dateKey] !== undefined) {
+                    return instance.actualMinutesByDate[dateKey];
                 }
-                this.renderWeekStats();
-                break;
-            case 'month':
-                // Default: current year (Jan 1 - Dec 31)
-                this.setStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
-                this.renderMonthStats();
-                break;
-            case 'year':
-                // Default: current year (Jan 1 - Dec 31)
-                this.setStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
-                this.renderYearStats();
-                break;
+            }
+            const firstKey = Object.keys(instance.actualMinutesByDate)[0];
+            if (firstKey) return instance.actualMinutesByDate[firstKey];
         }
     }
+    return undefined;
+}
 
-TimetableApp.prototype.updateStatsWeekModeBadge = function() {
-        var badge = document.getElementById('statsWeekModeBadge');
-        if (!badge) return;
-        badge.hidden = !(this._statsTab === 'week' && this._statsWeekMode === 'naturalWeeks');
+TimetableApp.prototype.getAttendanceStatusForStats = function (lesson, studentId, dateKey) {
+    if (this.erpData && Array.isArray(this.erpData.attendanceRecords)) {
+        const dates = dateKey ? [dateKey] : (lesson.dates || []);
+        const record = this.erpData.attendanceRecords.find(item =>
+            item.studentId === String(studentId) &&
+            (item.courseInstanceId === lesson.courseInstanceId || item.cellKey === lesson.key) &&
+            (dates.length === 0 || dates.includes(item.dateKey))
+        );
+        if (record) return record.status;
+    }
+    return null;
+}
+
+TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
+    const aggregated = {};
+
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    const formatLocalDate = d => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     };
 
-TimetableApp.prototype.onStatsDateChange = function() {
-        // Unified handler for date input changes — routes to the active tab's renderer
-        switch (this._statsTab) {
-            case 'day': this.renderDayStats(); break;
-            case 'week': this.renderWeekStats(); break;
-            case 'month': this.renderMonthStats(); break;
-            case 'year': this.renderYearStats(); break;
-        }
-    }
-
-TimetableApp.prototype.getTextStatsRange = function() {
-        const anchor = new Date(this._textStatsAnchorDate || new Date());
-        anchor.setHours(0, 0, 0, 0);
-
-        switch (this._textStatsTab) {
-            case 'day':
-                return { start: new Date(anchor), end: new Date(anchor) };
-            case 'week': {
-                const week = this.getWeekRange(anchor);
-                const start = new Date(week.start);
-                const end = new Date(week.end);
-                end.setDate(end.getDate() - 1);
-                end.setHours(0, 0, 0, 0);
-                return { start, end };
+    while (current <= end) {
+        const dateStr = formatLocalDate(current);
+        const lessons = this.collectLessonsForDate(current);
+        lessons.forEach(lesson => {
+            const aggKey = lesson.key;
+            if (!aggregated[aggKey]) {
+                aggregated[aggKey] = {
+                    subject: lesson.subject,
+                    color: lesson.color,
+                    time: lesson.time,
+                    studentCount: 0,
+                    leaveCount: 0,
+                    absentCount: 0,
+                    presentNonAuditionCount: 0,
+                    auditionStudentCount: 0,
+                    perSessionStudents: lesson.studentCount + lesson.leaveCount + lesson.absentCount,
+                    section: lesson.section,
+                    period: lesson.period,
+                    key: lesson.key,
+                    courseInstanceId: lesson.courseInstanceId || null,
+                    studentIds: [...lesson.studentIds],
+                    students: [...(lesson.students || [])],
+                    lessonCount: 0,
+                    dates: []
+                };
             }
-            case 'month':
-                return {
-                    start: new Date(anchor.getFullYear(), anchor.getMonth(), 1),
-                    end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
-                };
-            case 'year':
-                return {
-                    start: new Date(anchor.getFullYear(), 0, 1),
-                    end: new Date(anchor.getFullYear(), 11, 31)
-                };
-            default:
-                return { start: new Date(anchor), end: new Date(anchor) };
-        }
-    }
-
-TimetableApp.prototype.getTextStatsRangeLabel = function(range) {
-        const start = range.start;
-        const end = range.end;
-        const formatMD = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
-
-        switch (this._textStatsTab) {
-            case 'day':
-                return `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`;
-            case 'week':
-                return `${formatMD(start)} - ${formatMD(end)}`;
-            case 'month':
-                return `${start.getFullYear()}年${start.getMonth() + 1}月`;
-            case 'year':
-                return `${start.getFullYear()}年`;
-            default:
-                return `${formatMD(start)} - ${formatMD(end)}`;
-        }
-    }
-
-TimetableApp.prototype.getTextStatsTitle = function(range) {
-        const tabLabelMap = {
-            day: '日统计',
-            week: '周统计',
-            month: '月统计',
-            year: '年统计'
-        };
-        return `课时统计 · ${tabLabelMap[this._textStatsTab] || '统计'} · ${this.getTextStatsRangeLabel(range)}`;
-    }
-
-TimetableApp.prototype.updateTextStatsNavButtons = function() {
-        const labelMap = {
-            day: ['上一日', '下一日'],
-            week: ['上一周', '下一周'],
-            month: ['上一月', '下一月'],
-            year: ['上一年', '下一年']
-        };
-        const [prevLabel, nextLabel] = labelMap[this._textStatsTab] || ['上一项', '下一项'];
-        const prevBtn = document.getElementById('textStatsPrevBtn');
-        const nextBtn = document.getElementById('textStatsNextBtn');
-        if (prevBtn) prevBtn.textContent = prevLabel;
-        if (nextBtn) nextBtn.textContent = nextLabel;
-    }
-
-TimetableApp.prototype.renderTextStatsModal = function() {
-        const range = this.getTextStatsRange();
-        const lessons = this.aggregateLessons(range.start, range.end);
-        const isDayView = this._textStatsTab === 'day';
-
-        const title = document.getElementById('textStatsTitle');
-        const rangeLabel = document.getElementById('textStatsRangeLabel');
-        if (title) title.textContent = this.getTextStatsTitle(range);
-        if (rangeLabel) rangeLabel.textContent = this.getTextStatsRangeLabel(range);
-        this.updateTextStatsNavButtons();
-
-        this.renderStatsCards(lessons, {
-            targetId: 'textStatsCards',
-            showClassDays: !isDayView,
-            compact: true,
-            emptyText: '当前范围内暂无有效课时'
-        });
-        this.renderStatsByGrade(lessons, {
-            targetId: 'textStatsByGrade',
-            showDates: true,
-            emptyText: '当前范围内暂无课程明细'
-        });
-    }
-
-TimetableApp.prototype.collectLessonsForDate = function(date) {
-        const dayIndex = date.getDay();
-        const dayNum = dayIndex === 0 ? 7 : dayIndex;
-        const formatLocalDate = d => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-        };
-        const dateKey = formatLocalDate(date);
-
-        const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
-        const lessons = [];
-
-        cells.forEach(cell => {
-            const section = cell.dataset.section;
-            const period = cell.dataset.period;
-            const key = `${dayNum}-${section}-${period}`;
-            const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
-            const cellData = this.getCellVersion(key, weekStartStr);
-
-            const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
-            if (lesson) {
-                lessons.push({
-                    ...lesson,
-                    dates: [dateKey]
+            aggregated[aggKey].studentCount += lesson.studentCount;
+            aggregated[aggKey].leaveCount += lesson.leaveCount;
+            aggregated[aggKey].absentCount += lesson.absentCount;
+            aggregated[aggKey].presentNonAuditionCount += lesson.presentNonAuditionCount || 0;
+            aggregated[aggKey].auditionStudentCount += lesson.auditionStudentCount || 0;
+            if (lesson.students) {
+                lesson.students.forEach(s => {
+                    if (!aggregated[aggKey].students.find(existing => existing.id === s.id)) {
+                        aggregated[aggKey].students.push(s);
+                    }
                 });
             }
+            aggregated[aggKey].lessonCount++;
+            aggregated[aggKey].dates.push(dateStr);
         });
-
-        return lessons;
+        current.setDate(current.getDate() + 1);
     }
 
-TimetableApp.prototype.buildLessonStats = function(cellData, { key, section, period, date, dateKey }) {
-        if (!cellData) return null;
+    return Object.values(aggregated);
+}
 
-        // 统计课时只统计当前时间之前已上完的课程，后续未上的课程不统计
-        if (!this.isClassFinished(key, date)) return null;
+TimetableApp.prototype.showDayStats = function (date) {
+    this.openTextStatsModal(date);
+}
 
-        const studentIds = cellData.student && Array.isArray(cellData.student) ? cellData.student : [];
-        if (studentIds.length === 0) return null;
+TimetableApp.prototype.getAttendanceSuffix = function (lesson) {
+    const total = lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+    if (total === 0) return '';
 
-        // 课程已结束（过去的日期），即使没有考勤记录也纳入统计
-        // 没有记录的学生默认视为"出勤"
+    const leave = lesson.leaveCount || 0;
+    const absent = lesson.absentCount || 0;
 
-        const subject = cellData.subject ? this.subjects.find(s => s.id == cellData.subject) : null;
-        const periodInfo = this.periods[section] && this.periods[section][period]
-            ? this.periods[section][period] : null;
-
-        let studentCount = 0, leaveCount = 0, absentCount = 0;
-        let presentNonAuditionCount = 0, auditionStudentCount = 0;
-        const students = studentIds.map(id => {
-            const student = this.students.find(s => s.id === id);
-            if (!student) return null;
-            const status = this.getAttendanceStatusForStats(
-                { key, courseInstanceId: cellData.courseInstanceId },
-                id,
-                dateKey
-            );
-            if (status === 'leave') leaveCount++;
-            else if (status === 'absent') absentCount++;
-            else studentCount++;
-            if (student.isAudition && (!status || (status !== 'leave' && status !== 'absent'))) {
-                auditionStudentCount++;
-            } else if (!status || status !== 'leave' && status !== 'absent') {
-                presentNonAuditionCount++;
-            }
-            return { ...student, status };
-        }).filter(Boolean);
-
-        return {
-            subject: subject ? subject.name : '未分类',
-            color: subject ? subject.color : '#888',
-            time: periodInfo ? periodInfo.time : '',
-            studentCount,
-            leaveCount,
-            absentCount,
-            presentNonAuditionCount,
-            auditionStudentCount,
-            section,
-            period,
-            key,
-            courseInstanceId: cellData.courseInstanceId || null,
-            studentIds,
-            students
-        };
+    // 全部出勤 → 只显示绿色色块
+    if (leave === 0 && absent === 0) {
+        return ` <span class="att-dot dot-green" title="全部出勤"></span>`;
     }
 
-TimetableApp.prototype.getLessonActualMinutesForStats = function(lesson) {
-        if (this.erpData && Array.isArray(this.erpData.courseInstances)) {
-            const instance = this.erpData.courseInstances.find(ci => ci.id === lesson.courseInstanceId);
-            if (instance && instance.actualMinutesByDate) {
-                const dates = lesson.dates || [];
-                for (const dateKey of dates) {
-                    if (instance.actualMinutesByDate[dateKey] !== undefined) {
-                        return instance.actualMinutesByDate[dateKey];
-                    }
-                }
-                const firstKey = Object.keys(instance.actualMinutesByDate)[0];
-                if (firstKey) return instance.actualMinutesByDate[firstKey];
-            }
-        }
-        return undefined;
+    // 否则显示黄色(请假)和/或红色(缺勤)色块，不显示绿色
+    let html = '';
+    if (leave > 0) {
+        html += ` <span class="att-dot dot-yellow" title="请假${leave}人"></span>`;
     }
-
-TimetableApp.prototype.getAttendanceStatusForStats = function(lesson, studentId, dateKey) {
-        if (this.erpData && Array.isArray(this.erpData.attendanceRecords)) {
-            const dates = dateKey ? [dateKey] : (lesson.dates || []);
-            const record = this.erpData.attendanceRecords.find(item =>
-                item.studentId === String(studentId) &&
-                (item.courseInstanceId === lesson.courseInstanceId || item.cellKey === lesson.key) &&
-                (dates.length === 0 || dates.includes(item.dateKey))
-            );
-            if (record) return record.status;
-        }
-        return null;
+    if (absent > 0) {
+        html += ` <span class="att-dot dot-red" title="缺勤${absent}人"></span>`;
     }
+    return html;
+}
 
-TimetableApp.prototype.aggregateLessons = function(startDate, endDate) {
-        const aggregated = {};
+TimetableApp.prototype.getInlineAuditionBadge = function () {
+    return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:#1890ff;color:#fff;font-size:10px;font-weight:700;line-height:1;">试</span>';
+}
 
-        const current = new Date(startDate);
-        current.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(0, 0, 0, 0);
+TimetableApp.prototype.getInlineOneV1Badge = function () {
+    return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:linear-gradient(135deg,#4caf50 0%,#66bb6a 100%);color:#fff;font-size:10px;font-weight:700;line-height:1;">1v1</span>';
+}
 
-        const formatLocalDate = d => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-        };
+TimetableApp.prototype.getStatsStudentLabel = function (lesson) {
+    const lessonCount = lesson.lessonCount || 1;
+    const presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+    let studentLabel = '';
 
-        while (current <= end) {
-            const dateStr = formatLocalDate(current);
-            const lessons = this.collectLessonsForDate(current);
-            lessons.forEach(lesson => {
-            const aggKey = lesson.key;
-                if (!aggregated[aggKey]) {
-                    aggregated[aggKey] = {
-                        subject: lesson.subject,
-                        color: lesson.color,
-                        time: lesson.time,
-                        studentCount: 0,
-                        leaveCount: 0,
-                        absentCount: 0,
-                        presentNonAuditionCount: 0,
-                        auditionStudentCount: 0,
-                        perSessionStudents: lesson.studentCount + lesson.leaveCount + lesson.absentCount,
-                        section: lesson.section,
-                        period: lesson.period,
-                        key: lesson.key,
-                        courseInstanceId: lesson.courseInstanceId || null,
-                        studentIds: [...lesson.studentIds],
-                        students: [...(lesson.students || [])],
-                        lessonCount: 0,
-                        dates: []
-                    };
-                }
-                aggregated[aggKey].studentCount += lesson.studentCount;
-                aggregated[aggKey].leaveCount += lesson.leaveCount;
-                aggregated[aggKey].absentCount += lesson.absentCount;
-                aggregated[aggKey].presentNonAuditionCount += lesson.presentNonAuditionCount || 0;
-                aggregated[aggKey].auditionStudentCount += lesson.auditionStudentCount || 0;
-                if (lesson.students) {
-                    lesson.students.forEach(s => {
-                        if (!aggregated[aggKey].students.find(existing => existing.id === s.id)) {
-                            aggregated[aggKey].students.push(s);
-                        }
-                    });
-                }
-                aggregated[aggKey].lessonCount++;
-                aggregated[aggKey].dates.push(dateStr);
-            });
-            current.setDate(current.getDate() + 1);
-        }
-
-        return Object.values(aggregated);
-    }
-
-TimetableApp.prototype.showDayStats = function(date) {
-        this.openTextStatsModal(date);
-    }
-    
-TimetableApp.prototype.getAttendanceSuffix = function(lesson) {
-        const total = lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
-        if (total === 0) return '';
-
-        const leave = lesson.leaveCount || 0;
-        const absent = lesson.absentCount || 0;
-
-        // 全部出勤 → 只显示绿色色块
-        if (leave === 0 && absent === 0) {
-            return ` <span class="att-dot dot-green" title="全部出勤"></span>`;
-        }
-
-        // 否则显示黄色(请假)和/或红色(缺勤)色块，不显示绿色
-        let html = '';
-        if (leave > 0) {
-            html += ` <span class="att-dot dot-yellow" title="请假${leave}人"></span>`;
-        }
-        if (absent > 0) {
-            html += ` <span class="att-dot dot-red" title="缺勤${absent}人"></span>`;
-        }
-        return html;
-    }
-
-TimetableApp.prototype.getInlineAuditionBadge = function() {
-        return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:#1890ff;color:#fff;font-size:10px;font-weight:700;line-height:1;">试</span>';
-    }
-
-TimetableApp.prototype.getInlineOneV1Badge = function() {
-        return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:linear-gradient(135deg,#4caf50 0%,#66bb6a 100%);color:#fff;font-size:10px;font-weight:700;line-height:1;">1v1</span>';
-    }
-
-TimetableApp.prototype.getStatsStudentLabel = function(lesson) {
-        const lessonCount = lesson.lessonCount || 1;
-        const presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
-        let studentLabel = '';
-
-        if (presentNonAuditionCount > 0) {
-            if (presentNonAuditionCount === 1) {
-                const presentStudent = lesson.students ? lesson.students.find(s =>
-                    s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'))
-                ) : null;
-                if (presentStudent && presentStudent.is1v1) {
-                    studentLabel = '1v1';
-                } else {
-                    studentLabel = '1v1(0.8)';
-                }
+    if (presentNonAuditionCount > 0) {
+        if (presentNonAuditionCount === 1) {
+            const presentStudent = lesson.students ? lesson.students.find(s =>
+                s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'))
+            ) : null;
+            if (presentStudent && presentStudent.is1v1) {
+                studentLabel = '1v1';
             } else {
-                studentLabel = `1v${presentNonAuditionCount}`;
+                studentLabel = '1v1(0.8)';
             }
+        } else {
+            studentLabel = `1v${presentNonAuditionCount}`;
         }
-        if (studentLabel && lessonCount > 1) {
-            studentLabel += ` ×${lessonCount}`;
-        }
-
-        return studentLabel ? `(${studentLabel})` : '';
+    }
+    if (studentLabel && lessonCount > 1) {
+        studentLabel += ` ×${lessonCount}`;
     }
 
-TimetableApp.prototype.getStatsRowNameHtml = function(lesson, expanded = false) {
-        const studentLabel = this.getStatsStudentLabel(lesson);
-        const auditionBadge = (lesson.auditionStudentCount || 0) > 0 ? this.getInlineAuditionBadge() : '';
-        const suffix = this.getAttendanceSuffix(lesson);
+    return studentLabel ? `(${studentLabel})` : '';
+}
 
-        return `
+TimetableApp.prototype.getStatsRowNameHtml = function (lesson, expanded = false) {
+    const studentLabel = this.getStatsStudentLabel(lesson);
+    const auditionBadge = (lesson.auditionStudentCount || 0) > 0 ? this.getInlineAuditionBadge() : '';
+    const suffix = this.getAttendanceSuffix(lesson);
+
+    return `
             <span class="grade-expand-icon" style="display:inline-block;width:16px;text-align:center;margin-right:4px;font-size:10px;transition:transform 0.2s;">${expanded ? '▼' : '▶'}</span>
             <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${lesson.color};margin-right:8px"></span>
             ${lesson.subject} ${studentLabel}${auditionBadge}${suffix}
         `;
+}
+
+TimetableApp.prototype.syncLessonAttendanceSummary = function (lesson) {
+    let studentCount = 0;
+    let leaveCount = 0;
+    let absentCount = 0;
+    let presentNonAuditionCount = 0;
+    let auditionStudentCount = 0;
+    (lesson.students || []).forEach(student => {
+        if (!student) return;
+        const status = this.getAttendanceStatusForStats(lesson, student.id);
+        student.status = status;
+        if (status === 'leave') leaveCount++;
+        else if (status === 'absent') absentCount++;
+        else studentCount++;
+
+        if (student.isAudition && (!status || (status !== 'leave' && status !== 'absent'))) {
+            auditionStudentCount++;
+        } else if (!status || (status !== 'leave' && status !== 'absent')) {
+            presentNonAuditionCount++;
+        }
+    });
+
+    lesson.studentCount = studentCount;
+    lesson.leaveCount = leaveCount;
+    lesson.absentCount = absentCount;
+    lesson.presentNonAuditionCount = presentNonAuditionCount;
+    lesson.auditionStudentCount = auditionStudentCount;
+}
+
+TimetableApp.prototype.renderStatsByGrade = function (lessons, options) {
+    const config = typeof options === 'boolean'
+        ? { showDates: options }
+        : (options || {});
+    const showDates = config.showDates !== false;
+    const container = document.getElementById(config.targetId || 'statsByGrade');
+    if (!container) return;
+
+    if (lessons.length === 0) {
+        container.innerHTML = `<div class="text-muted">${config.emptyText || '暂无课时明细'}</div>`;
+        return;
     }
 
-TimetableApp.prototype.syncLessonAttendanceSummary = function(lesson) {
-        let studentCount = 0;
-        let leaveCount = 0;
-        let absentCount = 0;
-        let presentNonAuditionCount = 0;
-        let auditionStudentCount = 0;
-        (lesson.students || []).forEach(student => {
-            if (!student) return;
-            const status = this.getAttendanceStatusForStats(lesson, student.id);
-            student.status = status;
-            if (status === 'leave') leaveCount++;
-            else if (status === 'absent') absentCount++;
-            else studentCount++;
+    container.innerHTML = '';
+    lessons.forEach((lesson, index) => {
+        const lessonCount = lesson.lessonCount || 1;
+        const scheduledDuration = this.getLessonDuration(lesson.time);
+        const actualMin = this.getLessonActualMinutesForStats(lesson);
+        const totalActualMin = actualMin !== undefined ? actualMin * lessonCount : null;
+        const totalScheduled = parseFloat(scheduledDuration) * 60 * lessonCount;
+        const durationDisplay = totalActualMin !== null
+            ? this.formatDuration(Math.floor(totalActualMin / 60), totalActualMin % 60)
+            : (totalScheduled >= 60 ? `${(totalScheduled / 60).toFixed(1).replace('.0', '')}h` : `${totalScheduled}min`);
+        const perDisplay = actualMin !== undefined
+            ? this.formatDuration(Math.floor(actualMin / 60), actualMin % 60)
+            : `${scheduledDuration}h`;
+        const durationTitle = actualMin !== undefined
+            ? `实上${perDisplay}/次 × ${lessonCount}次 = ${durationDisplay}（原定${scheduledDuration}h/次）`
+            : `按${scheduledDuration}h/次 × ${lessonCount}次 = ${durationDisplay}`;
 
-            if (student.isAudition && (!status || (status !== 'leave' && status !== 'absent'))) {
-                auditionStudentCount++;
-            } else if (!status || (status !== 'leave' && status !== 'absent')) {
-                presentNonAuditionCount++;
-            }
-        });
-
-        lesson.studentCount = studentCount;
-        lesson.leaveCount = leaveCount;
-        lesson.absentCount = absentCount;
-        lesson.presentNonAuditionCount = presentNonAuditionCount;
-        lesson.auditionStudentCount = auditionStudentCount;
-    }
-
-TimetableApp.prototype.renderStatsByGrade = function(lessons, options) {
-        const config = typeof options === 'boolean'
-            ? { showDates: options }
-            : (options || {});
-        const showDates = config.showDates !== false;
-        const container = document.getElementById(config.targetId || 'statsByGrade');
-        if (!container) return;
-
-        if (lessons.length === 0) {
-            container.innerHTML = `<div class="text-muted">${config.emptyText || '暂无课时明细'}</div>`;
-            return;
+        let datesDisplay = '';
+        let dateTitle = '';
+        if (showDates) {
+            const dates = lesson.dates || [];
+            datesDisplay = dates.length > 0
+                ? dates.map(d => {
+                    const dateObj = new Date(d);
+                    return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                }).join(', ')
+                : '';
+            dateTitle = dates.length > 0 ? `上课日期：${dates.join(', ')}` : '';
         }
 
-        container.innerHTML = '';
-        lessons.forEach((lesson, index) => {
-            const lessonCount = lesson.lessonCount || 1;
-            const scheduledDuration = this.getLessonDuration(lesson.time);
-            const actualMin = this.getLessonActualMinutesForStats(lesson);
-            const totalActualMin = actualMin !== undefined ? actualMin * lessonCount : null;
-            const totalScheduled = parseFloat(scheduledDuration) * 60 * lessonCount;
-            const durationDisplay = totalActualMin !== null
-                ? this.formatDuration(Math.floor(totalActualMin / 60), totalActualMin % 60)
-                : (totalScheduled >= 60 ? `${(totalScheduled / 60).toFixed(1).replace('.0', '')}h` : `${totalScheduled}min`);
-            const perDisplay = actualMin !== undefined
-                ? this.formatDuration(Math.floor(actualMin / 60), actualMin % 60)
-                : `${scheduledDuration}h`;
-            const durationTitle = actualMin !== undefined
-                ? `实上${perDisplay}/次 × ${lessonCount}次 = ${durationDisplay}（原定${scheduledDuration}h/次）`
-                : `按${scheduledDuration}h/次 × ${lessonCount}次 = ${durationDisplay}`;
-            
-            let datesDisplay = '';
-            let dateTitle = '';
-            if (showDates) {
-                const dates = lesson.dates || [];
-                datesDisplay = dates.length > 0 
-                    ? dates.map(d => {
-                        const dateObj = new Date(d);
-                        return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
-                    }).join(', ') 
-                    : '';
-                dateTitle = dates.length > 0 ? `上课日期：${dates.join(', ')}` : '';
-            }
-            
-            const row = document.createElement('div');
-            row.className = 'grade-row';
-            row.style.cursor = 'pointer';
-            row.title = '点击展开/收起出勤记录';
-            row.dataset.expanded = 'false';
-            row.innerHTML = `
+        const row = document.createElement('div');
+        row.className = 'grade-row';
+        row.style.cursor = 'pointer';
+        row.title = '点击展开/收起出勤记录';
+        row.dataset.expanded = 'false';
+        row.innerHTML = `
                 <div class="gr-name">
                     ${this.getStatsRowNameHtml(lesson, false)}
                 </div>
@@ -689,69 +689,69 @@ TimetableApp.prototype.renderStatsByGrade = function(lessons, options) {
                 </div>
             `;
 
-            // 学生出勤详情面板（初始隐藏）
-            const detailPanel = document.createElement('div');
-            detailPanel.className = 'grade-detail';
-            detailPanel.style.display = 'none';
-            container.appendChild(row);
-            container.appendChild(detailPanel);
+        // 学生出勤详情面板（初始隐藏）
+        const detailPanel = document.createElement('div');
+        detailPanel.className = 'grade-detail';
+        detailPanel.style.display = 'none';
+        container.appendChild(row);
+        container.appendChild(detailPanel);
 
-            let expanded = false;
-            row.addEventListener('click', () => {
-                expanded = !expanded;
-                row.dataset.expanded = expanded ? 'true' : 'false';
-                const icon = row.querySelector('.grade-expand-icon');
-                if (expanded) {
-                    icon.textContent = '▼';
-                    icon.style.transform = 'rotate(0deg)';
-                    this.renderLessonAttendanceDetail(detailPanel, lesson);
-                    detailPanel.style.display = 'block';
-                } else {
-                    icon.textContent = '▶';
-                    icon.style.transform = 'rotate(0deg)';
-                    detailPanel.style.display = 'none';
-                }
-            });
+        let expanded = false;
+        row.addEventListener('click', () => {
+            expanded = !expanded;
+            row.dataset.expanded = expanded ? 'true' : 'false';
+            const icon = row.querySelector('.grade-expand-icon');
+            if (expanded) {
+                icon.textContent = '▼';
+                icon.style.transform = 'rotate(0deg)';
+                this.renderLessonAttendanceDetail(detailPanel, lesson);
+                detailPanel.style.display = 'block';
+            } else {
+                icon.textContent = '▶';
+                icon.style.transform = 'rotate(0deg)';
+                detailPanel.style.display = 'none';
+            }
         });
+    });
+}
+
+TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
+    const key = lesson.key;
+    const studentIds = lesson.studentIds || [];
+    if (studentIds.length === 0) {
+        panel.innerHTML = '<div style="color:#999;font-size:13px;padding:6px 0;">该节课暂无学生</div>';
+        return;
     }
 
-TimetableApp.prototype.renderLessonAttendanceDetail = function(panel, lesson) {
-        const key = lesson.key;
-        const studentIds = lesson.studentIds || [];
-        if (studentIds.length === 0) {
-            panel.innerHTML = '<div style="color:#999;font-size:13px;padding:6px 0;">该节课暂无学生</div>';
-            return;
-        }
+    // 统计各状态人数
+    let presentCount = 0, leaveCount = 0, absentCount = 0;
+    studentIds.forEach(id => {
+        const status = this.getAttendanceStatusForStats(lesson, id);
+        if (status === 'leave') leaveCount++;
+        else if (status === 'absent') absentCount++;
+        else presentCount++;
+    });
 
-        // 统计各状态人数
-        let presentCount = 0, leaveCount = 0, absentCount = 0;
-        studentIds.forEach(id => {
-            const status = this.getAttendanceStatusForStats(lesson, id);
-            if (status === 'leave') leaveCount++;
-            else if (status === 'absent') absentCount++;
-            else presentCount++;
-        });
+    let html = '<div style="font-size:12px;color:#888;margin-bottom:6px;">';
+    html += `共${studentIds.length}人 · `;
+    html += `<span style="color:#4caf50;">出勤${presentCount}</span> `;
+    if (leaveCount > 0) html += `<span style="color:#ff9800;">请假${leaveCount}</span> `;
+    if (absentCount > 0) html += `<span style="color:#f44336;">缺勤${absentCount}</span>`;
+    html += '</div>';
 
-        let html = '<div style="font-size:12px;color:#888;margin-bottom:6px;">';
-        html += `共${studentIds.length}人 · `;
-        html += `<span style="color:#4caf50;">出勤${presentCount}</span> `;
-        if (leaveCount > 0) html += `<span style="color:#ff9800;">请假${leaveCount}</span> `;
-        if (absentCount > 0) html += `<span style="color:#f44336;">缺勤${absentCount}</span>`;
-        html += '</div>';
+    // 检查该课程是否已结束；未结束的课程不默认选中任何考勤状态
+    const lessonDates = lesson.dates || [];
+    const primaryDate = lessonDates.length > 0 ? new Date(lessonDates[0] + 'T00:00:00') : new Date();
+    const classFinished = this.isClassFinished(key, primaryDate);
+    const defaultAttStatus = classFinished ? 'present' : '';
 
-        // 检查该课程是否已结束；未结束的课程不默认选中任何考勤状态
-        const lessonDates = lesson.dates || [];
-        const primaryDate = lessonDates.length > 0 ? new Date(lessonDates[0] + 'T00:00:00') : new Date();
-        const classFinished = this.isClassFinished(key, primaryDate);
-        const defaultAttStatus = classFinished ? 'present' : '';
-
-        studentIds.forEach(id => {
-            const student = this.students.find(s => s.id == id);
-            const name = student ? student.name : '未知';
-            const auditionBadge = student && student.isAudition ? this.getInlineAuditionBadge() : '';
-            const oneV1Badge = student && student.is1v1 ? this.getInlineOneV1Badge() : '';
-            const status = this.getAttendanceStatusForStats(lesson, id) || defaultAttStatus;
-            html += `
+    studentIds.forEach(id => {
+        const student = this.students.find(s => s.id == id);
+        const name = student ? student.name : '未知';
+        const auditionBadge = student && student.isAudition ? this.getInlineAuditionBadge() : '';
+        const oneV1Badge = student && student.is1v1 ? this.getInlineOneV1Badge() : '';
+        const status = this.getAttendanceStatusForStats(lesson, id) || defaultAttStatus;
+        html += `
                 <div class="att-inline-row" style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
                     <span style="display:inline-flex;align-items:center;">${name}${oneV1Badge}${auditionBadge}</span>
                     <div class="att-inline-btns" style="display:flex;gap:4px;">
@@ -776,88 +776,88 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function(panel, lesson) {
                     </div>
                 </div>
             `;
-        });
+    });
 
-        panel.innerHTML = html;
+    panel.innerHTML = html;
 
-        // 绑定出勤按钮事件
-        panel.querySelectorAll('.att-inline-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const btnKey = btn.dataset.key;
-                const sid = btn.dataset.sid;
-                const newStatus = btn.dataset.status;
+    // 绑定出勤按钮事件
+    panel.querySelectorAll('.att-inline-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const btnKey = btn.dataset.key;
+            const sid = btn.dataset.sid;
+            const newStatus = btn.dataset.status;
 
-                this.setAttendanceStatus(btnKey, sid, newStatus);
-                this.syncLessonAttendanceSummary(lesson);
+            this.setAttendanceStatus(btnKey, sid, newStatus);
+            this.syncLessonAttendanceSummary(lesson);
 
-                // 刷新当前行标题、1vN 文案和色块
-                const row = panel.previousElementSibling;
-                if (row && row.classList.contains('grade-row')) {
-                    const grName = row.querySelector('.gr-name');
-                    if (grName) {
-                        const expanded = row.dataset.expanded === 'true';
-                        grName.innerHTML = this.getStatsRowNameHtml(lesson, expanded);
-                    }
+            // 刷新当前行标题、1vN 文案和色块
+            const row = panel.previousElementSibling;
+            if (row && row.classList.contains('grade-row')) {
+                const grName = row.querySelector('.gr-name');
+                if (grName) {
+                    const expanded = row.dataset.expanded === 'true';
+                    grName.innerHTML = this.getStatsRowNameHtml(lesson, expanded);
                 }
-
-                // 刷新详情面板和统计卡片
-                this.renderLessonAttendanceDetail(panel, lesson);
-                this.refreshStatsAfterAttendanceChange();
-            });
-        });
-    }
-
-TimetableApp.prototype.refreshStatsAfterAttendanceChange = function() {
-        const textStatsModal = document.getElementById('textStatsModal');
-        if (textStatsModal && textStatsModal.style.display === 'block') {
-            this.renderTextStatsModal();
-            return;
-        }
-
-        if (!this.currentStatsDate) return;
-
-        const formatLocalDate = d => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-        };
-
-        // 重新统计当前日期的课程数据
-        const dayIndex = this.currentStatsDate.getDay();
-        const dayNum = dayIndex === 0 ? 7 : dayIndex;
-        const date = this.currentStatsDate;
-        const dateKey = formatLocalDate(date);
-
-        const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
-        const lessons = [];
-
-        cells.forEach(cell => {
-            const section = cell.dataset.section;
-            const period = cell.dataset.period;
-            const key = `${dayNum}-${section}-${period}`;
-            const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
-            const cellData = this.getCellVersion(key, weekStartStr);
-
-            const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
-            if (lesson) {
-                lessons.push(lesson);
             }
-        });
 
-        this.renderStatsCards(lessons, { showClassDays: false });
+            // 刷新详情面板和统计卡片
+            this.renderLessonAttendanceDetail(panel, lesson);
+            this.refreshStatsAfterAttendanceChange();
+        });
+    });
+}
+
+TimetableApp.prototype.refreshStatsAfterAttendanceChange = function () {
+    const textStatsModal = document.getElementById('textStatsModal');
+    if (textStatsModal && textStatsModal.style.display === 'block') {
+        this.renderTextStatsModal();
+        return;
     }
-    
-TimetableApp.prototype.getInlineOneV1Badge = function() {
-        return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:linear-gradient(135deg,#4caf50 0%,#66bb6a 100%);color:#fff;font-size:10px;font-weight:700;line-height:1;">1v1</span>';
-    }
+
+    if (!this.currentStatsDate) return;
+
+    const formatLocalDate = d => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    // 重新统计当前日期的课程数据
+    const dayIndex = this.currentStatsDate.getDay();
+    const dayNum = dayIndex === 0 ? 7 : dayIndex;
+    const date = this.currentStatsDate;
+    const dateKey = formatLocalDate(date);
+
+    const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
+    const lessons = [];
+
+    cells.forEach(cell => {
+        const section = cell.dataset.section;
+        const period = cell.dataset.period;
+        const key = `${dayNum}-${section}-${period}`;
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
+        const cellData = this.getCellVersion(key, weekStartStr);
+
+        const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
+        if (lesson) {
+            lessons.push(lesson);
+        }
+    });
+
+    this.renderStatsCards(lessons, { showClassDays: false });
+}
+
+TimetableApp.prototype.getInlineOneV1Badge = function () {
+    return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:linear-gradient(135deg,#4caf50 0%,#66bb6a 100%);color:#fff;font-size:10px;font-weight:700;line-height:1;">1v1</span>';
+}
 
 // ========== 图形统计系统 ==========
 
-TimetableApp.prototype.destroyCharts = function() {
+TimetableApp.prototype.destroyCharts = function () {
     if (this._chartInstances) {
-        Object.keys(this._chartInstances).forEach(function(key) {
+        Object.keys(this._chartInstances).forEach(function (key) {
             if (this._chartInstances[key]) {
                 this._chartInstances[key].destroy();
                 this._chartInstances[key] = null;
@@ -871,13 +871,13 @@ TimetableApp.prototype.destroyCharts = function() {
     this._activeChartSliceIndex = null;
 };
 
-TimetableApp.prototype.setChartLegendNote = function(text) {
+TimetableApp.prototype.setChartLegendNote = function (text) {
     var targetId = this._chartNoteTarget || 'chartLegendNote';
     var target = document.getElementById(targetId);
     if (target) target.textContent = text;
 };
 
-TimetableApp.prototype.getChartLegendOptions = function(textColor, extraOptions) {
+TimetableApp.prototype.getChartLegendOptions = function (textColor, extraOptions) {
     var baseOptions = {
         position: 'bottom',
         labels: {
@@ -904,7 +904,7 @@ TimetableApp.prototype.getChartLegendOptions = function(textColor, extraOptions)
     });
 };
 
-TimetableApp.prototype.getLinePointSizes = function(labelCount) {
+TimetableApp.prototype.getLinePointSizes = function (labelCount) {
     if (labelCount > 90) return { radius: 0, hoverRadius: 2.5 };
     if (labelCount > 60) return { radius: 0.6, hoverRadius: 2.5 };
     if (labelCount > 35) return { radius: 1, hoverRadius: 3 };
@@ -912,7 +912,7 @@ TimetableApp.prototype.getLinePointSizes = function(labelCount) {
     return { radius: 2, hoverRadius: 4 };
 };
 
-TimetableApp.prototype.getChartSliceData = function(data, index) {
+TimetableApp.prototype.getChartSliceData = function (data, index) {
     if (index === null || index === undefined || index < 0 || index >= data.labels.length) {
         return data;
     }
@@ -936,9 +936,9 @@ TimetableApp.prototype.getChartSliceData = function(data, index) {
     };
 };
 
-TimetableApp.prototype.switchChartCategory = function(category) {
+TimetableApp.prototype.switchChartCategory = function (category) {
     this._currentChartCategory = category;
-    document.querySelectorAll('.chart-category-tab').forEach(function(btn) {
+    document.querySelectorAll('.chart-category-tab').forEach(function (btn) {
         btn.classList.toggle('active', btn.dataset.category === category);
     });
     if (this._lastChartLessons && this._lastChartStart && this._lastChartEnd) {
@@ -946,14 +946,14 @@ TimetableApp.prototype.switchChartCategory = function(category) {
     }
 };
 
-TimetableApp.prototype.switchChartType = function(type) {
+TimetableApp.prototype.switchChartType = function (type) {
     if (this._lastChartLessons && this._lastChartStart && this._lastChartEnd) {
         this.renderCharts(this._lastChartLessons, this._lastChartStart, this._lastChartEnd);
     }
 };
 
-TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, forcedGranularity) {
-    var formatLocalDate = function(d) {
+TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, forcedGranularity) {
+    var formatLocalDate = function (d) {
         var y = d.getFullYear();
         var m = String(d.getMonth() + 1).padStart(2, '0');
         var day = String(d.getDate()).padStart(2, '0');
@@ -1021,7 +1021,7 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
         }
 
         var lessons = this.collectLessonsForDate(current);
-        lessons.forEach(function(lesson) {
+        lessons.forEach(function (lesson) {
             groups[groupKey].present += lesson.studentCount || 0;
             groups[groupKey].leave += lesson.leaveCount || 0;
             groups[groupKey].absent += lesson.absentCount || 0;
@@ -1051,7 +1051,7 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
                 groups[groupKey].totalMinutes += totalDuration;
                 var typeKey;
                 if (presentNonAuditionCount === 1) {
-                    var presentStudent = lesson.students ? lesson.students.find(function(s) {
+                    var presentStudent = lesson.students ? lesson.students.find(function (s) {
                         return s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'));
                     }) : null;
                     if (presentStudent && presentStudent.is1v1) {
@@ -1089,14 +1089,14 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
     var rangeCrossesMonth = startDate.getFullYear() !== endDate.getFullYear() || startDate.getMonth() !== endDate.getMonth();
     var rangeCrossesYear = startDate.getFullYear() !== endDate.getFullYear();
     var weekOrdinalByMonth = {};
-    var formatFullDateLabel = function(d) {
+    var formatFullDateLabel = function (d) {
         return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
     };
-    var formatShortDateLabel = function(d) {
+    var formatShortDateLabel = function (d) {
         return (d.getMonth() + 1) + '月' + d.getDate() + '日';
     };
 
-    groupOrder.forEach(function(key) {
+    groupOrder.forEach(function (key) {
         var g = groups[key];
         var label;
         if (granularity === 'day') {
@@ -1156,7 +1156,7 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
         groupStartDates.push(new Date(g.startDate));
         groupEndDates.push(new Date(g.endDate));
 
-        Object.keys(g.typeMinutes).forEach(function(tk) {
+        Object.keys(g.typeMinutes).forEach(function (tk) {
             if (!aggregatedTypeMinutes[tk]) aggregatedTypeMinutes[tk] = 0;
             aggregatedTypeMinutes[tk] += g.typeMinutes[tk];
         });
@@ -1182,18 +1182,18 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
 // Final override: keep the percentage-enhanced duration pie chart as the last definition.
 // ========== 人数统计 ==========
 
-TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
+TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
     var self = this;
 
-    var totalStudents = data.totalStudentsData.reduce(function(a, b) { return a + b; }, 0);
-    var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
-    var totalAudition = data.auditionData.reduce(function(a, b) { return a + b; }, 0);
+    var totalStudents = data.totalStudentsData.reduce(function (a, b) { return a + b; }, 0);
+    var totalPresent = data.presentData.reduce(function (a, b) { return a + b; }, 0);
+    var totalAudition = data.auditionData.reduce(function (a, b) { return a + b; }, 0);
     var totalNonAudition = totalPresent - totalAudition;
-    var totalLeave = data.leaveData.reduce(function(a, b) { return a + b; }, 0);
-    var totalAbsent = data.absentData.reduce(function(a, b) { return a + b; }, 0);
+    var totalLeave = data.leaveData.reduce(function (a, b) { return a + b; }, 0);
+    var totalAbsent = data.absentData.reduce(function (a, b) { return a + b; }, 0);
 
     var chart = new Chart(ctx, {
         type: 'bar',
@@ -1257,20 +1257,20 @@ TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
                 mode: 'index',
                 intersect: false
             },
-            onHover: function(event, elements, chart) {
+            onHover: function (event, elements, chart) {
                 chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
                 if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
             },
             plugins: {
                 legend: this.getChartLegendOptions(textColor, {
-                    onClick: function(event, legendItem, legend) {
+                    onClick: function (event, legendItem, legend) {
                         Chart.defaults.plugins.legend.onClick.call(this, event, legendItem, legend);
                         self.renderLinkedCharts('student', data, self._activeChartSliceIndex, { updateLine: true });
                     }
                 }),
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) {
+                        label: function (ctx) {
                             return ctx.dataset.label + ': ' + ctx.parsed.y + '人';
                         }
                     }
@@ -1289,7 +1289,7 @@ TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
                     ticks: {
                         color: textColor,
                         font: { size: 10 },
-                        callback: function(v) { return v + '人'; }
+                        callback: function (v) { return v + '人'; }
                     }
                 }
             }
@@ -1300,15 +1300,15 @@ TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
     return chart;
 };
 
-TimetableApp.prototype.renderStudentPieChart = function(ctx, data) {
+TimetableApp.prototype.renderStudentPieChart = function (ctx, data) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
 
-    var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
-    var totalAudition = data.auditionData.reduce(function(a, b) { return a + b; }, 0);
+    var totalPresent = data.presentData.reduce(function (a, b) { return a + b; }, 0);
+    var totalAudition = data.auditionData.reduce(function (a, b) { return a + b; }, 0);
     var totalNonAudition = totalPresent - totalAudition;
-    var totalLeave = data.leaveData.reduce(function(a, b) { return a + b; }, 0);
-    var totalAbsent = data.absentData.reduce(function(a, b) { return a + b; }, 0);
+    var totalLeave = data.leaveData.reduce(function (a, b) { return a + b; }, 0);
+    var totalAbsent = data.absentData.reduce(function (a, b) { return a + b; }, 0);
     var totalStudents = totalPresent + totalLeave + totalAbsent;
 
     var labels = [];
@@ -1346,7 +1346,7 @@ TimetableApp.prototype.renderStudentPieChart = function(ctx, data) {
                 legend: this.getChartLegendOptions(textColor),
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) {
+                        label: function (ctx) {
                             if (labels[0] === '暂无数据') return '暂无数据';
                             var pct = totalStudents > 0 ? (ctx.parsed / totalStudents * 100).toFixed(1) : '0';
                             return ctx.label + ': ' + ctx.parsed + '人 (' + pct + '%)';
@@ -1361,16 +1361,16 @@ TimetableApp.prototype.renderStudentPieChart = function(ctx, data) {
     return chart;
 };
 
-TimetableApp.prototype.renderStudentLineChart = function(ctx, data) {
+TimetableApp.prototype.renderStudentLineChart = function (ctx, data) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
 
-    var totalStudents = data.totalStudentsData.reduce(function(a, b) { return a + b; }, 0);
-    var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
-    var totalAudition = data.auditionData.reduce(function(a, b) { return a + b; }, 0);
+    var totalStudents = data.totalStudentsData.reduce(function (a, b) { return a + b; }, 0);
+    var totalPresent = data.presentData.reduce(function (a, b) { return a + b; }, 0);
+    var totalAudition = data.auditionData.reduce(function (a, b) { return a + b; }, 0);
     var totalNonAudition = totalPresent - totalAudition;
-    var totalLeave = data.leaveData.reduce(function(a, b) { return a + b; }, 0);
+    var totalLeave = data.leaveData.reduce(function (a, b) { return a + b; }, 0);
     var pointSizes = this.getLinePointSizes(data.labels.length);
 
     var chart = new Chart(ctx, {
@@ -1439,7 +1439,7 @@ TimetableApp.prototype.renderStudentLineChart = function(ctx, data) {
                 legend: this.getChartLegendOptions(textColor),
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) {
+                        label: function (ctx) {
                             return ctx.dataset.label + ': ' + ctx.parsed.y + '人';
                         }
                     }
@@ -1456,7 +1456,7 @@ TimetableApp.prototype.renderStudentLineChart = function(ctx, data) {
                     ticks: {
                         color: textColor,
                         font: { size: 10 },
-                        callback: function(v) { return v + '人'; }
+                        callback: function (v) { return v + '人'; }
                     }
                 }
             }
@@ -1469,7 +1469,7 @@ TimetableApp.prototype.renderStudentLineChart = function(ctx, data) {
 
 // ========== 课时统计 ==========
 
-TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) {
+TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
@@ -1482,11 +1482,11 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
     // Build datasets for each type that has data
     var datasets = [];
     var hasData = false;
-    typeOrder.forEach(function(type, i) {
-        var typeData = data.typeMinutesByGroup.map(function(g) {
+    typeOrder.forEach(function (type, i) {
+        var typeData = data.typeMinutesByGroup.map(function (g) {
             return g[type] ? (g[type] / 60) : 0; // Convert to hours
         });
-        var typeTotal = typeData.reduce(function(a, b) { return a + b; }, 0);
+        var typeTotal = typeData.reduce(function (a, b) { return a + b; }, 0);
         if (typeTotal > 0) {
             hasData = true;
             datasets.push({
@@ -1506,13 +1506,13 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
     if (!hasData) {
         datasets = [{
             label: '暂无数据',
-            data: data.labels.map(function() { return 0; }),
+            data: data.labels.map(function () { return 0; }),
             backgroundColor: '#e1e0d9',
             borderWidth: 0
         }];
     }
 
-    var totalHours = data.totalMinutesData.reduce(function(a, b) { return a + b; }, 0);
+    var totalHours = data.totalMinutesData.reduce(function (a, b) { return a + b; }, 0);
     var totalHoursDisplay = (totalHours / 60).toFixed(2);
     var chart = new Chart(ctx, {
         type: 'bar',
@@ -1527,20 +1527,20 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
                 mode: 'index',
                 intersect: false
             },
-            onHover: function(event, elements, chart) {
+            onHover: function (event, elements, chart) {
                 chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
                 if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
             },
             plugins: {
                 legend: this.getChartLegendOptions(textColor, {
-                    onClick: function(event, legendItem, legend) {
+                    onClick: function (event, legendItem, legend) {
                         Chart.defaults.plugins.legend.onClick.call(this, event, legendItem, legend);
                         self.renderLinkedCharts('duration', data, self._activeChartSliceIndex, { updateLine: true });
                     }
                 }),
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) {
+                        label: function (ctx) {
                             if (ctx.dataset.label === '暂无数据') return '暂无数据';
                             return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + 'h';
                         }
@@ -1560,7 +1560,7 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
                     ticks: {
                         color: textColor,
                         font: { size: 10 },
-                        callback: function(v) { return v.toFixed(1) + 'h'; }
+                        callback: function (v) { return v.toFixed(1) + 'h'; }
                     }
                 }
             }
@@ -1571,7 +1571,7 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
     return chart;
 };
 
-TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
+TimetableApp.prototype.renderDurationLineChart = function (ctx, data) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
@@ -1583,11 +1583,11 @@ TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
     // Build datasets for each type that has data
     var datasets = [];
     var hasData = false;
-    typeOrder.forEach(function(type, i) {
-        var typeData = data.typeMinutesByGroup.map(function(g) {
+    typeOrder.forEach(function (type, i) {
+        var typeData = data.typeMinutesByGroup.map(function (g) {
             return g[type] ? (g[type] / 60) : 0; // Convert to hours
         });
-        var typeTotal = typeData.reduce(function(a, b) { return a + b; }, 0);
+        var typeTotal = typeData.reduce(function (a, b) { return a + b; }, 0);
         if (typeTotal > 0) {
             hasData = true;
             datasets.push({
@@ -1608,13 +1608,13 @@ TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
     if (!hasData) {
         datasets = [{
             label: '暂无数据',
-            data: data.labels.map(function() { return 0; }),
+            data: data.labels.map(function () { return 0; }),
             borderColor: '#e1e0d9',
             pointRadius: 0
         }];
     }
 
-    var totalHours = (data.totalMinutesData.reduce(function(a, b) { return a + b; }, 0) / 60).toFixed(2);
+    var totalHours = (data.totalMinutesData.reduce(function (a, b) { return a + b; }, 0) / 60).toFixed(2);
 
     var chart = new Chart(ctx, {
         type: 'line',
@@ -1633,7 +1633,7 @@ TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
                 legend: this.getChartLegendOptions(textColor),
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) {
+                        label: function (ctx) {
                             if (ctx.dataset.label === '暂无数据') return '暂无数据';
                             return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + 'h';
                         }
@@ -1651,7 +1651,7 @@ TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
                     ticks: {
                         color: textColor,
                         font: { size: 10 },
-                        callback: function(v) { return v.toFixed(1) + 'h'; }
+                        callback: function (v) { return v.toFixed(1) + 'h'; }
                     }
                 }
             }
@@ -1662,7 +1662,7 @@ TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
     return chart;
 };
 
-TimetableApp.prototype.openStatsModal = function(date, showCharts) {
+TimetableApp.prototype.openStatsModal = function (date, showCharts) {
     if (showCharts === false) {
         this.openTextStatsModal(date);
         return;
@@ -1681,7 +1681,7 @@ TimetableApp.prototype.openStatsModal = function(date, showCharts) {
     this.switchStatsTab('day');
 };
 
-TimetableApp.prototype.toggleStatsDetails = function(forceExpanded) {
+TimetableApp.prototype.toggleStatsDetails = function (forceExpanded) {
     var section = document.getElementById('statsDetailSection');
     var body = document.getElementById('statsDetailBody');
     if (!section || !body) return;
@@ -1693,11 +1693,11 @@ TimetableApp.prototype.toggleStatsDetails = function(forceExpanded) {
     body.hidden = !expanded;
 };
 
-TimetableApp.prototype.formatStatsHeaderDate = function(date) {
+TimetableApp.prototype.formatStatsHeaderDate = function (date) {
     return (date.getMonth() + 1) + '/' + date.getDate();
 };
 
-TimetableApp.prototype.getStatsGranularityLabel = function(granularity) {
+TimetableApp.prototype.getStatsGranularityLabel = function (granularity) {
     var labelMap = {
         day: '\u6309\u5929',
         week: '\u6309\u5468',
@@ -1707,14 +1707,14 @@ TimetableApp.prototype.getStatsGranularityLabel = function(granularity) {
     return labelMap[granularity] || '\u6309\u65f6\u95f4';
 };
 
-TimetableApp.prototype.updateStatsHeader = function(title, subtitle) {
+TimetableApp.prototype.updateStatsHeader = function (title, subtitle) {
     var titleEl = document.getElementById('statsTitle');
     var subtitleEl = document.getElementById('statsSubtitle');
-    if (titleEl) titleEl.textContent = title;
-    if (subtitleEl) subtitleEl.textContent = subtitle;
+    if (titleEl) titleEl.textContent = '课时统计';
+    if (subtitleEl) subtitleEl.style.display = 'none';
 };
 
-TimetableApp.prototype.updateStatsOverview = function(summary, startDate, endDate) {
+TimetableApp.prototype.updateStatsOverview = function (summary, startDate, endDate) {
     var noteEl = document.getElementById('statsOverviewNote');
     var detailEl = document.getElementById('statsDetailSummary');
 
@@ -1737,12 +1737,12 @@ TimetableApp.prototype.updateStatsOverview = function(summary, startDate, endDat
     if (detailEl) detailEl.textContent = '\u5171 ' + summary.lessonCount + ' \u6761\u8bfe\u7a0b\u8bb0\u5f55\uff0c\u70b9\u51fb\u5c55\u5f00\u67e5\u770b\u9010\u8282\u51fa\u52e4\u3002';
 };
 
-TimetableApp.prototype.getStatsViewSubtitle = function(viewLabel, startDate, endDate) {
+TimetableApp.prototype.getStatsViewSubtitle = function (viewLabel, startDate, endDate) {
     var range = this.formatStatsHeaderDate(startDate) + ' - ' + this.formatStatsHeaderDate(endDate);
     return '\u5f53\u524d\u67e5\u770b' + viewLabel + '\uff0c\u8303\u56f4 ' + range + '\uff0c\u4e3b\u56fe\u805a\u7126\u7ed3\u679c\u8d8b\u52bf\uff0c\u6458\u8981\u5361\u7247\u4fdd\u7559\u5173\u952e\u6307\u6807\u3002';
 };
 
-TimetableApp.prototype.getTypeStatsForRange = function(startDate, endDate) {
+TimetableApp.prototype.getTypeStatsForRange = function (startDate, endDate) {
     var typeStats = {};
     var totalMinutes = 0;
     var current = new Date(startDate);
@@ -1752,7 +1752,7 @@ TimetableApp.prototype.getTypeStatsForRange = function(startDate, endDate) {
 
     while (current <= end) {
         var lessons = this.collectLessonsForDate(current);
-        lessons.forEach(function(lesson) {
+        lessons.forEach(function (lesson) {
             var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
             if (presentNonAuditionCount <= 0) return;
 
@@ -1772,7 +1772,7 @@ TimetableApp.prototype.getTypeStatsForRange = function(startDate, endDate) {
             var totalDuration = duration * lessonCount;
             var type = null;
             if (presentNonAuditionCount === 1) {
-                var presentStudent = lesson.students ? lesson.students.find(function(student) {
+                var presentStudent = lesson.students ? lesson.students.find(function (student) {
                     return student && !student.isAudition && (!student.status || (student.status !== 'leave' && student.status !== 'absent'));
                 }) : null;
                 type = presentStudent && presentStudent.is1v1 ? '1v1' : '1v1(0.8)';
@@ -1793,7 +1793,7 @@ TimetableApp.prototype.getTypeStatsForRange = function(startDate, endDate) {
     };
 };
 
-TimetableApp.prototype.getNaturalWeekStatsRange = function(startDate, endDate) {
+TimetableApp.prototype.getNaturalWeekStatsRange = function (startDate, endDate) {
     var start = new Date(startDate);
     var end = new Date(endDate);
     start.setHours(0, 0, 0, 0);
@@ -1813,7 +1813,7 @@ TimetableApp.prototype.getNaturalWeekStatsRange = function(startDate, endDate) {
     };
 };
 
-TimetableApp.prototype.renderStatsCards = function(lessons, options) {
+TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var config = typeof options === 'boolean' ? { showClassDays: options } : (options || {});
     var showClassDays = config.showClassDays !== false;
     var container = document.getElementById(config.targetId || 'statsCards');
@@ -1821,7 +1821,7 @@ TimetableApp.prototype.renderStatsCards = function(lessons, options) {
 
     container.classList.toggle('stats-grid-compact', !!config.compact);
 
-    var validLessons = lessons.filter(function(lesson) {
+    var validLessons = lessons.filter(function (lesson) {
         return (lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0)) > 0;
     });
 
@@ -1837,7 +1837,7 @@ TimetableApp.prototype.renderStatsCards = function(lessons, options) {
     var allDates = new Set();
     var typeStats = {};
 
-    validLessons.forEach(function(lesson) {
+    validLessons.forEach(function (lesson) {
         var lessonCount = lesson.lessonCount || 1;
         var duration = 0;
         var actualMinutes = this.getLessonActualMinutesForStats(lesson);
@@ -1860,24 +1860,33 @@ TimetableApp.prototype.renderStatsCards = function(lessons, options) {
         totalPresentStudents += presentCount;
         totalScheduledStudents += totalCount;
 
-        if (presentNonAuditionCount > 0) totalMinutes += totalDuration;
+        if (presentNonAuditionCount > 0) {
+            totalMinutes += totalDuration;
+            if (presentNonAuditionCount === 1) {
+                var presentStudent = lesson.students ? lesson.students.find(function (s) {
+                    return s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'));
+                }) : null;
+                if (presentStudent && presentStudent.is1v1) {
+                    typeStats['1v1'] = (typeStats['1v1'] || 0) + totalDuration;
+                } else {
+                    typeStats['1v1(0.8)'] = (typeStats['1v1(0.8)'] || 0) + totalDuration;
+                }
+            } else {
+                var type = '1v' + presentNonAuditionCount;
+                typeStats[type] = (typeStats[type] || 0) + totalDuration;
+            }
+        }
 
         if (lesson.dates && lesson.dates.length > 0) {
-            lesson.dates.forEach(function(dateKey) { allDates.add(dateKey); });
+            lesson.dates.forEach(function (dateKey) { allDates.add(dateKey); });
         }
     }, this);
 
-    if (config.startDate && config.endDate) {
-        var rangeTypeStats = this.getTypeStatsForRange(config.startDate, config.endDate);
-        typeStats = rangeTypeStats.typeStats;
-        totalMinutes = rangeTypeStats.totalMinutes;
-    }
-
     var totalHours = (totalMinutes / 60).toFixed(2);
     var classDays = allDates.size;
-    var topTypeEntry = Object.keys(typeStats).map(function(type) {
+    var topTypeEntry = Object.keys(typeStats).map(function (type) {
         return { type: type, minutes: typeStats[type] };
-    }).sort(function(a, b) {
+    }).sort(function (a, b) {
         return b.minutes - a.minutes;
     })[0] || null;
     var topType = topTypeEntry ? topTypeEntry.type : '';
@@ -1885,28 +1894,36 @@ TimetableApp.prototype.renderStatsCards = function(lessons, options) {
         '1v1(0.8)': 0,
         '1v1': 1,
         '1v2': 2,
-        '1v4': 3,
-        '1v3': 4
+        '1v3': 3,
+        '1v4': 4
     };
-    var typeEntries = Object.keys(typeStats).map(function(type) {
+    var typeEntries = Object.keys(typeStats).map(function (type) {
         return { type: type, minutes: typeStats[type] };
-    }).sort(function(a, b) {
+    }).sort(function (a, b) {
         return (typeDisplayOrder[a.type] || 99) - (typeDisplayOrder[b.type] || 99);
     });
 
-    var cards = [
-        '<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">\u5230\u8bfe / \u6392\u8bfe\u4eba\u6b21</div></div>',
-        '<div class="stats-card"><div class="st-num">' + totalHours + 'h</div><div class="st-label">\u7d2f\u8ba1\u8bfe\u65f6</div></div>'
-    ];
+    var cards = [];
 
+    // 1. \u5230\u8bfe / \u6392\u8bfe\u4eba\u6b21
+    cards.push('<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">\u5230\u8bfe / \u6392\u8bfe\u4eba\u6b21</div></div>');
+    // 2. \u7d2f\u8ba1\u8bfe\u65f6
+    cards.push('<div class="stats-card"><div class="st-num">' + totalHours + 'h</div><div class="st-label">\u7d2f\u8ba1\u8bfe\u65f6</div></div>');
+    // 3. \u4e0a\u8bfe\u5929\u6570
     if (showClassDays) {
         cards.push('<div class="stats-card"><div class="st-num">' + classDays + '</div><div class="st-label">\u4e0a\u8bfe\u5929\u6570</div></div>');
     }
-    if (totalAuditionCount > 0) {
-        cards.push('<div class="stats-card"><div class="st-num">' + totalAuditionCount + '</div><div class="st-label">\u8bd5\u542c\u4eba\u6b21</div></div>');
-    }
-    typeEntries.slice(0, config.compact ? 2 : 5).forEach(function(entry) {
-        cards.push('<div class="stats-card"><div class="st-num">' + (entry.minutes / 60).toFixed(2) + 'h</div><div class="st-label">' + entry.type + ' \u8bfe\u65f6</div></div>');
+    // 4. \u8bd5\u542c\u4eba\u6b21
+    cards.push('<div class="stats-card"><div class="st-num">' + totalAuditionCount + '</div><div class="st-label">\u8bd5\u542c\u4eba\u6b21</div></div>');
+    // 5-9. 1v1(0.8) / 1v1 / 1v2 / 1v3 / 1v4\uff08\u56fa\u5b9a\u987a\u5e8f\uff0c\u59cb\u7ec8\u663e\u793a\uff09
+    var fixedTypeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var typeStatsMap = {};
+    typeEntries.forEach(function (entry) {
+        typeStatsMap[entry.type] = entry.minutes;
+    });
+    fixedTypeOrder.forEach(function (type) {
+        var minutes = typeStatsMap[type] || 0;
+        cards.push('<div class="stats-card"><div class="st-num">' + (minutes / 60).toFixed(2) + 'h</div><div class="st-label">' + type + ' \u8bfe\u65f6</div></div>');
     });
 
     container.innerHTML = cards.join('');
@@ -1924,7 +1941,7 @@ TimetableApp.prototype.renderStatsCards = function(lessons, options) {
     };
 };
 
-TimetableApp.prototype.renderDayStats = function() {
+TimetableApp.prototype.renderDayStats = function () {
     var startInput = document.getElementById('statsStartDate');
     var endInput = document.getElementById('statsEndDate');
     if (!startInput.value || !endInput.value) return;
@@ -1945,7 +1962,7 @@ TimetableApp.prototype.renderDayStats = function() {
     this.renderCharts(lessons, startDate, endDate);
 };
 
-TimetableApp.prototype.renderWeekStats = function() {
+TimetableApp.prototype.renderWeekStats = function () {
     var startInput = document.getElementById('statsStartDate');
     var endInput = document.getElementById('statsEndDate');
     if (!startInput.value || !endInput.value) return;
@@ -1969,7 +1986,7 @@ TimetableApp.prototype.renderWeekStats = function() {
     this.renderCharts(lessons, statsRange.start, statsRange.end);
 };
 
-TimetableApp.prototype.renderMonthStats = function() {
+TimetableApp.prototype.renderMonthStats = function () {
     var startInput = document.getElementById('statsStartDate');
     var endInput = document.getElementById('statsEndDate');
     if (!startInput.value || !endInput.value) return;
@@ -1990,7 +2007,7 @@ TimetableApp.prototype.renderMonthStats = function() {
     this.renderCharts(lessons, startDate, endDate);
 };
 
-TimetableApp.prototype.renderYearStats = function() {
+TimetableApp.prototype.renderYearStats = function () {
     var startInput = document.getElementById('statsStartDate');
     var endInput = document.getElementById('statsEndDate');
     if (!startInput.value || !endInput.value) return;
@@ -2011,14 +2028,14 @@ TimetableApp.prototype.renderYearStats = function() {
     this.renderCharts(lessons, startDate, endDate);
 };
 
-TimetableApp.prototype.setChartPanelText = function(titleId, subtitleId, title, subtitle) {
+TimetableApp.prototype.setChartPanelText = function (titleId, subtitleId, title, subtitle) {
     var titleEl = document.getElementById(titleId);
     var subtitleEl = document.getElementById(subtitleId);
     if (titleEl) titleEl.textContent = title;
     if (subtitleEl) subtitleEl.textContent = subtitle;
 };
 
-TimetableApp.prototype.getChartPanelCopy = function(category, granularity, focusLabel) {
+TimetableApp.prototype.getChartPanelCopy = function (category, granularity, focusLabel) {
     var prefix = focusLabel || '\u5f53\u524d\u8303\u56f4';
     var granularityLabel = this.getStatsGranularityLabel(granularity);
     if (category === 'duration') {
@@ -2041,7 +2058,7 @@ TimetableApp.prototype.getChartPanelCopy = function(category, granularity, focus
     };
 };
 
-TimetableApp.prototype.applyMainChartFilters = function(category, data) {
+TimetableApp.prototype.applyMainChartFilters = function (category, data) {
     var barChart = this._chartInstances && this._chartInstances.bar;
     if (!barChart || !data) return data;
 
@@ -2050,15 +2067,15 @@ TimetableApp.prototype.applyMainChartFilters = function(category, data) {
         var visibleAudition = barChart.isDatasetVisible(1);
         var visibleLeave = barChart.isDatasetVisible(2);
         var visibleAbsent = barChart.isDatasetVisible(3);
-        var zeroes = data.labels.map(function() { return 0; });
+        var zeroes = data.labels.map(function () { return 0; });
         var presentNonAuditionData = visiblePresent ? data.presentNonAuditionData.slice() : zeroes.slice();
         var auditionData = visibleAudition ? data.auditionData.slice() : zeroes.slice();
         var leaveData = visibleLeave ? data.leaveData.slice() : zeroes.slice();
         var absentData = visibleAbsent ? data.absentData.slice() : zeroes.slice();
-        var presentData = presentNonAuditionData.map(function(value, idx) {
+        var presentData = presentNonAuditionData.map(function (value, idx) {
             return value + auditionData[idx];
         });
-        var totalStudentsData = presentData.map(function(value, idx) {
+        var totalStudentsData = presentData.map(function (value, idx) {
             return value + leaveData[idx] + absentData[idx];
         });
 
@@ -2074,30 +2091,30 @@ TimetableApp.prototype.applyMainChartFilters = function(category, data) {
 
     var visibleTypes = {};
     if (barChart.data && barChart.data.datasets) {
-        barChart.data.datasets.forEach(function(dataset, idx) {
+        barChart.data.datasets.forEach(function (dataset, idx) {
             if (dataset.label !== '暂无数据' && barChart.isDatasetVisible(idx)) {
                 visibleTypes[dataset.label] = true;
             }
         });
     }
 
-    var filteredTypeMinutesByGroup = data.typeMinutesByGroup.map(function(group) {
+    var filteredTypeMinutesByGroup = data.typeMinutesByGroup.map(function (group) {
         var filteredGroup = {};
-        Object.keys(group).forEach(function(type) {
+        Object.keys(group).forEach(function (type) {
             if (visibleTypes[type]) filteredGroup[type] = group[type];
         });
         return filteredGroup;
     });
 
     var filteredTypeMinutes = {};
-    filteredTypeMinutesByGroup.forEach(function(group) {
-        Object.keys(group).forEach(function(type) {
+    filteredTypeMinutesByGroup.forEach(function (group) {
+        Object.keys(group).forEach(function (type) {
             filteredTypeMinutes[type] = (filteredTypeMinutes[type] || 0) + group[type];
         });
     });
 
-    var filteredTotalMinutesData = filteredTypeMinutesByGroup.map(function(group) {
-        return Object.keys(group).reduce(function(sum, type) {
+    var filteredTotalMinutesData = filteredTypeMinutesByGroup.map(function (group) {
+        return Object.keys(group).reduce(function (sum, type) {
             return sum + group[type];
         }, 0);
     });
@@ -2109,7 +2126,7 @@ TimetableApp.prototype.applyMainChartFilters = function(category, data) {
     });
 };
 
-TimetableApp.prototype.renderLinkedCharts = function(category, data, index, options) {
+TimetableApp.prototype.renderLinkedCharts = function (category, data, index, options) {
     if (!this._chartInstances) this._chartInstances = {};
     var config = options || {};
     var shouldUpdateLine = !!config.updateLine;
@@ -2145,7 +2162,7 @@ TimetableApp.prototype.renderLinkedCharts = function(category, data, index, opti
     this._chartNoteTarget = null;
 };
 
-TimetableApp.prototype.renderCharts = function(lessons, startDate, endDate) {
+TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     var chartSection = document.getElementById('chartsSection');
     if (!chartSection) return;
 
@@ -2181,12 +2198,12 @@ TimetableApp.prototype.renderCharts = function(lessons, startDate, endDate) {
     if (!canvas || !lineCanvas) return;
     var ctx = canvas.getContext('2d');
     var self = this;
-    var handleBarHover = function(index) {
+    var handleBarHover = function (index) {
         if (self._activeChartSliceIndex === index) return;
         self._activeChartSliceIndex = index;
         self.renderLinkedCharts(cat, seriesData, index, { updateLine: false });
     };
-    canvas.onmouseleave = function() {
+    canvas.onmouseleave = function () {
         handleBarHover(null);
     };
 
@@ -2201,7 +2218,7 @@ TimetableApp.prototype.renderCharts = function(lessons, startDate, endDate) {
     this.renderLinkedCharts(cat, seriesData, null, { updateLine: true });
 };
 
-TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
+TimetableApp.prototype.renderDurationPieChart = function (ctx, data) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var centerTextColor = isDark ? '#f8fafc' : '#0f172a';
@@ -2212,7 +2229,7 @@ TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
     var values = [];
     var colors = [];
 
-    typeOrder.forEach(function(type, i) {
+    typeOrder.forEach(function (type, i) {
         if (data.typeMinutes[type] && data.typeMinutes[type] > 0) {
             labels.push(type);
             values.push(data.typeMinutes[type]);
@@ -2227,17 +2244,17 @@ TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
     }
 
     var chartHasData = labels.length > 0 && labels[0] !== '\u6682\u65e0\u6570\u636e';
-    var totalMin = chartHasData ? values.reduce(function(a, b) { return a + b; }, 0) : 0;
-    var getVisibleTotalMin = function(chart) {
+    var totalMin = chartHasData ? values.reduce(function (a, b) { return a + b; }, 0) : 0;
+    var getVisibleTotalMin = function (chart) {
         if (!chartHasData) return 0;
-        return values.reduce(function(sum, value, index) {
+        return values.reduce(function (sum, value, index) {
             return chart.getDataVisibility(index) ? sum + value : sum;
         }, 0);
     };
 
     var doughnutLabelPlugin = {
         id: 'durationPieLabelPluginClean',
-        afterDatasetsDraw: function(chart) {
+        afterDatasetsDraw: function (chart) {
             var meta = chart.getDatasetMeta(0);
             if (!meta || !meta.data || !meta.data.length) return;
 
@@ -2259,7 +2276,7 @@ TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
                 drawCtx.fillText(visibleTotalHours + 'h', centerX, centerY + 10);
             }
 
-            meta.data.forEach(function(arc, index) {
+            meta.data.forEach(function (arc, index) {
                 if (!chartHasData) return;
                 if (!chart.getDataVisibility(index)) return;
                 var value = values[index] || 0;
@@ -2303,7 +2320,7 @@ TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
                 legend: this.getChartLegendOptions(textColor),
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             if (labels[0] === '\u6682\u65e0\u6570\u636e') return '\u6682\u65e0\u6570\u636e';
                             var hours = (context.parsed / 60).toFixed(2);
                             var visibleTotalMin = getVisibleTotalMin(context.chart);
