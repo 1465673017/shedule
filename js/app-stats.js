@@ -1,21 +1,6 @@
 // app-stats.js - Statistics views
 // Auto-split from script.js
 
-TimetableApp.prototype.openStatsModal = function(date, showCharts) {
-        if (showCharts === false) {
-            this.openTextStatsModal(date);
-            return;
-        }
-
-        this._statsDate = date || new Date();
-        this._statsShowCharts = true;
-        const now = new Date();
-        this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
-        document.getElementById('statsCustomRange').style.display = 'flex';
-        document.getElementById('statsModal').style.display = 'block';
-        this.switchStatsTab('day');
-    }
-
 TimetableApp.prototype.closeStatsModal = function() {
         document.getElementById('statsModal').style.display = 'none';
         this.closeStatsDatePicker();
@@ -205,10 +190,22 @@ TimetableApp.prototype.selectStatsCalendarDate = function(dateValue) {
 
 TimetableApp.prototype.switchStatsTab = function(tab) {
         this.closeStatsDatePicker();
+        const previousTab = this._statsTab;
+        const isRepeatedWeekClick = previousTab === 'week' && tab === 'week';
         this._statsTab = tab;
+
+        if (tab === 'week') {
+            this._statsWeekMode = isRepeatedWeekClick && this._statsWeekMode === 'monthWeeks'
+                ? 'naturalWeeks'
+                : 'monthWeeks';
+        } else {
+            this._statsWeekMode = 'monthWeeks';
+        }
+
         document.querySelectorAll('.stats-tab').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
+        this.updateStatsWeekModeBadge();
 
         // Always show the date range picker for all tabs
         document.getElementById('statsCustomRange').style.display = 'flex';
@@ -222,8 +219,9 @@ TimetableApp.prototype.switchStatsTab = function(tab) {
                 this.renderDayStats();
                 break;
             case 'week':
-                // Default: current month
-                this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+                if (previousTab !== 'week') {
+                    this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+                }
                 this.renderWeekStats();
                 break;
             case 'month':
@@ -238,6 +236,12 @@ TimetableApp.prototype.switchStatsTab = function(tab) {
                 break;
         }
     }
+
+TimetableApp.prototype.updateStatsWeekModeBadge = function() {
+        var badge = document.getElementById('statsWeekModeBadge');
+        if (!badge) return;
+        badge.hidden = !(this._statsTab === 'week' && this._statsWeekMode === 'naturalWeeks');
+    };
 
 TimetableApp.prototype.onStatsDateChange = function() {
         // Unified handler for date input changes — routes to the active tab's renderer
@@ -464,93 +468,6 @@ TimetableApp.prototype.getAttendanceStatusForStats = function(lesson, studentId,
         return null;
     }
 
-TimetableApp.prototype.renderDayStats = function() {
-        const startInput = document.getElementById('statsStartDate');
-        const endInput = document.getElementById('statsEndDate');
-        if (!startInput.value || !endInput.value) return;
-
-        const startDate = new Date(startInput.value + 'T00:00:00');
-        const endDate = new Date(endInput.value + 'T00:00:00');
-        if (startDate > endDate) return;
-
-        const formatMD = d => `${d.getMonth() + 1}/${d.getDate()}`;
-        document.getElementById('statsTitle').textContent = `日统计 · ${formatMD(startDate)} - ${formatMD(endDate)}`;
-
-        this._chartGranularity = 'day'; // Force day-level chart grouping
-        const lessons = this.aggregateLessons(startDate, endDate);
-        this.renderStatsCards(lessons);
-        this.renderStatsByGrade(lessons);
-        this._lastChartLessons = lessons;
-        this._lastChartStart = startDate;
-        this._lastChartEnd = endDate;
-        this.renderCharts(lessons, startDate, endDate);
-    }
-
-TimetableApp.prototype.renderWeekStats = function() {
-        const startInput = document.getElementById('statsStartDate');
-        const endInput = document.getElementById('statsEndDate');
-        if (!startInput.value || !endInput.value) return;
-
-        const startDate = new Date(startInput.value + 'T00:00:00');
-        const endDate = new Date(endInput.value + 'T00:00:00');
-        if (startDate > endDate) return;
-
-        const formatMD = d => `${d.getMonth() + 1}/${d.getDate()}`;
-        document.getElementById('statsTitle').textContent = `周统计 · ${formatMD(startDate)} - ${formatMD(endDate)}`;
-
-        this._chartGranularity = 'week'; // Force week-level chart grouping
-        const lessons = this.aggregateLessons(startDate, endDate);
-        this.renderStatsCards(lessons);
-        this.renderStatsByGrade(lessons);
-        this._lastChartLessons = lessons;
-        this._lastChartStart = startDate;
-        this._lastChartEnd = endDate;
-        this.renderCharts(lessons, startDate, endDate);
-    }
-
-TimetableApp.prototype.renderMonthStats = function() {
-        const startInput = document.getElementById('statsStartDate');
-        const endInput = document.getElementById('statsEndDate');
-        if (!startInput.value || !endInput.value) return;
-
-        const startDate = new Date(startInput.value + 'T00:00:00');
-        const endDate = new Date(endInput.value + 'T00:00:00');
-        if (startDate > endDate) return;
-
-        const formatMD = d => `${d.getMonth() + 1}/${d.getDate()}`;
-        document.getElementById('statsTitle').textContent = `月统计 · ${formatMD(startDate)} - ${formatMD(endDate)}`;
-
-        this._chartGranularity = 'month'; // Force month-level chart grouping
-        const lessons = this.aggregateLessons(startDate, endDate);
-        this.renderStatsCards(lessons);
-        this.renderStatsByGrade(lessons);
-        this._lastChartLessons = lessons;
-        this._lastChartStart = startDate;
-        this._lastChartEnd = endDate;
-        this.renderCharts(lessons, startDate, endDate);
-    }
-
-TimetableApp.prototype.renderYearStats = function() {
-        const startInput = document.getElementById('statsStartDate');
-        const endInput = document.getElementById('statsEndDate');
-        if (!startInput.value || !endInput.value) return;
-
-        const startDate = new Date(startInput.value + 'T00:00:00');
-        const endDate = new Date(endInput.value + 'T00:00:00');
-        if (startDate > endDate) return;
-
-        document.getElementById('statsTitle').textContent = `年统计 · ${startDate.getFullYear()}年`;
-
-        this._chartGranularity = 'year';
-        const lessons = this.aggregateLessons(startDate, endDate);
-        this.renderStatsCards(lessons);
-        this.renderStatsByGrade(lessons);
-        this._lastChartLessons = lessons;
-        this._lastChartStart = startDate;
-        this._lastChartEnd = endDate;
-        this.renderCharts(lessons, startDate, endDate);
-    }
-
 TimetableApp.prototype.aggregateLessons = function(startDate, endDate) {
         const aggregated = {};
 
@@ -617,142 +534,6 @@ TimetableApp.prototype.showDayStats = function(date) {
         this.openTextStatsModal(date);
     }
     
-TimetableApp.prototype.renderStatsCards = function(lessons, options) {
-        const config = typeof options === 'boolean'
-            ? { showClassDays: options }
-            : (options || {});
-        const showClassDays = config.showClassDays !== false;
-        const container = document.getElementById(config.targetId || 'statsCards');
-        if (!container) return;
-
-        container.classList.toggle('stats-grid-compact', !!config.compact);
-
-        const validLessons = lessons.filter(l => (l.studentCount + (l.leaveCount || 0) + (l.absentCount || 0)) > 0);
-
-        if (validLessons.length === 0) {
-            container.innerHTML = `<div class="text-muted" style="text-align:center;padding:20px">${config.emptyText || '当天无有效课时'}</div>`;
-            return;
-        }
-
-        let totalPresentStudents = 0;
-        let totalScheduledStudents = 0;
-        let totalMinutes = 0;
-        let totalAuditionCount = 0;
-        const typeStats = {};
-        const allDates = new Set();
-
-        validLessons.forEach(lesson => {
-            const lessonCount = lesson.lessonCount || 1;
-            let duration;
-            const actualMinutes = this.getLessonActualMinutesForStats(lesson);
-            if (actualMinutes !== undefined) {
-                duration = actualMinutes;
-            } else if (lesson.time) {
-                const parts = lesson.time.split('-');
-                if (parts.length === 2) {
-                    const start = this.timeToMinutes(parts[0]);
-                    const end = this.timeToMinutes(parts[1]);
-                    duration = end - start;
-                } else {
-                    duration = 0;
-                }
-            } else {
-                duration = 0;
-            }
-            const totalDuration = duration * lessonCount;
-
-            const presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
-            const auditionCount = lesson.auditionStudentCount || 0;
-            const presentCount = lesson.studentCount || 0;
-            const totalCount = presentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
-
-            totalAuditionCount += auditionCount;
-            totalPresentStudents += presentCount;
-            totalScheduledStudents += totalCount;
-
-            if (presentNonAuditionCount > 0) {
-                totalMinutes += totalDuration;
-                if (presentNonAuditionCount === 1) {
-                    // 区分真正的1v1学生和普通的单人课程
-                    const presentStudent = lesson.students ? lesson.students.find(s =>
-                        s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'))
-                    ) : null;
-                    if (presentStudent && presentStudent.is1v1) {
-                        // 带有1v1标志的学生，按完整1v1统计
-                        if (!typeStats['1v1']) { typeStats['1v1'] = 0; }
-                        typeStats['1v1'] += totalDuration;
-                    } else {
-                        // 没有1v1标志的单人课程，标记为1v1(0.8)以区分
-                        if (!typeStats['1v1(0.8)']) { typeStats['1v1(0.8)'] = 0; }
-                        typeStats['1v1(0.8)'] += totalDuration;
-                    }
-                } else {
-                    const type = `1v${presentNonAuditionCount}`;
-                    if (!typeStats[type]) {
-                        typeStats[type] = 0;
-                    }
-                    typeStats[type] += totalDuration;
-                }
-            }
-
-            if (lesson.dates && lesson.dates.length > 0) {
-                lesson.dates.forEach(d => allDates.add(d));
-            }
-        });
-
-        const totalHours = (totalMinutes / 60).toFixed(2);
-        const classDays = allDates.size;
-
-        let typeCards = '';
-        const sortedTypes = Object.keys(typeStats).sort((a, b) => {
-            if (!a.startsWith('1v') && !b.startsWith('1v')) return 0;
-            if (!a.startsWith('1v')) return 1;
-            if (!b.startsWith('1v')) return -1;
-            const numA = parseInt(a.substring(2));
-            const numB = parseInt(b.substring(2));
-            if (numA !== numB) return numA - numB;
-            // "1v1" 排在 "1v1(0.8)" 前面
-            if (a.includes('(0.8)') === b.includes('(0.8)')) return 0;
-            return a.includes('(0.8)') ? 1 : -1;
-        });
-        sortedTypes.forEach(type => {
-            const hours = (typeStats[type] / 60).toFixed(2);
-            typeCards += `
-                <div class="stats-card">
-                    <div class="st-num">${hours}h</div>
-                    <div class="st-label">${type}</div>
-                </div>
-            `;
-        });
-
-        const auditionCard = totalAuditionCount > 0 ? `
-            <div class="stats-card">
-                <div class="st-num">${totalAuditionCount}</div>
-                <div class="st-label">试听人数</div>
-            </div>
-        ` : '';
-
-        const classDaysCard = showClassDays ? `
-            <div class="stats-card">
-                <div class="st-num">${classDays}</div>
-                <div class="st-label">上课天数</div>
-            </div>
-        ` : '';
-        
-        container.innerHTML = `
-            <div class="stats-card">
-                <div class="st-num">${totalPresentStudents}/${totalScheduledStudents}</div>
-                <div class="st-label">学生数</div>
-            </div>
-            <div class="stats-card">
-                <div class="st-num">${totalHours}h</div>
-                <div class="st-label">总时长</div>
-            </div>
-            ${auditionCard}
-            ${classDaysCard}
-            ${typeCards}
-        `;
-    }
 TimetableApp.prototype.getAttendanceSuffix = function(lesson) {
         const total = lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
         if (total === 0) return '';
@@ -1096,8 +877,8 @@ TimetableApp.prototype.setChartLegendNote = function(text) {
     if (target) target.textContent = text;
 };
 
-TimetableApp.prototype.getChartLegendOptions = function(textColor) {
-    return {
+TimetableApp.prototype.getChartLegendOptions = function(textColor, extraOptions) {
+    var baseOptions = {
         position: 'bottom',
         labels: {
             color: textColor,
@@ -1113,6 +894,14 @@ TimetableApp.prototype.getChartLegendOptions = function(textColor) {
             }
         }
     };
+
+    if (!extraOptions) {
+        return baseOptions;
+    }
+
+    return Object.assign({}, baseOptions, extraOptions, {
+        labels: Object.assign({}, baseOptions.labels, extraOptions.labels || {})
+    });
 };
 
 TimetableApp.prototype.getLinePointSizes = function(labelCount) {
@@ -1145,36 +934,6 @@ TimetableApp.prototype.getChartSliceData = function(data, index) {
         granularity: data.granularity,
         selectedLabel: data.labels[index]
     };
-};
-
-TimetableApp.prototype.renderLinkedCharts = function(category, data, index) {
-    if (!this._chartInstances) this._chartInstances = {};
-
-    var detailData = this.getChartSliceData(data, index);
-    var lineTitle = document.getElementById('lineChartTitle');
-    var pieTitle = document.getElementById('pieChartTitle');
-    if (lineTitle) lineTitle.textContent = '折线统计图';
-    if (pieTitle) pieTitle.textContent = '饼状统计图';
-
-    if (this._chartInstances.line) this._chartInstances.line.destroy();
-    if (this._chartInstances.pie) this._chartInstances.pie.destroy();
-
-    var lineCanvas = document.getElementById('statsLineChart');
-    var pieCanvas = document.getElementById('statsPieChart');
-    if (!lineCanvas || !pieCanvas) return;
-
-    if (category === 'student') {
-        this._chartNoteTarget = 'lineChartLegendNote';
-        this._chartInstances.line = this.renderStudentLineChart(lineCanvas.getContext('2d'), detailData);
-        this._chartNoteTarget = 'pieChartLegendNote';
-        this._chartInstances.pie = this.renderStudentPieChart(pieCanvas.getContext('2d'), detailData);
-    } else {
-        this._chartNoteTarget = 'lineChartLegendNote';
-        this._chartInstances.line = this.renderDurationLineChart(lineCanvas.getContext('2d'), detailData);
-        this._chartNoteTarget = 'pieChartLegendNote';
-        this._chartInstances.pie = this.renderDurationPieChart(pieCanvas.getContext('2d'), detailData);
-    }
-    this._chartNoteTarget = null;
 };
 
 TimetableApp.prototype.switchChartCategory = function(category) {
@@ -1220,6 +979,7 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
     var groups = {};
     var groupOrder = [];
     var self = this;
+    var weekMode = this._statsWeekMode || 'monthWeeks';
 
     var current = new Date(startDate);
     current.setHours(0, 0, 0, 0);
@@ -1231,11 +991,16 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
         if (granularity === 'day') {
             groupKey = formatLocalDate(current);
         } else if (granularity === 'week') {
-            var dayOfWeek = current.getDay();
-            var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-            var monday = new Date(current);
-            monday.setDate(current.getDate() - diffToMonday);
-            groupKey = formatLocalDate(monday);
+            if (weekMode === 'naturalWeeks') {
+                var dayOfWeek = current.getDay();
+                var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                var monday = new Date(current);
+                monday.setDate(current.getDate() - diffToMonday);
+                groupKey = formatLocalDate(monday);
+            } else {
+                var weekOfMonth = Math.floor((current.getDate() - 1) / 7) + 1;
+                groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0') + '-W' + weekOfMonth;
+            }
         } else if (granularity === 'month') {
             groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0');
         } else {
@@ -1353,6 +1118,32 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
         } else {
             label = key + '年';
         }
+        if (granularity === 'week') {
+            var weekMonthKeyDisplay = g.startDate.getFullYear() + '-' + String(g.startDate.getMonth() + 1).padStart(2, '0');
+            var weekIndexDisplay = weekOrdinalByMonth[weekMonthKeyDisplay];
+            var weekRangeLabel = (g.startDate.getMonth() + 1) + '/' + g.startDate.getDate() + '-' + (g.endDate.getMonth() + 1) + '/' + g.endDate.getDate();
+            label = '第' + weekIndexDisplay + '周 ' + weekRangeLabel;
+            if (startDate.getFullYear() !== endDate.getFullYear()) {
+                label = g.startDate.getFullYear() + ' ' + label;
+            }
+        }
+
+        if (granularity === 'week') {
+            if (weekMode === 'naturalWeeks') {
+                label = (g.startDate.getMonth() + 1) + '/' + g.startDate.getDate() + '-' + (g.endDate.getMonth() + 1) + '/' + g.endDate.getDate();
+                if (startDate.getFullYear() !== endDate.getFullYear()) {
+                    label = g.startDate.getFullYear() + ' ' + label;
+                }
+            } else {
+                var weekMonthKeyDisplayFinal = g.startDate.getFullYear() + '-' + String(g.startDate.getMonth() + 1).padStart(2, '0');
+                var weekIndexDisplayFinal = weekOrdinalByMonth[weekMonthKeyDisplayFinal];
+                label = '第' + weekIndexDisplayFinal + '周';
+                if (rangeCrossesMonth) {
+                    label = (g.startDate.getMonth() + 1) + '月' + label;
+                }
+            }
+        }
+
         labels.push(label);
         presentData.push(g.present);
         presentNonAuditionData.push(Math.max(0, g.present - g.audition));
@@ -1388,82 +1179,14 @@ TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, for
     };
 };
 
-TimetableApp.prototype.renderCharts = function(lessons, startDate, endDate) {
-    var chartSection = document.getElementById('chartsSection');
-    if (!chartSection) return;
-
-    var statsCards = document.getElementById('statsCards');
-    var statsByGrade = document.getElementById('statsByGrade');
-    var detailLabel = statsByGrade ? statsByGrade.previousElementSibling : null;
-
-    // 课表表头入口 → 只显示数字卡片+明细，不显示图表
-    if (this._statsShowCharts === false) {
-        chartSection.style.display = 'none';
-        if (statsCards) statsCards.style.display = '';
-        if (detailLabel) detailLabel.style.display = '';
-        if (statsByGrade) statsByGrade.style.display = '';
-        this.destroyCharts();
-        return;
-    }
-
-    // 顶部日期范围入口 → 只显示图形统计，隐藏数字卡片和明细
-    chartSection.style.display = '';
-    if (statsCards) statsCards.style.display = 'none';
-    if (detailLabel) detailLabel.style.display = 'none';
-    if (statsByGrade) statsByGrade.style.display = 'none';
-
-    this._lastChartLessons = lessons;
-    this._lastChartStart = startDate;
-    this._lastChartEnd = endDate;
-    if (!this._currentChartCategory) this._currentChartCategory = 'student';
-
-    if (typeof Chart === 'undefined') {
-        chartSection.style.display = 'none';
-        if (statsCards) statsCards.style.display = '';
-        if (detailLabel) detailLabel.style.display = '';
-        if (statsByGrade) statsByGrade.style.display = '';
-        this.destroyCharts();
-        console.warn('Chart.js is unavailable; falling back to text statistics.');
-        return;
-    }
-
-    var seriesData = this.collectChartSeriesData(startDate, endDate);
-
-    // Destroy previous chart
-    this.destroyCharts();
-
-    var canvas = document.getElementById('statsBarChart');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-
-    var cat = this._currentChartCategory;
-    var self = this;
-    var handleBarHover = function(index) {
-        if (self._activeChartSliceIndex === index) return;
-        self._activeChartSliceIndex = index;
-        self.renderLinkedCharts(cat, seriesData, index);
-    };
-    canvas.onmouseleave = function() {
-        handleBarHover(null);
-    };
-
-    this._chartInstances = {};
-    this._chartNoteTarget = 'barChartLegendNote';
-    if (cat === 'student') {
-        this._chartInstances.bar = this.renderStudentBarChart(ctx, seriesData, handleBarHover);
-    } else if (cat === 'duration') {
-        this._chartInstances.bar = this.renderDurationBarChart(ctx, seriesData, handleBarHover);
-    }
-    this._chartNoteTarget = null;
-    this.renderLinkedCharts(cat, seriesData, null);
-};
-
+// Final override: keep the percentage-enhanced duration pie chart as the last definition.
 // ========== 人数统计 ==========
 
 TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+    var self = this;
 
     var totalStudents = data.totalStudentsData.reduce(function(a, b) { return a + b; }, 0);
     var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
@@ -1539,7 +1262,12 @@ TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
                 if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
             },
             plugins: {
-                legend: this.getChartLegendOptions(textColor),
+                legend: this.getChartLegendOptions(textColor, {
+                    onClick: function(event, legendItem, legend) {
+                        Chart.defaults.plugins.legend.onClick.call(this, event, legendItem, legend);
+                        self.renderLinkedCharts('student', data, self._activeChartSliceIndex, { updateLine: true });
+                    }
+                }),
                 tooltip: {
                     callbacks: {
                         label: function(ctx) {
@@ -1745,9 +1473,10 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+    var self = this;
 
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var catColors = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
+    var catColors = ['#2a78d6', '#c97b63', '#eda100', '#12907a', '#6b4ce6'];
     var typeLabels = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
 
     // Build datasets for each type that has data
@@ -1803,7 +1532,12 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
                 if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
             },
             plugins: {
-                legend: this.getChartLegendOptions(textColor),
+                legend: this.getChartLegendOptions(textColor, {
+                    onClick: function(event, legendItem, legend) {
+                        Chart.defaults.plugins.legend.onClick.call(this, event, legendItem, legend);
+                        self.renderLinkedCharts('duration', data, self._activeChartSliceIndex, { updateLine: true });
+                    }
+                }),
                 tooltip: {
                     callbacks: {
                         label: function(ctx) {
@@ -1837,79 +1571,13 @@ TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) 
     return chart;
 };
 
-TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
-    var isDark = document.body.classList.contains('dark-theme-active');
-    var textColor = isDark ? '#c3c2b7' : '#52514e';
-
-    var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var catColors = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
-    var labels = [];
-    var values = [];
-    var colors = [];
-
-    typeOrder.forEach(function(type, i) {
-        if (data.typeMinutes[type] && data.typeMinutes[type] > 0) {
-            labels.push(type);
-            values.push(data.typeMinutes[type]);
-            colors.push(catColors[i]);
-        }
-    });
-
-    if (labels.length === 0) {
-        labels = ['暂无数据'];
-        values = [1];
-        colors = ['#e1e0d9'];
-    }
-
-    var totalMin = 0;
-    if (labels.length > 0 && labels[0] !== '暂无数据') {
-        totalMin = values.reduce(function(a, b) { return a + b; }, 0);
-    }
-    var totalHours = (totalMin / 60).toFixed(2);
-
-    var chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: values,
-                backgroundColor: colors,
-                borderColor: isDark ? '#1a1a19' : '#fcfcfb',
-                borderWidth: 2,
-                hoverBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '50%',
-            plugins: {
-                legend: this.getChartLegendOptions(textColor),
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            if (labels[0] === '暂无数据') return '暂无数据';
-                            var hours = (ctx.parsed / 60).toFixed(2);
-                            var pct = totalMin > 0 ? (ctx.parsed / totalMin * 100).toFixed(1) : '0';
-                            return ctx.label + ': ' + hours + 'h (' + pct + '%)';
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    this.setChartLegendNote(labels[0] !== '暂无数据' ? '' : '暂无上课时长数据');
-    return chart;
-};
-
 TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
     var isDark = document.body.classList.contains('dark-theme-active');
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
 
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var catColors = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
+    var catColors = ['#2a78d6', '#c97b63', '#eda100', '#12907a', '#6b4ce6'];
     var pointSizes = this.getLinePointSizes(data.labels.length);
 
     // Build datasets for each type that has data
@@ -1991,5 +1659,664 @@ TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
     });
 
     this.setChartLegendNote(hasData ? '' : '暂无课时数据');
+    return chart;
+};
+
+TimetableApp.prototype.openStatsModal = function(date, showCharts) {
+    if (showCharts === false) {
+        this.openTextStatsModal(date);
+        return;
+    }
+
+    this._statsDate = date || new Date();
+    this._statsShowCharts = true;
+    var now = new Date();
+    this.setStatsDateRange(
+        new Date(now.getFullYear(), now.getMonth(), 1),
+        new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    );
+    document.getElementById('statsCustomRange').style.display = 'flex';
+    document.getElementById('statsModal').style.display = 'block';
+    this.toggleStatsDetails(false);
+    this.switchStatsTab('day');
+};
+
+TimetableApp.prototype.toggleStatsDetails = function(forceExpanded) {
+    var section = document.getElementById('statsDetailSection');
+    var body = document.getElementById('statsDetailBody');
+    if (!section || !body) return;
+
+    var expanded = typeof forceExpanded === 'boolean'
+        ? forceExpanded
+        : !section.classList.contains('expanded');
+    section.classList.toggle('expanded', expanded);
+    body.hidden = !expanded;
+};
+
+TimetableApp.prototype.formatStatsHeaderDate = function(date) {
+    return (date.getMonth() + 1) + '/' + date.getDate();
+};
+
+TimetableApp.prototype.getStatsGranularityLabel = function(granularity) {
+    var labelMap = {
+        day: '\u6309\u5929',
+        week: '\u6309\u5468',
+        month: '\u6309\u6708',
+        year: '\u6309\u5e74'
+    };
+    return labelMap[granularity] || '\u6309\u65f6\u95f4';
+};
+
+TimetableApp.prototype.updateStatsHeader = function(title, subtitle) {
+    var titleEl = document.getElementById('statsTitle');
+    var subtitleEl = document.getElementById('statsSubtitle');
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+};
+
+TimetableApp.prototype.updateStatsOverview = function(summary, startDate, endDate) {
+    var noteEl = document.getElementById('statsOverviewNote');
+    var detailEl = document.getElementById('statsDetailSummary');
+
+    if (!summary || summary.empty) {
+        if (noteEl) noteEl.textContent = '\u5f53\u524d\u65f6\u95f4\u8303\u56f4\u5185\u8fd8\u6ca1\u6709\u53ef\u7edf\u8ba1\u7684\u8bfe\u7a0b\u8bb0\u5f55\u3002';
+        if (detailEl) detailEl.textContent = '\u6682\u65e0\u8bfe\u7a0b\u660e\u7ec6';
+        return;
+    }
+
+    var rangeLabel = this.formatStatsHeaderDate(startDate) + ' - ' + this.formatStatsHeaderDate(endDate);
+    var noteParts = [
+        rangeLabel + ' \u5171\u5b8c\u6210 ' + summary.lessonCount + ' \u8282\u8bfe',
+        '\u5230\u8bfe ' + summary.totalPresentStudents + '/' + summary.totalScheduledStudents + ' \u4eba\u6b21',
+        '\u7d2f\u8ba1 ' + summary.totalHours + 'h'
+    ];
+    if (summary.topType) noteParts.push('\u4e3b\u529b\u73ed\u578b\u4e3a ' + summary.topType);
+    if (summary.totalAuditionCount > 0) noteParts.push('\u542b\u8bd5\u542c ' + summary.totalAuditionCount + ' \u4eba\u6b21');
+
+    if (noteEl) noteEl.textContent = noteParts.join('\uff0c') + '\u3002';
+    if (detailEl) detailEl.textContent = '\u5171 ' + summary.lessonCount + ' \u6761\u8bfe\u7a0b\u8bb0\u5f55\uff0c\u70b9\u51fb\u5c55\u5f00\u67e5\u770b\u9010\u8282\u51fa\u52e4\u3002';
+};
+
+TimetableApp.prototype.getStatsViewSubtitle = function(viewLabel, startDate, endDate) {
+    var range = this.formatStatsHeaderDate(startDate) + ' - ' + this.formatStatsHeaderDate(endDate);
+    return '\u5f53\u524d\u67e5\u770b' + viewLabel + '\uff0c\u8303\u56f4 ' + range + '\uff0c\u4e3b\u56fe\u805a\u7126\u7ed3\u679c\u8d8b\u52bf\uff0c\u6458\u8981\u5361\u7247\u4fdd\u7559\u5173\u952e\u6307\u6807\u3002';
+};
+
+TimetableApp.prototype.getTypeStatsForRange = function(startDate, endDate) {
+    var typeStats = {};
+    var totalMinutes = 0;
+    var current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    var end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (current <= end) {
+        var lessons = this.collectLessonsForDate(current);
+        lessons.forEach(function(lesson) {
+            var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+            if (presentNonAuditionCount <= 0) return;
+
+            var duration = 0;
+            var actualMinutes = this.getLessonActualMinutesForStats(lesson);
+            if (actualMinutes !== undefined) {
+                duration = actualMinutes;
+            } else if (lesson.time) {
+                var parts = lesson.time.split('-');
+                if (parts.length === 2) {
+                    duration = this.timeToMinutes(parts[1]) - this.timeToMinutes(parts[0]);
+                }
+            }
+            if (duration < 0) duration = 0;
+
+            var lessonCount = lesson.lessonCount || 1;
+            var totalDuration = duration * lessonCount;
+            var type = null;
+            if (presentNonAuditionCount === 1) {
+                var presentStudent = lesson.students ? lesson.students.find(function(student) {
+                    return student && !student.isAudition && (!student.status || (student.status !== 'leave' && student.status !== 'absent'));
+                }) : null;
+                type = presentStudent && presentStudent.is1v1 ? '1v1' : '1v1(0.8)';
+            } else {
+                type = '1v' + presentNonAuditionCount;
+            }
+
+            typeStats[type] = (typeStats[type] || 0) + totalDuration;
+            totalMinutes += totalDuration;
+        }, this);
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    return {
+        typeStats: typeStats,
+        totalMinutes: totalMinutes
+    };
+};
+
+TimetableApp.prototype.getNaturalWeekStatsRange = function(startDate, endDate) {
+    var start = new Date(startDate);
+    var end = new Date(endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    var startDay = start.getDay();
+    var startDiffToMonday = startDay === 0 ? 6 : startDay - 1;
+    start.setDate(start.getDate() - startDiffToMonday);
+
+    var endDay = end.getDay();
+    var endDiffToSunday = endDay === 0 ? 0 : 7 - endDay;
+    end.setDate(end.getDate() + endDiffToSunday);
+
+    return {
+        start: start,
+        end: end
+    };
+};
+
+TimetableApp.prototype.renderStatsCards = function(lessons, options) {
+    var config = typeof options === 'boolean' ? { showClassDays: options } : (options || {});
+    var showClassDays = config.showClassDays !== false;
+    var container = document.getElementById(config.targetId || 'statsCards');
+    if (!container) return { empty: true };
+
+    container.classList.toggle('stats-grid-compact', !!config.compact);
+
+    var validLessons = lessons.filter(function(lesson) {
+        return (lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0)) > 0;
+    });
+
+    if (validLessons.length === 0) {
+        container.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px">' + (config.emptyText || '\u5f53\u524d\u8303\u56f4\u5185\u6682\u65e0\u6709\u6548\u8bfe\u65f6') + '</div>';
+        return { empty: true };
+    }
+
+    var totalPresentStudents = 0;
+    var totalScheduledStudents = 0;
+    var totalMinutes = 0;
+    var totalAuditionCount = 0;
+    var allDates = new Set();
+    var typeStats = {};
+
+    validLessons.forEach(function(lesson) {
+        var lessonCount = lesson.lessonCount || 1;
+        var duration = 0;
+        var actualMinutes = this.getLessonActualMinutesForStats(lesson);
+        if (actualMinutes !== undefined) {
+            duration = actualMinutes;
+        } else if (lesson.time) {
+            var parts = lesson.time.split('-');
+            if (parts.length === 2) {
+                duration = this.timeToMinutes(parts[1]) - this.timeToMinutes(parts[0]);
+            }
+        }
+
+        var totalDuration = duration * lessonCount;
+        var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+        var auditionCount = lesson.auditionStudentCount || 0;
+        var presentCount = lesson.studentCount || 0;
+        var totalCount = presentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+
+        totalAuditionCount += auditionCount;
+        totalPresentStudents += presentCount;
+        totalScheduledStudents += totalCount;
+
+        if (presentNonAuditionCount > 0) totalMinutes += totalDuration;
+
+        if (lesson.dates && lesson.dates.length > 0) {
+            lesson.dates.forEach(function(dateKey) { allDates.add(dateKey); });
+        }
+    }, this);
+
+    if (config.startDate && config.endDate) {
+        var rangeTypeStats = this.getTypeStatsForRange(config.startDate, config.endDate);
+        typeStats = rangeTypeStats.typeStats;
+        totalMinutes = rangeTypeStats.totalMinutes;
+    }
+
+    var totalHours = (totalMinutes / 60).toFixed(2);
+    var classDays = allDates.size;
+    var topTypeEntry = Object.keys(typeStats).map(function(type) {
+        return { type: type, minutes: typeStats[type] };
+    }).sort(function(a, b) {
+        return b.minutes - a.minutes;
+    })[0] || null;
+    var topType = topTypeEntry ? topTypeEntry.type : '';
+    var typeDisplayOrder = {
+        '1v1(0.8)': 0,
+        '1v1': 1,
+        '1v2': 2,
+        '1v4': 3,
+        '1v3': 4
+    };
+    var typeEntries = Object.keys(typeStats).map(function(type) {
+        return { type: type, minutes: typeStats[type] };
+    }).sort(function(a, b) {
+        return (typeDisplayOrder[a.type] || 99) - (typeDisplayOrder[b.type] || 99);
+    });
+
+    var cards = [
+        '<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">\u5230\u8bfe / \u6392\u8bfe\u4eba\u6b21</div></div>',
+        '<div class="stats-card"><div class="st-num">' + totalHours + 'h</div><div class="st-label">\u7d2f\u8ba1\u8bfe\u65f6</div></div>'
+    ];
+
+    if (showClassDays) {
+        cards.push('<div class="stats-card"><div class="st-num">' + classDays + '</div><div class="st-label">\u4e0a\u8bfe\u5929\u6570</div></div>');
+    }
+    if (totalAuditionCount > 0) {
+        cards.push('<div class="stats-card"><div class="st-num">' + totalAuditionCount + '</div><div class="st-label">\u8bd5\u542c\u4eba\u6b21</div></div>');
+    }
+    typeEntries.slice(0, config.compact ? 2 : 5).forEach(function(entry) {
+        cards.push('<div class="stats-card"><div class="st-num">' + (entry.minutes / 60).toFixed(2) + 'h</div><div class="st-label">' + entry.type + ' \u8bfe\u65f6</div></div>');
+    });
+
+    container.innerHTML = cards.join('');
+
+    return {
+        empty: false,
+        lessonCount: validLessons.length,
+        totalPresentStudents: totalPresentStudents,
+        totalScheduledStudents: totalScheduledStudents,
+        totalHours: totalHours,
+        totalAuditionCount: totalAuditionCount,
+        classDays: classDays,
+        topType: topType,
+        typeEntries: typeEntries
+    };
+};
+
+TimetableApp.prototype.renderDayStats = function() {
+    var startInput = document.getElementById('statsStartDate');
+    var endInput = document.getElementById('statsEndDate');
+    if (!startInput.value || !endInput.value) return;
+
+    var startDate = new Date(startInput.value + 'T00:00:00');
+    var endDate = new Date(endInput.value + 'T00:00:00');
+    if (startDate > endDate) return;
+
+    this.updateStatsHeader('\u65e5\u7edf\u8ba1', this.getStatsViewSubtitle('\u65e5\u7edf\u8ba1', startDate, endDate));
+    this._chartGranularity = 'day';
+    var lessons = this.aggregateLessons(startDate, endDate);
+    var summary = this.renderStatsCards(lessons, { startDate: startDate, endDate: endDate });
+    this.updateStatsOverview(summary, startDate, endDate);
+    this.renderStatsByGrade(lessons);
+    this._lastChartLessons = lessons;
+    this._lastChartStart = startDate;
+    this._lastChartEnd = endDate;
+    this.renderCharts(lessons, startDate, endDate);
+};
+
+TimetableApp.prototype.renderWeekStats = function() {
+    var startInput = document.getElementById('statsStartDate');
+    var endInput = document.getElementById('statsEndDate');
+    if (!startInput.value || !endInput.value) return;
+
+    var startDate = new Date(startInput.value + 'T00:00:00');
+    var endDate = new Date(endInput.value + 'T00:00:00');
+    if (startDate > endDate) return;
+    var statsRange = this._statsWeekMode === 'naturalWeeks'
+        ? this.getNaturalWeekStatsRange(startDate, endDate)
+        : { start: startDate, end: endDate };
+
+    this.updateStatsHeader('\u5468\u7edf\u8ba1', this.getStatsViewSubtitle('\u5468\u7edf\u8ba1', startDate, endDate));
+    this._chartGranularity = 'week';
+    var lessons = this.aggregateLessons(statsRange.start, statsRange.end);
+    var summary = this.renderStatsCards(lessons, { startDate: statsRange.start, endDate: statsRange.end });
+    this.updateStatsOverview(summary, statsRange.start, statsRange.end);
+    this.renderStatsByGrade(lessons);
+    this._lastChartLessons = lessons;
+    this._lastChartStart = statsRange.start;
+    this._lastChartEnd = statsRange.end;
+    this.renderCharts(lessons, statsRange.start, statsRange.end);
+};
+
+TimetableApp.prototype.renderMonthStats = function() {
+    var startInput = document.getElementById('statsStartDate');
+    var endInput = document.getElementById('statsEndDate');
+    if (!startInput.value || !endInput.value) return;
+
+    var startDate = new Date(startInput.value + 'T00:00:00');
+    var endDate = new Date(endInput.value + 'T00:00:00');
+    if (startDate > endDate) return;
+
+    this.updateStatsHeader('\u6708\u7edf\u8ba1', this.getStatsViewSubtitle('\u6708\u7edf\u8ba1', startDate, endDate));
+    this._chartGranularity = 'month';
+    var lessons = this.aggregateLessons(startDate, endDate);
+    var summary = this.renderStatsCards(lessons, { startDate: startDate, endDate: endDate });
+    this.updateStatsOverview(summary, startDate, endDate);
+    this.renderStatsByGrade(lessons);
+    this._lastChartLessons = lessons;
+    this._lastChartStart = startDate;
+    this._lastChartEnd = endDate;
+    this.renderCharts(lessons, startDate, endDate);
+};
+
+TimetableApp.prototype.renderYearStats = function() {
+    var startInput = document.getElementById('statsStartDate');
+    var endInput = document.getElementById('statsEndDate');
+    if (!startInput.value || !endInput.value) return;
+
+    var startDate = new Date(startInput.value + 'T00:00:00');
+    var endDate = new Date(endInput.value + 'T00:00:00');
+    if (startDate > endDate) return;
+
+    this.updateStatsHeader('\u5e74\u7edf\u8ba1', '\u5f53\u524d\u67e5\u770b\u5e74\u7edf\u8ba1\uff0c\u4e3b\u56fe\u7a81\u51fa\u5168\u5e74\u7ed3\u6784\u53d8\u5316\uff0c\u526f\u56fe\u8865\u5145\u8d8b\u52bf\u548c\u5360\u6bd4\u3002');
+    this._chartGranularity = 'year';
+    var lessons = this.aggregateLessons(startDate, endDate);
+    var summary = this.renderStatsCards(lessons, { startDate: startDate, endDate: endDate });
+    this.updateStatsOverview(summary, startDate, endDate);
+    this.renderStatsByGrade(lessons);
+    this._lastChartLessons = lessons;
+    this._lastChartStart = startDate;
+    this._lastChartEnd = endDate;
+    this.renderCharts(lessons, startDate, endDate);
+};
+
+TimetableApp.prototype.setChartPanelText = function(titleId, subtitleId, title, subtitle) {
+    var titleEl = document.getElementById(titleId);
+    var subtitleEl = document.getElementById(subtitleId);
+    if (titleEl) titleEl.textContent = title;
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+};
+
+TimetableApp.prototype.getChartPanelCopy = function(category, granularity, focusLabel) {
+    var prefix = focusLabel || '\u5f53\u524d\u8303\u56f4';
+    var granularityLabel = this.getStatsGranularityLabel(granularity);
+    if (category === 'duration') {
+        return {
+            barTitle: '\u8bfe\u65f6\u7ed3\u6784\u603b\u89c8',
+            barSubtitle: granularityLabel + '\u5bf9\u6bd4\u4e0d\u540c\u73ed\u578b\u8d21\u732e\u7684\u8bfe\u65f6\u7ed3\u6784\u3002',
+            lineTitle: focusLabel ? prefix + '\u8bfe\u65f6\u53d8\u5316' : '\u8bfe\u65f6\u53d8\u5316\u8d8b\u52bf',
+            lineSubtitle: granularityLabel + '\u67e5\u770b\u4e0d\u540c\u73ed\u578b\u8bfe\u65f6\u7684\u589e\u51cf\u3002',
+            pieTitle: focusLabel ? prefix + '\u73ed\u578b\u5360\u6bd4' : '\u73ed\u578b\u8bfe\u65f6\u5360\u6bd4',
+            pieSubtitle: '\u5feb\u901f\u67e5\u770b 1v1 \u5230 1v4 \u7684\u8bfe\u65f6\u5206\u5e03\u3002'
+        };
+    }
+    return {
+        barTitle: '\u51fa\u52e4\u7ed3\u6784\u603b\u89c8',
+        barSubtitle: granularityLabel + '\u5bf9\u6bd4\u51fa\u52e4\u3001\u8bd5\u542c\u3001\u8bf7\u5047\u4e0e\u7f3a\u52e4\u3002',
+        lineTitle: focusLabel ? prefix + '\u5230\u8bfe\u8d8b\u52bf' : '\u5b66\u751f\u5230\u8bfe\u8d8b\u52bf',
+        lineSubtitle: granularityLabel + '\u67e5\u770b\u5b66\u751f\u603b\u6570\u4e0e\u5230\u8bfe\u53d8\u5316\u3002',
+        pieTitle: focusLabel ? prefix + '\u72b6\u6001\u5360\u6bd4' : '\u8bfe\u7a0b\u72b6\u6001\u5360\u6bd4',
+        pieSubtitle: '\u5feb\u901f\u67e5\u770b\u51fa\u52e4\u3001\u8bd5\u542c\u3001\u8bf7\u5047\u4e0e\u7f3a\u52e4\u7684\u7ed3\u6784\u6bd4\u4f8b\u3002'
+    };
+};
+
+TimetableApp.prototype.applyMainChartFilters = function(category, data) {
+    var barChart = this._chartInstances && this._chartInstances.bar;
+    if (!barChart || !data) return data;
+
+    if (category === 'student') {
+        var visiblePresent = barChart.isDatasetVisible(0);
+        var visibleAudition = barChart.isDatasetVisible(1);
+        var visibleLeave = barChart.isDatasetVisible(2);
+        var visibleAbsent = barChart.isDatasetVisible(3);
+        var zeroes = data.labels.map(function() { return 0; });
+        var presentNonAuditionData = visiblePresent ? data.presentNonAuditionData.slice() : zeroes.slice();
+        var auditionData = visibleAudition ? data.auditionData.slice() : zeroes.slice();
+        var leaveData = visibleLeave ? data.leaveData.slice() : zeroes.slice();
+        var absentData = visibleAbsent ? data.absentData.slice() : zeroes.slice();
+        var presentData = presentNonAuditionData.map(function(value, idx) {
+            return value + auditionData[idx];
+        });
+        var totalStudentsData = presentData.map(function(value, idx) {
+            return value + leaveData[idx] + absentData[idx];
+        });
+
+        return Object.assign({}, data, {
+            presentNonAuditionData: presentNonAuditionData,
+            auditionData: auditionData,
+            leaveData: leaveData,
+            absentData: absentData,
+            presentData: presentData,
+            totalStudentsData: totalStudentsData
+        });
+    }
+
+    var visibleTypes = {};
+    if (barChart.data && barChart.data.datasets) {
+        barChart.data.datasets.forEach(function(dataset, idx) {
+            if (dataset.label !== '暂无数据' && barChart.isDatasetVisible(idx)) {
+                visibleTypes[dataset.label] = true;
+            }
+        });
+    }
+
+    var filteredTypeMinutesByGroup = data.typeMinutesByGroup.map(function(group) {
+        var filteredGroup = {};
+        Object.keys(group).forEach(function(type) {
+            if (visibleTypes[type]) filteredGroup[type] = group[type];
+        });
+        return filteredGroup;
+    });
+
+    var filteredTypeMinutes = {};
+    filteredTypeMinutesByGroup.forEach(function(group) {
+        Object.keys(group).forEach(function(type) {
+            filteredTypeMinutes[type] = (filteredTypeMinutes[type] || 0) + group[type];
+        });
+    });
+
+    var filteredTotalMinutesData = filteredTypeMinutesByGroup.map(function(group) {
+        return Object.keys(group).reduce(function(sum, type) {
+            return sum + group[type];
+        }, 0);
+    });
+
+    return Object.assign({}, data, {
+        typeMinutesByGroup: filteredTypeMinutesByGroup,
+        typeMinutes: filteredTypeMinutes,
+        totalMinutesData: filteredTotalMinutesData
+    });
+};
+
+TimetableApp.prototype.renderLinkedCharts = function(category, data, index, options) {
+    if (!this._chartInstances) this._chartInstances = {};
+    var config = options || {};
+    var shouldUpdateLine = !!config.updateLine;
+
+    var overallData = this.applyMainChartFilters(category, this.getChartSliceData(data, null));
+    var detailData = this.applyMainChartFilters(category, this.getChartSliceData(data, index));
+    var focusLabel = detailData.selectedLabel || null;
+    var piePanelCopy = this.getChartPanelCopy(category, data.granularity, focusLabel);
+    this.setChartPanelText('pieChartTitle', 'pieChartSubtitle', piePanelCopy.pieTitle, piePanelCopy.pieSubtitle);
+
+    if (shouldUpdateLine && this._chartInstances.line) this._chartInstances.line.destroy();
+    if (this._chartInstances.pie) this._chartInstances.pie.destroy();
+
+    var lineCanvas = document.getElementById('statsLineChart');
+    var pieCanvas = document.getElementById('statsPieChart');
+    if ((shouldUpdateLine && !lineCanvas) || !pieCanvas) return;
+
+    if (category === 'student') {
+        if (shouldUpdateLine) {
+            this._chartNoteTarget = 'lineChartLegendNote';
+            this._chartInstances.line = this.renderStudentLineChart(lineCanvas.getContext('2d'), overallData);
+        }
+        this._chartNoteTarget = 'pieChartLegendNote';
+        this._chartInstances.pie = this.renderStudentPieChart(pieCanvas.getContext('2d'), detailData);
+    } else {
+        if (shouldUpdateLine) {
+            this._chartNoteTarget = 'lineChartLegendNote';
+            this._chartInstances.line = this.renderDurationLineChart(lineCanvas.getContext('2d'), overallData);
+        }
+        this._chartNoteTarget = 'pieChartLegendNote';
+        this._chartInstances.pie = this.renderDurationPieChart(pieCanvas.getContext('2d'), detailData);
+    }
+    this._chartNoteTarget = null;
+};
+
+TimetableApp.prototype.renderCharts = function(lessons, startDate, endDate) {
+    var chartSection = document.getElementById('chartsSection');
+    if (!chartSection) return;
+
+    this._lastChartLessons = lessons;
+    this._lastChartStart = startDate;
+    this._lastChartEnd = endDate;
+    if (!this._currentChartCategory) this._currentChartCategory = 'duration';
+
+    var statsCards = document.getElementById('statsCards');
+    var detailSection = document.getElementById('statsDetailSection');
+    if (statsCards) statsCards.style.display = '';
+    if (detailSection) detailSection.style.display = '';
+
+    if (typeof Chart === 'undefined') {
+        chartSection.style.display = 'none';
+        this.destroyCharts();
+        console.warn('Chart.js is unavailable; falling back to text statistics.');
+        return;
+    }
+
+    chartSection.style.display = '';
+    var seriesData = this.collectChartSeriesData(startDate, endDate);
+    var cat = this._currentChartCategory;
+    var copy = this.getChartPanelCopy(cat, seriesData.granularity, null);
+    this.setChartPanelText('barChartTitle', 'barChartSubtitle', copy.barTitle, copy.barSubtitle);
+    this.setChartPanelText('lineChartTitle', 'lineChartSubtitle', copy.lineTitle, copy.lineSubtitle);
+    this.setChartPanelText('pieChartTitle', 'pieChartSubtitle', copy.pieTitle, copy.pieSubtitle);
+
+    this.destroyCharts();
+
+    var canvas = document.getElementById('statsBarChart');
+    var lineCanvas = document.getElementById('statsLineChart');
+    if (!canvas || !lineCanvas) return;
+    var ctx = canvas.getContext('2d');
+    var self = this;
+    var handleBarHover = function(index) {
+        if (self._activeChartSliceIndex === index) return;
+        self._activeChartSliceIndex = index;
+        self.renderLinkedCharts(cat, seriesData, index, { updateLine: false });
+    };
+    canvas.onmouseleave = function() {
+        handleBarHover(null);
+    };
+
+    this._chartInstances = {};
+    this._chartNoteTarget = 'barChartLegendNote';
+    if (cat === 'student') {
+        this._chartInstances.bar = this.renderStudentBarChart(ctx, seriesData, handleBarHover);
+    } else {
+        this._chartInstances.bar = this.renderDurationBarChart(ctx, seriesData, handleBarHover);
+    }
+    this._chartNoteTarget = null;
+    this.renderLinkedCharts(cat, seriesData, null, { updateLine: true });
+};
+
+TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var centerTextColor = isDark ? '#f8fafc' : '#0f172a';
+
+    var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var catColors = ['#2a78d6', '#c97b63', '#eda100', '#12907a', '#6b4ce6'];
+    var labels = [];
+    var values = [];
+    var colors = [];
+
+    typeOrder.forEach(function(type, i) {
+        if (data.typeMinutes[type] && data.typeMinutes[type] > 0) {
+            labels.push(type);
+            values.push(data.typeMinutes[type]);
+            colors.push(catColors[i]);
+        }
+    });
+
+    if (labels.length === 0) {
+        labels = ['\u6682\u65e0\u6570\u636e'];
+        values = [1];
+        colors = ['#e1e0d9'];
+    }
+
+    var chartHasData = labels.length > 0 && labels[0] !== '\u6682\u65e0\u6570\u636e';
+    var totalMin = chartHasData ? values.reduce(function(a, b) { return a + b; }, 0) : 0;
+    var getVisibleTotalMin = function(chart) {
+        if (!chartHasData) return 0;
+        return values.reduce(function(sum, value, index) {
+            return chart.getDataVisibility(index) ? sum + value : sum;
+        }, 0);
+    };
+
+    var doughnutLabelPlugin = {
+        id: 'durationPieLabelPluginClean',
+        afterDatasetsDraw: function(chart) {
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data || !meta.data.length) return;
+
+            var drawCtx = chart.ctx;
+            var visibleTotalMin = getVisibleTotalMin(chart);
+            var visibleTotalHours = (visibleTotalMin / 60).toFixed(2);
+            drawCtx.save();
+
+            if (chartHasData) {
+                var centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                var centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'middle';
+                drawCtx.fillStyle = textColor;
+                drawCtx.font = '600 11px sans-serif';
+                drawCtx.fillText('\u603b\u8bfe\u65f6', centerX, centerY - 12);
+                drawCtx.fillStyle = centerTextColor;
+                drawCtx.font = '700 22px sans-serif';
+                drawCtx.fillText(visibleTotalHours + 'h', centerX, centerY + 10);
+            }
+
+            meta.data.forEach(function(arc, index) {
+                if (!chartHasData) return;
+                if (!chart.getDataVisibility(index)) return;
+                var value = values[index] || 0;
+                var pct = visibleTotalMin > 0 ? (value / visibleTotalMin * 100) : 0;
+                if (pct < 8) return;
+
+                var angle = (arc.startAngle + arc.endAngle) / 2;
+                var radius = arc.innerRadius + (arc.outerRadius - arc.innerRadius) * 0.58;
+                var x = arc.x + Math.cos(angle) * radius;
+                var y = arc.y + Math.sin(angle) * radius;
+
+                drawCtx.fillStyle = '#ffffff';
+                drawCtx.font = '700 12px sans-serif';
+                drawCtx.shadowColor = 'rgba(15, 23, 42, 0.24)';
+                drawCtx.shadowBlur = 6;
+                drawCtx.fillText(Math.round(pct) + '%', x, y);
+                drawCtx.shadowBlur = 0;
+            });
+
+            drawCtx.restore();
+        }
+    };
+
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderColor: isDark ? '#1a1a19' : '#fcfcfb',
+                borderWidth: 2,
+                hoverBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '56%',
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (labels[0] === '\u6682\u65e0\u6570\u636e') return '\u6682\u65e0\u6570\u636e';
+                            var hours = (context.parsed / 60).toFixed(2);
+                            var visibleTotalMin = getVisibleTotalMin(context.chart);
+                            var pct = visibleTotalMin > 0 ? (context.parsed / visibleTotalMin * 100).toFixed(1) : '0';
+                            return context.label + ': ' + hours + 'h (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [doughnutLabelPlugin]
+    });
+
+    this.setChartLegendNote(chartHasData ? '' : '\u6682\u65e0\u4e0a\u8bfe\u65f6\u957f\u6570\u636e');
     return chart;
 };

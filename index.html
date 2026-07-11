@@ -436,12 +436,15 @@
     <div id="statsModal" class="modal">
         <div class="modal-content stats-modal-content">
             <div class="modal-header">
-                <h3 id="statsTitle">课时统计</h3>
-                <button class="modal-close" onclick="app.closeStatsModal()">×</button>
+                <div class="stats-title-group">
+                    <h3 id="statsTitle">课时统计</h3>
+                    <p class="stats-subtitle" id="statsSubtitle">用图表和摘要快速查看这个时间范围的课程表现。</p>
+                </div>
+                <button class="modal-close" onclick="app.closeStatsModal()">&times;</button>
             </div>
             <div class="stats-tabs" id="statsTabs">
                 <button class="stats-tab active" data-tab="day" onclick="app.switchStatsTab('day')">日统计</button>
-                <button class="stats-tab" data-tab="week" onclick="app.switchStatsTab('week')">周统计</button>
+                <button class="stats-tab stats-tab-week" data-tab="week" onclick="app.switchStatsTab('week')">周统计<span class="stats-week-mode-badge" id="statsWeekModeBadge" hidden>自</span></button>
                 <button class="stats-tab" data-tab="month" onclick="app.switchStatsTab('month')">月统计</button>
                 <button class="stats-tab" data-tab="year" onclick="app.switchStatsTab('year')">年统计</button>
             </div>
@@ -450,15 +453,15 @@
                     <input type="hidden" id="statsStartDate">
                     <input type="hidden" id="statsEndDate">
                     <button type="button" class="stats-date-range-picker" onclick="app.toggleStatsDatePicker()">
-                        <span class="stats-date-range-icon">📅</span>
+                        <span class="stats-date-range-icon">&#128197;</span>
                         <span class="stats-date-range-value" id="statsDateRangeText">请选择日期范围</span>
-                        <span class="stats-date-range-caret">▾</span>
+                        <span class="stats-date-range-caret">&#9662;</span>
                     </button>
                     <div class="stats-date-popover" id="statsDatePopover" style="display:none;">
                         <div class="stats-calendar-header">
-                            <button type="button" class="stats-calendar-nav" onclick="app.changeStatsCalendarMonth(-1)">‹</button>
+                            <button type="button" class="stats-calendar-nav" onclick="app.changeStatsCalendarMonth(-1)">&#8249;</button>
                             <div class="stats-calendar-title" id="statsCalendarTitle"></div>
-                            <button type="button" class="stats-calendar-nav" onclick="app.changeStatsCalendarMonth(1)">›</button>
+                            <button type="button" class="stats-calendar-nav" onclick="app.changeStatsCalendarMonth(1)">&#8250;</button>
                         </div>
                         <div class="stats-calendar-weekdays">
                             <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
@@ -467,31 +470,46 @@
                     </div>
                 </div>
                 <div class="chart-category-tabs">
-                    <button class="chart-category-tab active" data-category="student" onclick="app.switchChartCategory('student')">人数统计</button>
-                    <button class="chart-category-tab" data-category="duration" onclick="app.switchChartCategory('duration')">课时统计</button>
+                    <span class="chart-category-label">统计视图</span>
+                    <button class="chart-category-tab active" data-category="duration" onclick="app.switchChartCategory('duration')">课时统计</button>
+                    <button class="chart-category-tab" data-category="student" onclick="app.switchChartCategory('student')">人数统计</button>
                 </div>
             </div>
             <div id="statsContent">
+                <div class="stats-overview-head">
+                    <div class="stats-overview-copy">
+                        <div class="stats-overview-eyebrow">本次摘要</div>
+                        <div class="stats-overview-note" id="statsOverviewNote">正在整理这个时间范围的统计结果。</div>
+                    </div>
+                </div>
                 <div class="stats-grid" id="statsCards"></div>
-                <!-- 图表区域 -->
                 <div class="charts-section" id="chartsSection">
                     <div class="charts-dashboard">
                         <div class="chart-panel chart-panel-wide">
-                            <div class="chart-panel-title">堆积柱状图</div>
+                            <div class="chart-panel-head">
+                                <div class="chart-panel-title" id="barChartTitle">出勤结构总览</div>
+                                <div class="chart-panel-subtitle" id="barChartSubtitle">把核心变化先放到主图看。</div>
+                            </div>
                             <div class="chart-canvas-wrapper chart-canvas-large">
                                 <canvas id="statsBarChart"></canvas>
                             </div>
                             <div class="chart-legend-note" id="barChartLegendNote"></div>
                         </div>
                         <div class="chart-panel">
-                            <div class="chart-panel-title" id="lineChartTitle">折线统计图</div>
+                            <div class="chart-panel-head">
+                                <div class="chart-panel-title" id="lineChartTitle">学生到课趋势</div>
+                                <div class="chart-panel-subtitle" id="lineChartSubtitle">用趋势看这段时间的变化。</div>
+                            </div>
                             <div class="chart-canvas-wrapper chart-canvas-small">
                                 <canvas id="statsLineChart"></canvas>
                             </div>
                             <div class="chart-legend-note" id="lineChartLegendNote"></div>
                         </div>
                         <div class="chart-panel">
-                            <div class="chart-panel-title" id="pieChartTitle">饼状统计图</div>
+                            <div class="chart-panel-head">
+                                <div class="chart-panel-title" id="pieChartTitle">占比分布</div>
+                                <div class="chart-panel-subtitle" id="pieChartSubtitle">用分布看结构。</div>
+                            </div>
                             <div class="chart-canvas-wrapper chart-canvas-small">
                                 <canvas id="statsPieChart"></canvas>
                             </div>
@@ -499,8 +517,18 @@
                         </div>
                     </div>
                 </div>
-                <div style="font-size:12px;font-weight:500;color:#888;margin:16px 0 8px">课时明细</div>
-                <div class="stats-by-grade" id="statsByGrade"></div>
+                <div class="stats-detail-section" id="statsDetailSection">
+                    <button type="button" class="stats-detail-toggle" id="statsDetailToggle" onclick="app.toggleStatsDetails()">
+                        <span class="stats-detail-toggle-copy">
+                            <span class="stats-detail-toggle-title">课程明细</span>
+                            <span class="stats-detail-toggle-subtitle" id="statsDetailSummary">展开查看详细记录</span>
+                        </span>
+                        <span class="stats-detail-toggle-icon" id="statsDetailToggleIcon">&#9662;</span>
+                    </button>
+                    <div class="stats-detail-body" id="statsDetailBody" hidden>
+                        <div class="stats-by-grade" id="statsByGrade"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
