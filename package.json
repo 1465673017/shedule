@@ -1,0 +1,42 @@
+{
+  "name": "kebiao-app",
+  "version": "1.0.0",
+  "description": "Timetable app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/schedule-erp.test.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.example.kebiao",
+    "productName": "Timetable App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "html2canvas.min.js",
+      "js/**",
+      "*.svg"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  }
+}
+

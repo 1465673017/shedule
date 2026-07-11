@@ -1,0 +1,1824 @@
+// app-stats.js - Statistics views
+// Auto-split from script.js
+
+TimetableApp.prototype.openStatsModal = function(date, showCharts) {
+        this._statsDate = date || new Date();
+        this.currentStatsDate = new Date(this._statsDate);
+        this._statsShowCharts = showCharts !== false; // 默认 true（顶部日期范围入口），课表表头入口传 false
+        // Set default date range for day tab: current month
+        const now = new Date();
+        this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+        // Always show date range picker
+        document.getElementById('statsCustomRange').style.display = 'flex';
+        document.getElementById('statsModal').style.display = 'block';
+        this.switchStatsTab('day');
+    }
+
+TimetableApp.prototype.closeStatsModal = function() {
+        document.getElementById('statsModal').style.display = 'none';
+        this.closeStatsDatePicker();
+    }
+
+TimetableApp.prototype.formatStatsInputDate = function(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+TimetableApp.prototype.parseStatsInputDate = function(value) {
+        return value ? new Date(value + 'T00:00:00') : null;
+    }
+
+TimetableApp.prototype.formatStatsRangeLabel = function(startDate, endDate) {
+        const format = d => `${d.getFullYear()}年${d.getMonth() + 1}月${String(d.getDate()).padStart(2, '0')}日`;
+        return `${format(startDate)}-${format(endDate)}`;
+    }
+
+TimetableApp.prototype.setStatsDateRange = function(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        const rangeStart = start <= end ? start : end;
+        const rangeEnd = start <= end ? end : start;
+
+        document.getElementById('statsStartDate').value = this.formatStatsInputDate(rangeStart);
+        document.getElementById('statsEndDate').value = this.formatStatsInputDate(rangeEnd);
+        const label = document.getElementById('statsDateRangeText');
+        if (label) label.textContent = this.formatStatsRangeLabel(rangeStart, rangeEnd);
+    }
+
+TimetableApp.prototype.toggleStatsDatePicker = function() {
+        const popover = document.getElementById('statsDatePopover');
+        if (!popover) return;
+        if (popover.style.display === 'none' || !popover.style.display) {
+            const start = this.parseStatsInputDate(document.getElementById('statsStartDate').value) || new Date();
+            this._statsCalendarMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+            this._pendingStatsStartDate = null;
+            popover.style.display = 'block';
+            this.renderStatsDatePicker();
+            setTimeout(() => this.bindStatsDatePickerOutsideClick(), 0);
+        } else {
+            this.closeStatsDatePicker();
+        }
+    }
+
+TimetableApp.prototype.closeStatsDatePicker = function() {
+        const popover = document.getElementById('statsDatePopover');
+        if (popover) popover.style.display = 'none';
+        this._pendingStatsStartDate = null;
+        if (this._statsDatePickerOutsideHandler) {
+            document.removeEventListener('mousedown', this._statsDatePickerOutsideHandler);
+            this._statsDatePickerOutsideHandler = null;
+        }
+    }
+
+TimetableApp.prototype.bindStatsDatePickerOutsideClick = function() {
+        if (this._statsDatePickerOutsideHandler) {
+            document.removeEventListener('mousedown', this._statsDatePickerOutsideHandler);
+        }
+        this._statsDatePickerOutsideHandler = (event) => {
+            const picker = document.getElementById('statsCustomRange');
+            const popover = document.getElementById('statsDatePopover');
+            if (!popover || popover.style.display === 'none') return;
+            if (picker && picker.contains(event.target)) return;
+            this.closeStatsDatePicker();
+        };
+        document.addEventListener('mousedown', this._statsDatePickerOutsideHandler);
+    }
+
+TimetableApp.prototype.changeStatsCalendarMonth = function(delta) {
+        const base = this._statsCalendarMonth || new Date();
+        this._statsCalendarMonth = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+        this.renderStatsDatePicker();
+    }
+
+TimetableApp.prototype.renderStatsDatePicker = function() {
+        const title = document.getElementById('statsCalendarTitle');
+        const grid = document.getElementById('statsCalendarGrid');
+        if (!title || !grid) return;
+
+        const month = this._statsCalendarMonth || new Date();
+        const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+        const gridStart = new Date(monthStart);
+        gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+        const startDate = this._pendingStatsStartDate || this.parseStatsInputDate(document.getElementById('statsStartDate').value);
+        const endDate = this._pendingStatsStartDate ? this._pendingStatsStartDate : this.parseStatsInputDate(document.getElementById('statsEndDate').value);
+
+        title.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+        grid.innerHTML = '';
+
+        for (let i = 0; i < 42; i++) {
+            const day = new Date(gridStart);
+            day.setDate(gridStart.getDate() + i);
+            day.setHours(0, 0, 0, 0);
+            const dayKey = this.formatStatsInputDate(day);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'stats-calendar-day';
+            btn.textContent = String(day.getDate());
+            btn.dataset.date = dayKey;
+            if (day.getMonth() !== month.getMonth()) btn.classList.add('other-month');
+            if (startDate && endDate && day >= startDate && day <= endDate) btn.classList.add('in-range');
+            if ((startDate && day.getTime() === startDate.getTime()) || (endDate && day.getTime() === endDate.getTime())) {
+                btn.classList.add('range-edge');
+            }
+            btn.addEventListener('click', () => this.selectStatsCalendarDate(dayKey));
+            grid.appendChild(btn);
+        }
+    }
+
+TimetableApp.prototype.selectStatsCalendarDate = function(dateValue) {
+        const picked = this.parseStatsInputDate(dateValue);
+        if (!picked) return;
+
+        if (!this._pendingStatsStartDate) {
+            this._pendingStatsStartDate = picked;
+            const label = document.getElementById('statsDateRangeText');
+            if (label) label.textContent = `${picked.getFullYear()}年${picked.getMonth() + 1}月${String(picked.getDate()).padStart(2, '0')}日-请选择结束日期`;
+            this.renderStatsDatePicker();
+            return;
+        }
+
+        this.setStatsDateRange(this._pendingStatsStartDate, picked);
+        this.closeStatsDatePicker();
+        this.onStatsDateChange();
+    }
+
+TimetableApp.prototype.switchStatsTab = function(tab) {
+        this.closeStatsDatePicker();
+        this._statsTab = tab;
+        document.querySelectorAll('.stats-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+
+        // Always show the date range picker for all tabs
+        document.getElementById('statsCustomRange').style.display = 'flex';
+
+        const now = new Date();
+        // Set default date range based on tab
+        switch (tab) {
+            case 'day':
+                // Default: current month
+                this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+                this.renderDayStats();
+                break;
+            case 'week':
+                // Default: current month
+                this.setStatsDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+                this.renderWeekStats();
+                break;
+            case 'month':
+                // Default: current year (Jan 1 - Dec 31)
+                this.setStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+                this.renderMonthStats();
+                break;
+            case 'year':
+                // Default: current year (Jan 1 - Dec 31)
+                this.setStatsDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31));
+                this.renderYearStats();
+                break;
+        }
+    }
+
+TimetableApp.prototype.onStatsDateChange = function() {
+        // Unified handler for date input changes — routes to the active tab's renderer
+        switch (this._statsTab) {
+            case 'day': this.renderDayStats(); break;
+            case 'week': this.renderWeekStats(); break;
+            case 'month': this.renderMonthStats(); break;
+            case 'year': this.renderYearStats(); break;
+        }
+    }
+
+TimetableApp.prototype.collectLessonsForDate = function(date) {
+        const dayIndex = date.getDay();
+        const dayNum = dayIndex === 0 ? 7 : dayIndex;
+        const formatLocalDate = d => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+        const dateKey = formatLocalDate(date);
+
+        const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
+        const lessons = [];
+
+        cells.forEach(cell => {
+            const section = cell.dataset.section;
+            const period = cell.dataset.period;
+            const key = `${dayNum}-${section}-${period}`;
+            const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
+            const cellData = this.getCellVersion(key, weekStartStr);
+
+            const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
+            if (lesson) {
+                lessons.push({
+                    ...lesson,
+                    dates: [dateKey]
+                });
+            }
+        });
+
+        return lessons;
+    }
+
+TimetableApp.prototype.buildLessonStats = function(cellData, { key, section, period, date, dateKey }) {
+        if (!cellData) return null;
+
+        // 统计课时只统计当前时间之前已上完的课程，后续未上的课程不统计
+        if (!this.isClassFinished(key, date)) return null;
+
+        const studentIds = cellData.student && Array.isArray(cellData.student) ? cellData.student : [];
+        if (studentIds.length === 0) return null;
+
+        // 课程已结束（过去的日期），即使没有考勤记录也纳入统计
+        // 没有记录的学生默认视为"出勤"
+
+        const subject = cellData.subject ? this.subjects.find(s => s.id == cellData.subject) : null;
+        const periodInfo = this.periods[section] && this.periods[section][period]
+            ? this.periods[section][period] : null;
+
+        let studentCount = 0, leaveCount = 0, absentCount = 0;
+        let presentNonAuditionCount = 0, auditionStudentCount = 0;
+        const students = studentIds.map(id => {
+            const student = this.students.find(s => s.id === id);
+            if (!student) return null;
+            const status = this.getAttendanceStatusForStats(
+                { key, courseInstanceId: cellData.courseInstanceId },
+                id,
+                dateKey
+            );
+            if (status === 'leave') leaveCount++;
+            else if (status === 'absent') absentCount++;
+            else studentCount++;
+            if (student.isAudition && (!status || (status !== 'leave' && status !== 'absent'))) {
+                auditionStudentCount++;
+            } else if (!status || status !== 'leave' && status !== 'absent') {
+                presentNonAuditionCount++;
+            }
+            return { ...student, status };
+        }).filter(Boolean);
+
+        return {
+            subject: subject ? subject.name : '未分类',
+            color: subject ? subject.color : '#888',
+            time: periodInfo ? periodInfo.time : '',
+            studentCount,
+            leaveCount,
+            absentCount,
+            presentNonAuditionCount,
+            auditionStudentCount,
+            section,
+            period,
+            key,
+            courseInstanceId: cellData.courseInstanceId || null,
+            studentIds,
+            students
+        };
+    }
+
+TimetableApp.prototype.getLessonActualMinutesForStats = function(lesson) {
+        if (this.erpData && Array.isArray(this.erpData.courseInstances)) {
+            const instance = this.erpData.courseInstances.find(ci => ci.id === lesson.courseInstanceId);
+            if (instance && instance.actualMinutesByDate) {
+                const dates = lesson.dates || [];
+                for (const dateKey of dates) {
+                    if (instance.actualMinutesByDate[dateKey] !== undefined) {
+                        return instance.actualMinutesByDate[dateKey];
+                    }
+                }
+                const firstKey = Object.keys(instance.actualMinutesByDate)[0];
+                if (firstKey) return instance.actualMinutesByDate[firstKey];
+            }
+        }
+        return undefined;
+    }
+
+TimetableApp.prototype.getAttendanceStatusForStats = function(lesson, studentId, dateKey) {
+        if (this.erpData && Array.isArray(this.erpData.attendanceRecords)) {
+            const dates = dateKey ? [dateKey] : (lesson.dates || []);
+            const record = this.erpData.attendanceRecords.find(item =>
+                item.studentId === String(studentId) &&
+                (item.courseInstanceId === lesson.courseInstanceId || item.cellKey === lesson.key) &&
+                (dates.length === 0 || dates.includes(item.dateKey))
+            );
+            if (record) return record.status;
+        }
+        return null;
+    }
+
+TimetableApp.prototype.renderDayStats = function() {
+        const startInput = document.getElementById('statsStartDate');
+        const endInput = document.getElementById('statsEndDate');
+        if (!startInput.value || !endInput.value) return;
+
+        const startDate = new Date(startInput.value + 'T00:00:00');
+        const endDate = new Date(endInput.value + 'T00:00:00');
+        if (startDate > endDate) return;
+
+        const formatMD = d => `${d.getMonth() + 1}/${d.getDate()}`;
+        document.getElementById('statsTitle').textContent = `日统计 · ${formatMD(startDate)} - ${formatMD(endDate)}`;
+
+        this._chartGranularity = 'day'; // Force day-level chart grouping
+        const lessons = this.aggregateLessons(startDate, endDate);
+        this.renderStatsCards(lessons);
+        this.renderStatsByGrade(lessons);
+        this._lastChartLessons = lessons;
+        this._lastChartStart = startDate;
+        this._lastChartEnd = endDate;
+        this.renderCharts(lessons, startDate, endDate);
+    }
+
+TimetableApp.prototype.renderWeekStats = function() {
+        const startInput = document.getElementById('statsStartDate');
+        const endInput = document.getElementById('statsEndDate');
+        if (!startInput.value || !endInput.value) return;
+
+        const startDate = new Date(startInput.value + 'T00:00:00');
+        const endDate = new Date(endInput.value + 'T00:00:00');
+        if (startDate > endDate) return;
+
+        const formatMD = d => `${d.getMonth() + 1}/${d.getDate()}`;
+        document.getElementById('statsTitle').textContent = `周统计 · ${formatMD(startDate)} - ${formatMD(endDate)}`;
+
+        this._chartGranularity = 'week'; // Force week-level chart grouping
+        const lessons = this.aggregateLessons(startDate, endDate);
+        this.renderStatsCards(lessons);
+        this.renderStatsByGrade(lessons);
+        this._lastChartLessons = lessons;
+        this._lastChartStart = startDate;
+        this._lastChartEnd = endDate;
+        this.renderCharts(lessons, startDate, endDate);
+    }
+
+TimetableApp.prototype.renderMonthStats = function() {
+        const startInput = document.getElementById('statsStartDate');
+        const endInput = document.getElementById('statsEndDate');
+        if (!startInput.value || !endInput.value) return;
+
+        const startDate = new Date(startInput.value + 'T00:00:00');
+        const endDate = new Date(endInput.value + 'T00:00:00');
+        if (startDate > endDate) return;
+
+        const formatMD = d => `${d.getMonth() + 1}/${d.getDate()}`;
+        document.getElementById('statsTitle').textContent = `月统计 · ${formatMD(startDate)} - ${formatMD(endDate)}`;
+
+        this._chartGranularity = 'month'; // Force month-level chart grouping
+        const lessons = this.aggregateLessons(startDate, endDate);
+        this.renderStatsCards(lessons);
+        this.renderStatsByGrade(lessons);
+        this._lastChartLessons = lessons;
+        this._lastChartStart = startDate;
+        this._lastChartEnd = endDate;
+        this.renderCharts(lessons, startDate, endDate);
+    }
+
+TimetableApp.prototype.renderYearStats = function() {
+        const startInput = document.getElementById('statsStartDate');
+        const endInput = document.getElementById('statsEndDate');
+        if (!startInput.value || !endInput.value) return;
+
+        const startDate = new Date(startInput.value + 'T00:00:00');
+        const endDate = new Date(endInput.value + 'T00:00:00');
+        if (startDate > endDate) return;
+
+        document.getElementById('statsTitle').textContent = `年统计 · ${startDate.getFullYear()}年`;
+
+        this._chartGranularity = 'year';
+        const lessons = this.aggregateLessons(startDate, endDate);
+        this.renderStatsCards(lessons);
+        this.renderStatsByGrade(lessons);
+        this._lastChartLessons = lessons;
+        this._lastChartStart = startDate;
+        this._lastChartEnd = endDate;
+        this.renderCharts(lessons, startDate, endDate);
+    }
+
+TimetableApp.prototype.aggregateLessons = function(startDate, endDate) {
+        const aggregated = {};
+
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+
+        const formatLocalDate = d => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        while (current <= end) {
+            const dateStr = formatLocalDate(current);
+            const lessons = this.collectLessonsForDate(current);
+            lessons.forEach(lesson => {
+            const aggKey = lesson.key;
+                if (!aggregated[aggKey]) {
+                    aggregated[aggKey] = {
+                        subject: lesson.subject,
+                        color: lesson.color,
+                        time: lesson.time,
+                        studentCount: 0,
+                        leaveCount: 0,
+                        absentCount: 0,
+                        presentNonAuditionCount: 0,
+                        auditionStudentCount: 0,
+                        perSessionStudents: lesson.studentCount + lesson.leaveCount + lesson.absentCount,
+                        section: lesson.section,
+                        period: lesson.period,
+                        key: lesson.key,
+                        courseInstanceId: lesson.courseInstanceId || null,
+                        studentIds: [...lesson.studentIds],
+                        students: [...(lesson.students || [])],
+                        lessonCount: 0,
+                        dates: []
+                    };
+                }
+                aggregated[aggKey].studentCount += lesson.studentCount;
+                aggregated[aggKey].leaveCount += lesson.leaveCount;
+                aggregated[aggKey].absentCount += lesson.absentCount;
+                aggregated[aggKey].presentNonAuditionCount += lesson.presentNonAuditionCount || 0;
+                aggregated[aggKey].auditionStudentCount += lesson.auditionStudentCount || 0;
+                if (lesson.students) {
+                    lesson.students.forEach(s => {
+                        if (!aggregated[aggKey].students.find(existing => existing.id === s.id)) {
+                            aggregated[aggKey].students.push(s);
+                        }
+                    });
+                }
+                aggregated[aggKey].lessonCount++;
+                aggregated[aggKey].dates.push(dateStr);
+            });
+            current.setDate(current.getDate() + 1);
+        }
+
+        return Object.values(aggregated);
+    }
+
+TimetableApp.prototype.showDayStats = function(date) {
+        // 课表表头点击入口 — 不显示图形统计，仅显示原数字统计
+        this.openStatsModal(date, false);
+    }
+    
+TimetableApp.prototype.renderStatsCards = function(lessons, showClassDays = true) {
+        const container = document.getElementById('statsCards');
+
+        const validLessons = lessons.filter(l => (l.studentCount + (l.leaveCount || 0) + (l.absentCount || 0)) > 0);
+
+        if (validLessons.length === 0) {
+            container.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px">当天无有效课时</div>';
+            return;
+        }
+
+        let totalPresentStudents = 0;
+        let totalScheduledStudents = 0;
+        let totalMinutes = 0;
+        let totalAuditionCount = 0;
+        const typeStats = {};
+        const allDates = new Set();
+
+        validLessons.forEach(lesson => {
+            const lessonCount = lesson.lessonCount || 1;
+            let duration;
+            const actualMinutes = this.getLessonActualMinutesForStats(lesson);
+            if (actualMinutes !== undefined) {
+                duration = actualMinutes;
+            } else if (lesson.time) {
+                const parts = lesson.time.split('-');
+                if (parts.length === 2) {
+                    const start = this.timeToMinutes(parts[0]);
+                    const end = this.timeToMinutes(parts[1]);
+                    duration = end - start;
+                } else {
+                    duration = 0;
+                }
+            } else {
+                duration = 0;
+            }
+            const totalDuration = duration * lessonCount;
+
+            const presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+            const auditionCount = lesson.auditionStudentCount || 0;
+            const presentCount = lesson.studentCount || 0;
+            const totalCount = presentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+
+            totalAuditionCount += auditionCount;
+            totalPresentStudents += presentCount;
+            totalScheduledStudents += totalCount;
+
+            if (presentNonAuditionCount > 0) {
+                totalMinutes += totalDuration;
+                if (presentNonAuditionCount === 1) {
+                    // 区分真正的1v1学生和普通的单人课程
+                    const presentStudent = lesson.students ? lesson.students.find(s =>
+                        s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'))
+                    ) : null;
+                    if (presentStudent && presentStudent.is1v1) {
+                        // 带有1v1标志的学生，按完整1v1统计
+                        if (!typeStats['1v1']) { typeStats['1v1'] = 0; }
+                        typeStats['1v1'] += totalDuration;
+                    } else {
+                        // 没有1v1标志的单人课程，标记为1v1(0.8)以区分
+                        if (!typeStats['1v1(0.8)']) { typeStats['1v1(0.8)'] = 0; }
+                        typeStats['1v1(0.8)'] += totalDuration;
+                    }
+                } else {
+                    const type = `1v${presentNonAuditionCount}`;
+                    if (!typeStats[type]) {
+                        typeStats[type] = 0;
+                    }
+                    typeStats[type] += totalDuration;
+                }
+            }
+
+            if (lesson.dates && lesson.dates.length > 0) {
+                lesson.dates.forEach(d => allDates.add(d));
+            }
+        });
+
+        const totalHours = (totalMinutes / 60).toFixed(2);
+        const classDays = allDates.size;
+
+        let typeCards = '';
+        const sortedTypes = Object.keys(typeStats).sort((a, b) => {
+            if (!a.startsWith('1v') && !b.startsWith('1v')) return 0;
+            if (!a.startsWith('1v')) return 1;
+            if (!b.startsWith('1v')) return -1;
+            const numA = parseInt(a.substring(2));
+            const numB = parseInt(b.substring(2));
+            if (numA !== numB) return numA - numB;
+            // "1v1" 排在 "1v1(0.8)" 前面
+            if (a.includes('(0.8)') === b.includes('(0.8)')) return 0;
+            return a.includes('(0.8)') ? 1 : -1;
+        });
+        sortedTypes.forEach(type => {
+            const hours = (typeStats[type] / 60).toFixed(2);
+            typeCards += `
+                <div class="stats-card">
+                    <div class="st-num">${hours}h</div>
+                    <div class="st-label">${type}</div>
+                </div>
+            `;
+        });
+
+        const auditionCard = totalAuditionCount > 0 ? `
+            <div class="stats-card">
+                <div class="st-num">${totalAuditionCount}</div>
+                <div class="st-label">试听人数</div>
+            </div>
+        ` : '';
+
+        const classDaysCard = showClassDays ? `
+            <div class="stats-card">
+                <div class="st-num">${classDays}</div>
+                <div class="st-label">上课天数</div>
+            </div>
+        ` : '';
+        
+        container.innerHTML = `
+            <div class="stats-card">
+                <div class="st-num">${totalPresentStudents}/${totalScheduledStudents}</div>
+                <div class="st-label">学生数</div>
+            </div>
+            <div class="stats-card">
+                <div class="st-num">${totalHours}h</div>
+                <div class="st-label">总时长</div>
+            </div>
+            ${auditionCard}
+            ${classDaysCard}
+            ${typeCards}
+        `;
+    }
+TimetableApp.prototype.getAttendanceSuffix = function(lesson) {
+        const total = lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+        if (total === 0) return '';
+
+        const leave = lesson.leaveCount || 0;
+        const absent = lesson.absentCount || 0;
+
+        // 全部出勤 → 只显示绿色色块
+        if (leave === 0 && absent === 0) {
+            return ` <span class="att-dot dot-green" title="全部出勤"></span>`;
+        }
+
+        // 否则显示黄色(请假)和/或红色(缺勤)色块，不显示绿色
+        let html = '';
+        if (leave > 0) {
+            html += ` <span class="att-dot dot-yellow" title="请假${leave}人"></span>`;
+        }
+        if (absent > 0) {
+            html += ` <span class="att-dot dot-red" title="缺勤${absent}人"></span>`;
+        }
+        return html;
+    }
+
+TimetableApp.prototype.getInlineAuditionBadge = function() {
+        return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:#1890ff;color:#fff;font-size:10px;font-weight:700;line-height:1;">试</span>';
+    }
+
+TimetableApp.prototype.getInlineOneV1Badge = function() {
+        return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:linear-gradient(135deg,#4caf50 0%,#66bb6a 100%);color:#fff;font-size:10px;font-weight:700;line-height:1;">1v1</span>';
+    }
+
+TimetableApp.prototype.getStatsStudentLabel = function(lesson) {
+        const lessonCount = lesson.lessonCount || 1;
+        const presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+        let studentLabel = '';
+
+        if (presentNonAuditionCount > 0) {
+            if (presentNonAuditionCount === 1) {
+                const presentStudent = lesson.students ? lesson.students.find(s =>
+                    s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'))
+                ) : null;
+                if (presentStudent && presentStudent.is1v1) {
+                    studentLabel = '1v1';
+                } else {
+                    studentLabel = '1v1(0.8)';
+                }
+            } else {
+                studentLabel = `1v${presentNonAuditionCount}`;
+            }
+        }
+        if (studentLabel && lessonCount > 1) {
+            studentLabel += ` ×${lessonCount}`;
+        }
+
+        return studentLabel ? `(${studentLabel})` : '';
+    }
+
+TimetableApp.prototype.getStatsRowNameHtml = function(lesson, expanded = false) {
+        const studentLabel = this.getStatsStudentLabel(lesson);
+        const auditionBadge = (lesson.auditionStudentCount || 0) > 0 ? this.getInlineAuditionBadge() : '';
+        const suffix = this.getAttendanceSuffix(lesson);
+
+        return `
+            <span class="grade-expand-icon" style="display:inline-block;width:16px;text-align:center;margin-right:4px;font-size:10px;transition:transform 0.2s;">${expanded ? '▼' : '▶'}</span>
+            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${lesson.color};margin-right:8px"></span>
+            ${lesson.subject} ${studentLabel}${auditionBadge}${suffix}
+        `;
+    }
+
+TimetableApp.prototype.syncLessonAttendanceSummary = function(lesson) {
+        let studentCount = 0;
+        let leaveCount = 0;
+        let absentCount = 0;
+        let presentNonAuditionCount = 0;
+        let auditionStudentCount = 0;
+        (lesson.students || []).forEach(student => {
+            if (!student) return;
+            const status = this.getAttendanceStatusForStats(lesson, student.id);
+            student.status = status;
+            if (status === 'leave') leaveCount++;
+            else if (status === 'absent') absentCount++;
+            else studentCount++;
+
+            if (student.isAudition && (!status || (status !== 'leave' && status !== 'absent'))) {
+                auditionStudentCount++;
+            } else if (!status || (status !== 'leave' && status !== 'absent')) {
+                presentNonAuditionCount++;
+            }
+        });
+
+        lesson.studentCount = studentCount;
+        lesson.leaveCount = leaveCount;
+        lesson.absentCount = absentCount;
+        lesson.presentNonAuditionCount = presentNonAuditionCount;
+        lesson.auditionStudentCount = auditionStudentCount;
+    }
+
+TimetableApp.prototype.renderStatsByGrade = function(lessons, showDates = true) {
+        const container = document.getElementById('statsByGrade');
+
+        if (lessons.length === 0) {
+            container.innerHTML = '<div class="text-muted">暂无课时明细</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        lessons.forEach((lesson, index) => {
+            const lessonCount = lesson.lessonCount || 1;
+            const scheduledDuration = this.getLessonDuration(lesson.time);
+            const actualMin = this.getLessonActualMinutesForStats(lesson);
+            const totalActualMin = actualMin !== undefined ? actualMin * lessonCount : null;
+            const totalScheduled = parseFloat(scheduledDuration) * 60 * lessonCount;
+            const durationDisplay = totalActualMin !== null
+                ? this.formatDuration(Math.floor(totalActualMin / 60), totalActualMin % 60)
+                : (totalScheduled >= 60 ? `${(totalScheduled / 60).toFixed(1).replace('.0', '')}h` : `${totalScheduled}min`);
+            const perDisplay = actualMin !== undefined
+                ? this.formatDuration(Math.floor(actualMin / 60), actualMin % 60)
+                : `${scheduledDuration}h`;
+            const durationTitle = actualMin !== undefined
+                ? `实上${perDisplay}/次 × ${lessonCount}次 = ${durationDisplay}（原定${scheduledDuration}h/次）`
+                : `按${scheduledDuration}h/次 × ${lessonCount}次 = ${durationDisplay}`;
+            
+            let datesDisplay = '';
+            let dateTitle = '';
+            if (showDates) {
+                const dates = lesson.dates || [];
+                datesDisplay = dates.length > 0 
+                    ? dates.map(d => {
+                        const dateObj = new Date(d);
+                        return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                    }).join(', ') 
+                    : '';
+                dateTitle = dates.length > 0 ? `上课日期：${dates.join(', ')}` : '';
+            }
+            
+            const row = document.createElement('div');
+            row.className = 'grade-row';
+            row.style.cursor = 'pointer';
+            row.title = '点击展开/收起出勤记录';
+            row.dataset.expanded = 'false';
+            row.innerHTML = `
+                <div class="gr-name">
+                    ${this.getStatsRowNameHtml(lesson, false)}
+                </div>
+                <div class="gr-hours" title="${durationTitle}${dateTitle ? ' · ' + dateTitle : ''}">
+                    ${lesson.time} · ${durationDisplay}
+                    ${datesDisplay ? `<span class="gr-dates">${datesDisplay}</span>` : ''}
+                </div>
+            `;
+
+            // 学生出勤详情面板（初始隐藏）
+            const detailPanel = document.createElement('div');
+            detailPanel.className = 'grade-detail';
+            detailPanel.style.display = 'none';
+            container.appendChild(row);
+            container.appendChild(detailPanel);
+
+            let expanded = false;
+            row.addEventListener('click', () => {
+                expanded = !expanded;
+                row.dataset.expanded = expanded ? 'true' : 'false';
+                const icon = row.querySelector('.grade-expand-icon');
+                if (expanded) {
+                    icon.textContent = '▼';
+                    icon.style.transform = 'rotate(0deg)';
+                    this.renderLessonAttendanceDetail(detailPanel, lesson);
+                    detailPanel.style.display = 'block';
+                } else {
+                    icon.textContent = '▶';
+                    icon.style.transform = 'rotate(0deg)';
+                    detailPanel.style.display = 'none';
+                }
+            });
+        });
+    }
+
+TimetableApp.prototype.renderLessonAttendanceDetail = function(panel, lesson) {
+        const key = lesson.key;
+        const studentIds = lesson.studentIds || [];
+        if (studentIds.length === 0) {
+            panel.innerHTML = '<div style="color:#999;font-size:13px;padding:6px 0;">该节课暂无学生</div>';
+            return;
+        }
+
+        // 统计各状态人数
+        let presentCount = 0, leaveCount = 0, absentCount = 0;
+        studentIds.forEach(id => {
+            const status = this.getAttendanceStatusForStats(lesson, id);
+            if (status === 'leave') leaveCount++;
+            else if (status === 'absent') absentCount++;
+            else presentCount++;
+        });
+
+        let html = '<div style="font-size:12px;color:#888;margin-bottom:6px;">';
+        html += `共${studentIds.length}人 · `;
+        html += `<span style="color:#4caf50;">出勤${presentCount}</span> `;
+        if (leaveCount > 0) html += `<span style="color:#ff9800;">请假${leaveCount}</span> `;
+        if (absentCount > 0) html += `<span style="color:#f44336;">缺勤${absentCount}</span>`;
+        html += '</div>';
+
+        // 检查该课程是否已结束；未结束的课程不默认选中任何考勤状态
+        const lessonDates = lesson.dates || [];
+        const primaryDate = lessonDates.length > 0 ? new Date(lessonDates[0] + 'T00:00:00') : new Date();
+        const classFinished = this.isClassFinished(key, primaryDate);
+        const defaultAttStatus = classFinished ? 'present' : '';
+
+        studentIds.forEach(id => {
+            const student = this.students.find(s => s.id == id);
+            const name = student ? student.name : '未知';
+            const auditionBadge = student && student.isAudition ? this.getInlineAuditionBadge() : '';
+            const oneV1Badge = student && student.is1v1 ? this.getInlineOneV1Badge() : '';
+            const status = this.getAttendanceStatusForStats(lesson, id) || defaultAttStatus;
+            html += `
+                <div class="att-inline-row" style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
+                    <span style="display:inline-flex;align-items:center;">${name}${oneV1Badge}${auditionBadge}</span>
+                    <div class="att-inline-btns" style="display:flex;gap:4px;">
+                        <button class="att-inline-btn ${status === 'present' ? 'active' : ''}"
+                            data-key="${key}" data-sid="${id}" data-status="present"
+                            style="padding:2px 8px;border:1px solid #ddd;border-radius:3px;font-size:11px;cursor:pointer;
+                            ${status === 'present' ? 'background:#4caf50;color:#fff;border-color:#4caf50;' : 'background:#fff;color:#666;'}">
+                            出勤
+                        </button>
+                        <button class="att-inline-btn ${status === 'leave' ? 'active' : ''}"
+                            data-key="${key}" data-sid="${id}" data-status="leave"
+                            style="padding:2px 8px;border:1px solid #ddd;border-radius:3px;font-size:11px;cursor:pointer;
+                            ${status === 'leave' ? 'background:#ff9800;color:#fff;border-color:#ff9800;' : 'background:#fff;color:#666;'}">
+                            请假
+                        </button>
+                        <button class="att-inline-btn ${status === 'absent' ? 'active' : ''}"
+                            data-key="${key}" data-sid="${id}" data-status="absent"
+                            style="padding:2px 8px;border:1px solid #ddd;border-radius:3px;font-size:11px;cursor:pointer;
+                            ${status === 'absent' ? 'background:#f44336;color:#fff;border-color:#f44336;' : 'background:#fff;color:#666;'}">
+                            缺勤
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        panel.innerHTML = html;
+
+        // 绑定出勤按钮事件
+        panel.querySelectorAll('.att-inline-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const btnKey = btn.dataset.key;
+                const sid = btn.dataset.sid;
+                const newStatus = btn.dataset.status;
+
+                this.setAttendanceStatus(btnKey, sid, newStatus);
+                this.syncLessonAttendanceSummary(lesson);
+
+                // 刷新当前行标题、1vN 文案和色块
+                const row = panel.previousElementSibling;
+                if (row && row.classList.contains('grade-row')) {
+                    const grName = row.querySelector('.gr-name');
+                    if (grName) {
+                        const expanded = row.dataset.expanded === 'true';
+                        grName.innerHTML = this.getStatsRowNameHtml(lesson, expanded);
+                    }
+                }
+
+                // 刷新详情面板和统计卡片
+                this.renderLessonAttendanceDetail(panel, lesson);
+                this.refreshStatsAfterAttendanceChange();
+            });
+        });
+    }
+
+TimetableApp.prototype.refreshStatsAfterAttendanceChange = function() {
+        if (!this.currentStatsDate) return;
+
+        const formatLocalDate = d => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        // 重新统计当前日期的课程数据
+        const dayIndex = this.currentStatsDate.getDay();
+        const dayNum = dayIndex === 0 ? 7 : dayIndex;
+        const date = this.currentStatsDate;
+        const dateKey = formatLocalDate(date);
+
+        const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
+        const lessons = [];
+
+        cells.forEach(cell => {
+            const section = cell.dataset.section;
+            const period = cell.dataset.period;
+            const key = `${dayNum}-${section}-${period}`;
+            const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
+            const cellData = this.getCellVersion(key, weekStartStr);
+
+            const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
+            if (lesson) {
+                lessons.push(lesson);
+            }
+        });
+
+        this.renderStatsCards(lessons, false);
+    }
+    
+TimetableApp.prototype.getInlineOneV1Badge = function() {
+        return '<span style="display:inline-flex;align-items:center;justify-content:center;margin-left:4px;padding:0 4px;min-width:16px;height:16px;border-radius:8px;background:linear-gradient(135deg,#4caf50 0%,#66bb6a 100%);color:#fff;font-size:10px;font-weight:700;line-height:1;">1v1</span>';
+    }
+
+// ========== 图形统计系统 ==========
+
+TimetableApp.prototype.destroyCharts = function() {
+    if (this._chartInstances) {
+        Object.keys(this._chartInstances).forEach(function(key) {
+            if (this._chartInstances[key]) {
+                this._chartInstances[key].destroy();
+                this._chartInstances[key] = null;
+            }
+        }, this);
+    } else if (this._chartInstance) {
+        this._chartInstance.destroy();
+    }
+    this._chartInstance = null;
+    this._chartInstances = {};
+    this._activeChartSliceIndex = null;
+};
+
+TimetableApp.prototype.setChartLegendNote = function(text) {
+    var targetId = this._chartNoteTarget || 'chartLegendNote';
+    var target = document.getElementById(targetId);
+    if (target) target.textContent = text;
+};
+
+TimetableApp.prototype.getChartLegendOptions = function(textColor) {
+    return {
+        position: 'bottom',
+        labels: {
+            color: textColor,
+            boxWidth: 14,
+            boxHeight: 6,
+            padding: 8,
+            usePointStyle: true,
+            pointStyle: 'rectRounded',
+            pointStyleWidth: 14,
+            font: {
+                size: 10,
+                weight: '500'
+            }
+        }
+    };
+};
+
+TimetableApp.prototype.getLinePointSizes = function(labelCount) {
+    if (labelCount > 90) return { radius: 0, hoverRadius: 2.5 };
+    if (labelCount > 60) return { radius: 0.6, hoverRadius: 2.5 };
+    if (labelCount > 35) return { radius: 1, hoverRadius: 3 };
+    if (labelCount > 20) return { radius: 1.4, hoverRadius: 3.5 };
+    return { radius: 2, hoverRadius: 4 };
+};
+
+TimetableApp.prototype.getChartSliceData = function(data, index) {
+    if (index === null || index === undefined || index < 0 || index >= data.labels.length) {
+        return data;
+    }
+
+    var typeMinutes = data.typeMinutesByGroup[index] || {};
+    return {
+        labels: [data.labels[index]],
+        presentData: [data.presentData[index] || 0],
+        presentNonAuditionData: [data.presentNonAuditionData[index] || 0],
+        leaveData: [data.leaveData[index] || 0],
+        absentData: [data.absentData[index] || 0],
+        totalStudentsData: [data.totalStudentsData[index] || 0],
+        auditionData: [data.auditionData[index] || 0],
+        totalMinutesData: [data.totalMinutesData[index] || 0],
+        typeMinutes: Object.assign({}, typeMinutes),
+        typeMinutesByGroup: [typeMinutes],
+        groupStartDates: data.groupStartDates ? [data.groupStartDates[index]] : [],
+        groupEndDates: data.groupEndDates ? [data.groupEndDates[index]] : [],
+        granularity: data.granularity,
+        selectedLabel: data.labels[index]
+    };
+};
+
+TimetableApp.prototype.renderLinkedCharts = function(category, data, index) {
+    if (!this._chartInstances) this._chartInstances = {};
+
+    var detailData = this.getChartSliceData(data, index);
+    var lineTitle = document.getElementById('lineChartTitle');
+    var pieTitle = document.getElementById('pieChartTitle');
+    if (lineTitle) lineTitle.textContent = '折线统计图';
+    if (pieTitle) pieTitle.textContent = '饼状统计图';
+
+    if (this._chartInstances.line) this._chartInstances.line.destroy();
+    if (this._chartInstances.pie) this._chartInstances.pie.destroy();
+
+    var lineCanvas = document.getElementById('statsLineChart');
+    var pieCanvas = document.getElementById('statsPieChart');
+    if (!lineCanvas || !pieCanvas) return;
+
+    if (category === 'student') {
+        this._chartNoteTarget = 'lineChartLegendNote';
+        this._chartInstances.line = this.renderStudentLineChart(lineCanvas.getContext('2d'), detailData);
+        this._chartNoteTarget = 'pieChartLegendNote';
+        this._chartInstances.pie = this.renderStudentPieChart(pieCanvas.getContext('2d'), detailData);
+    } else {
+        this._chartNoteTarget = 'lineChartLegendNote';
+        this._chartInstances.line = this.renderDurationLineChart(lineCanvas.getContext('2d'), detailData);
+        this._chartNoteTarget = 'pieChartLegendNote';
+        this._chartInstances.pie = this.renderDurationPieChart(pieCanvas.getContext('2d'), detailData);
+    }
+    this._chartNoteTarget = null;
+};
+
+TimetableApp.prototype.switchChartCategory = function(category) {
+    this._currentChartCategory = category;
+    document.querySelectorAll('.chart-category-tab').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.category === category);
+    });
+    if (this._lastChartLessons && this._lastChartStart && this._lastChartEnd) {
+        this.renderCharts(this._lastChartLessons, this._lastChartStart, this._lastChartEnd);
+    }
+};
+
+TimetableApp.prototype.switchChartType = function(type) {
+    if (this._lastChartLessons && this._lastChartStart && this._lastChartEnd) {
+        this.renderCharts(this._lastChartLessons, this._lastChartStart, this._lastChartEnd);
+    }
+};
+
+TimetableApp.prototype.collectChartSeriesData = function(startDate, endDate, forcedGranularity) {
+    var formatLocalDate = function(d) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    };
+
+    var msPerDay = 24 * 60 * 60 * 1000;
+    var dayCount = Math.round((endDate - startDate) / msPerDay) + 1;
+
+    var granularity;
+    if (forcedGranularity) {
+        granularity = forcedGranularity;
+    } else if (this._chartGranularity) {
+        granularity = this._chartGranularity;
+    } else if (dayCount <= 14) {
+        granularity = 'day';
+    } else if (dayCount <= 90) {
+        granularity = 'week';
+    } else {
+        granularity = 'month';
+    }
+
+    var groups = {};
+    var groupOrder = [];
+    var self = this;
+
+    var current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    var end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (current <= end) {
+        var groupKey;
+        if (granularity === 'day') {
+            groupKey = formatLocalDate(current);
+        } else if (granularity === 'week') {
+            var dayOfWeek = current.getDay();
+            var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            var monday = new Date(current);
+            monday.setDate(current.getDate() - diffToMonday);
+            groupKey = formatLocalDate(monday);
+        } else if (granularity === 'month') {
+            groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0');
+        } else {
+            groupKey = String(current.getFullYear());
+        }
+
+        if (!groups[groupKey]) {
+            groups[groupKey] = {
+                present: 0, leave: 0, absent: 0,
+                audition: 0, totalMinutes: 0,
+                typeMinutes: {},
+                startDate: new Date(current),
+                endDate: new Date(current)
+            };
+            groupOrder.push(groupKey);
+        } else {
+            groups[groupKey].endDate = new Date(current);
+        }
+
+        var lessons = this.collectLessonsForDate(current);
+        lessons.forEach(function(lesson) {
+            groups[groupKey].present += lesson.studentCount || 0;
+            groups[groupKey].leave += lesson.leaveCount || 0;
+            groups[groupKey].absent += lesson.absentCount || 0;
+            groups[groupKey].audition += lesson.auditionStudentCount || 0;
+
+            var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
+            var duration;
+            var actualMinutes = self.getLessonActualMinutesForStats(lesson);
+            if (actualMinutes !== undefined) {
+                duration = actualMinutes;
+            } else if (lesson.time) {
+                var parts = lesson.time.split('-');
+                if (parts.length === 2) {
+                    duration = self.timeToMinutes(parts[1]) - self.timeToMinutes(parts[0]);
+                } else {
+                    duration = 0;
+                }
+            } else {
+                duration = 0;
+            }
+            if (duration < 0) duration = 0;
+
+            var lessonCount = lesson.lessonCount || 1;
+            var totalDuration = duration * lessonCount;
+
+            if (presentNonAuditionCount > 0) {
+                groups[groupKey].totalMinutes += totalDuration;
+                var typeKey;
+                if (presentNonAuditionCount === 1) {
+                    var presentStudent = lesson.students ? lesson.students.find(function(s) {
+                        return s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'));
+                    }) : null;
+                    if (presentStudent && presentStudent.is1v1) {
+                        typeKey = '1v1';
+                    } else {
+                        typeKey = '1v1(0.8)';
+                    }
+                } else {
+                    typeKey = '1v' + presentNonAuditionCount;
+                }
+                if (!groups[groupKey].typeMinutes[typeKey]) {
+                    groups[groupKey].typeMinutes[typeKey] = 0;
+                }
+                groups[groupKey].typeMinutes[typeKey] += totalDuration;
+            }
+        });
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    // Build output arrays
+    var labels = [];
+    var presentData = [];
+    var presentNonAuditionData = [];
+    var leaveData = [];
+    var absentData = [];
+    var totalStudentsData = [];
+    var auditionData = [];
+    var totalMinutesData = [];
+    var aggregatedTypeMinutes = {};
+    var typeMinutesByGroup = [];
+    var groupStartDates = [];
+    var groupEndDates = [];
+
+    var rangeCrossesMonth = startDate.getFullYear() !== endDate.getFullYear() || startDate.getMonth() !== endDate.getMonth();
+    var rangeCrossesYear = startDate.getFullYear() !== endDate.getFullYear();
+    var weekOrdinalByMonth = {};
+    var formatFullDateLabel = function(d) {
+        return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    };
+    var formatShortDateLabel = function(d) {
+        return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    };
+
+    groupOrder.forEach(function(key) {
+        var g = groups[key];
+        var label;
+        if (granularity === 'day') {
+            var d = new Date(key + 'T00:00:00');
+            label = rangeCrossesMonth ? formatFullDateLabel(d) : formatShortDateLabel(d);
+        } else if (granularity === 'week') {
+            var weekMonthKey = g.startDate.getFullYear() + '-' + String(g.startDate.getMonth() + 1).padStart(2, '0');
+            weekOrdinalByMonth[weekMonthKey] = (weekOrdinalByMonth[weekMonthKey] || 0) + 1;
+            label = '第' + weekOrdinalByMonth[weekMonthKey] + '周';
+            if (rangeCrossesMonth) {
+                label = g.startDate.getFullYear() + '年' + (g.startDate.getMonth() + 1) + '月' + label;
+            }
+        } else if (granularity === 'month') {
+            var parts = key.split('-');
+            label = parseInt(parts[1]) + '月';
+            if (rangeCrossesYear) {
+                label = parts[0] + '年' + label;
+            }
+        } else {
+            label = key + '年';
+        }
+        labels.push(label);
+        presentData.push(g.present);
+        presentNonAuditionData.push(Math.max(0, g.present - g.audition));
+        leaveData.push(g.leave);
+        absentData.push(g.absent);
+        totalStudentsData.push(g.present + g.leave + g.absent);
+        auditionData.push(g.audition);
+        totalMinutesData.push(g.totalMinutes);
+        typeMinutesByGroup.push(g.typeMinutes);
+        groupStartDates.push(new Date(g.startDate));
+        groupEndDates.push(new Date(g.endDate));
+
+        Object.keys(g.typeMinutes).forEach(function(tk) {
+            if (!aggregatedTypeMinutes[tk]) aggregatedTypeMinutes[tk] = 0;
+            aggregatedTypeMinutes[tk] += g.typeMinutes[tk];
+        });
+    });
+
+    return {
+        labels: labels,
+        presentData: presentData,
+        presentNonAuditionData: presentNonAuditionData,
+        leaveData: leaveData,
+        absentData: absentData,
+        totalStudentsData: totalStudentsData,
+        auditionData: auditionData,
+        totalMinutesData: totalMinutesData,
+        typeMinutes: aggregatedTypeMinutes,
+        typeMinutesByGroup: typeMinutesByGroup,
+        groupStartDates: groupStartDates,
+        groupEndDates: groupEndDates,
+        granularity: granularity
+    };
+};
+
+TimetableApp.prototype.renderCharts = function(lessons, startDate, endDate) {
+    var chartSection = document.getElementById('chartsSection');
+    if (!chartSection) return;
+
+    var statsCards = document.getElementById('statsCards');
+    var statsByGrade = document.getElementById('statsByGrade');
+    var detailLabel = statsByGrade ? statsByGrade.previousElementSibling : null;
+
+    // 课表表头入口 → 只显示数字卡片+明细，不显示图表
+    if (this._statsShowCharts === false) {
+        chartSection.style.display = 'none';
+        if (statsCards) statsCards.style.display = '';
+        if (detailLabel) detailLabel.style.display = '';
+        if (statsByGrade) statsByGrade.style.display = '';
+        this.destroyCharts();
+        return;
+    }
+
+    // 顶部日期范围入口 → 只显示图形统计，隐藏数字卡片和明细
+    chartSection.style.display = '';
+    if (statsCards) statsCards.style.display = 'none';
+    if (detailLabel) detailLabel.style.display = 'none';
+    if (statsByGrade) statsByGrade.style.display = 'none';
+
+    this._lastChartLessons = lessons;
+    this._lastChartStart = startDate;
+    this._lastChartEnd = endDate;
+    if (!this._currentChartCategory) this._currentChartCategory = 'student';
+
+    if (typeof Chart === 'undefined') {
+        chartSection.style.display = 'none';
+        if (statsCards) statsCards.style.display = '';
+        if (detailLabel) detailLabel.style.display = '';
+        if (statsByGrade) statsByGrade.style.display = '';
+        this.destroyCharts();
+        console.warn('Chart.js is unavailable; falling back to text statistics.');
+        return;
+    }
+
+    var seriesData = this.collectChartSeriesData(startDate, endDate);
+
+    // Destroy previous chart
+    this.destroyCharts();
+
+    var canvas = document.getElementById('statsBarChart');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+
+    var cat = this._currentChartCategory;
+    var self = this;
+    var handleBarHover = function(index) {
+        if (self._activeChartSliceIndex === index) return;
+        self._activeChartSliceIndex = index;
+        self.renderLinkedCharts(cat, seriesData, index);
+    };
+    canvas.onmouseleave = function() {
+        handleBarHover(null);
+    };
+
+    this._chartInstances = {};
+    this._chartNoteTarget = 'barChartLegendNote';
+    if (cat === 'student') {
+        this._chartInstances.bar = this.renderStudentBarChart(ctx, seriesData, handleBarHover);
+    } else if (cat === 'duration') {
+        this._chartInstances.bar = this.renderDurationBarChart(ctx, seriesData, handleBarHover);
+    }
+    this._chartNoteTarget = null;
+    this.renderLinkedCharts(cat, seriesData, null);
+};
+
+// ========== 人数统计 ==========
+
+TimetableApp.prototype.renderStudentBarChart = function(ctx, data, onBarHover) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+
+    var totalStudents = data.totalStudentsData.reduce(function(a, b) { return a + b; }, 0);
+    var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
+    var totalAudition = data.auditionData.reduce(function(a, b) { return a + b; }, 0);
+    var totalNonAudition = totalPresent - totalAudition;
+    var totalLeave = data.leaveData.reduce(function(a, b) { return a + b; }, 0);
+    var totalAbsent = data.absentData.reduce(function(a, b) { return a + b; }, 0);
+
+    var chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: '出勤',
+                    type: 'bar',
+                    data: data.presentNonAuditionData,
+                    backgroundColor: '#0ca30c',
+                    borderColor: '#0ca30c',
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: '试听',
+                    type: 'bar',
+                    data: data.auditionData,
+                    backgroundColor: '#2a78d6',
+                    borderColor: '#2a78d6',
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: '请假',
+                    type: 'bar',
+                    data: data.leaveData,
+                    backgroundColor: '#fab219',
+                    borderColor: '#fab219',
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    label: '缺勤',
+                    type: 'bar',
+                    data: data.absentData,
+                    backgroundColor: '#d03b3b',
+                    borderColor: '#d03b3b',
+                    borderWidth: 0,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    yAxisID: 'y',
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            onHover: function(event, elements, chart) {
+                chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+                if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
+            },
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y + '人';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { size: 10 } }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: textColor,
+                        font: { size: 10 },
+                        callback: function(v) { return v + '人'; }
+                    }
+                }
+            }
+        }
+    });
+
+    this.setChartLegendNote('');
+    return chart;
+};
+
+TimetableApp.prototype.renderStudentPieChart = function(ctx, data) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+
+    var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
+    var totalAudition = data.auditionData.reduce(function(a, b) { return a + b; }, 0);
+    var totalNonAudition = totalPresent - totalAudition;
+    var totalLeave = data.leaveData.reduce(function(a, b) { return a + b; }, 0);
+    var totalAbsent = data.absentData.reduce(function(a, b) { return a + b; }, 0);
+    var totalStudents = totalPresent + totalLeave + totalAbsent;
+
+    var labels = [];
+    var values = [];
+    var colors = [];
+
+    if (totalNonAudition > 0) { labels.push('出勤'); values.push(totalNonAudition); colors.push('#0ca30c'); }
+    if (totalAudition > 0) { labels.push('试听'); values.push(totalAudition); colors.push('#2a78d6'); }
+    if (totalLeave > 0) { labels.push('请假'); values.push(totalLeave); colors.push('#fab219'); }
+    if (totalAbsent > 0) { labels.push('缺勤'); values.push(totalAbsent); colors.push('#d03b3b'); }
+
+    if (labels.length === 0) {
+        labels = ['暂无数据'];
+        values = [1];
+        colors = ['#e1e0d9'];
+    }
+
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderColor: isDark ? '#1a1a19' : '#fcfcfb',
+                borderWidth: 2,
+                hoverBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '50%',
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (labels[0] === '暂无数据') return '暂无数据';
+                            var pct = totalStudents > 0 ? (ctx.parsed / totalStudents * 100).toFixed(1) : '0';
+                            return ctx.label + ': ' + ctx.parsed + '人 (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    this.setChartLegendNote('');
+    return chart;
+};
+
+TimetableApp.prototype.renderStudentLineChart = function(ctx, data) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+
+    var totalStudents = data.totalStudentsData.reduce(function(a, b) { return a + b; }, 0);
+    var totalPresent = data.presentData.reduce(function(a, b) { return a + b; }, 0);
+    var totalAudition = data.auditionData.reduce(function(a, b) { return a + b; }, 0);
+    var totalNonAudition = totalPresent - totalAudition;
+    var totalLeave = data.leaveData.reduce(function(a, b) { return a + b; }, 0);
+    var pointSizes = this.getLinePointSizes(data.labels.length);
+
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: '学生总数',
+                    data: data.totalStudentsData,
+                    borderColor: '#4a3aa7',
+                    backgroundColor: 'rgba(74,58,167,0.06)',
+                    borderWidth: 2,
+                    pointRadius: pointSizes.radius,
+                    pointHoverRadius: pointSizes.hoverRadius,
+                    pointBackgroundColor: '#4a3aa7',
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: '出勤',
+                    data: data.presentNonAuditionData,
+                    borderColor: '#0ca30c',
+                    backgroundColor: 'rgba(12,163,12,0.06)',
+                    borderWidth: 2,
+                    pointRadius: pointSizes.radius,
+                    pointHoverRadius: pointSizes.hoverRadius,
+                    pointBackgroundColor: '#0ca30c',
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: '试听',
+                    data: data.auditionData,
+                    borderColor: '#2a78d6',
+                    backgroundColor: 'rgba(42,120,214,0.06)',
+                    borderWidth: 2,
+                    pointRadius: pointSizes.radius,
+                    pointHoverRadius: pointSizes.hoverRadius,
+                    pointBackgroundColor: '#2a78d6',
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: '请假',
+                    data: data.leaveData,
+                    borderColor: '#fab219',
+                    backgroundColor: 'rgba(250,178,25,0.06)',
+                    borderWidth: 2,
+                    pointRadius: pointSizes.radius,
+                    pointHoverRadius: pointSizes.hoverRadius,
+                    pointBackgroundColor: '#fab219',
+                    tension: 0.3,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + ctx.parsed.y + '人';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { size: 10 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: textColor,
+                        font: { size: 10 },
+                        callback: function(v) { return v + '人'; }
+                    }
+                }
+            }
+        }
+    });
+
+    this.setChartLegendNote('');
+    return chart;
+};
+
+// ========== 课时统计 ==========
+
+TimetableApp.prototype.renderDurationBarChart = function(ctx, data, onBarHover) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+
+    var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var catColors = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
+    var typeLabels = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+
+    // Build datasets for each type that has data
+    var datasets = [];
+    var hasData = false;
+    typeOrder.forEach(function(type, i) {
+        var typeData = data.typeMinutesByGroup.map(function(g) {
+            return g[type] ? (g[type] / 60) : 0; // Convert to hours
+        });
+        var typeTotal = typeData.reduce(function(a, b) { return a + b; }, 0);
+        if (typeTotal > 0) {
+            hasData = true;
+            datasets.push({
+                label: type,
+                type: 'bar',
+                data: typeData,
+                backgroundColor: catColors[i],
+                borderColor: catColors[i],
+                borderWidth: 0,
+                borderRadius: 4,
+                borderSkipped: false,
+                order: 2
+            });
+        }
+    });
+
+    if (!hasData) {
+        datasets = [{
+            label: '暂无数据',
+            data: data.labels.map(function() { return 0; }),
+            backgroundColor: '#e1e0d9',
+            borderWidth: 0
+        }];
+    }
+
+    var totalHours = data.totalMinutesData.reduce(function(a, b) { return a + b; }, 0);
+    var totalHoursDisplay = (totalHours / 60).toFixed(2);
+    var chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            onHover: function(event, elements, chart) {
+                chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+                if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
+            },
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.dataset.label === '暂无数据') return '暂无数据';
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + 'h';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { size: 10 } }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: textColor,
+                        font: { size: 10 },
+                        callback: function(v) { return v.toFixed(1) + 'h'; }
+                    }
+                }
+            }
+        }
+    });
+
+    this.setChartLegendNote(hasData ? '' : '暂无课时数据');
+    return chart;
+};
+
+TimetableApp.prototype.renderDurationPieChart = function(ctx, data) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+
+    var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var catColors = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
+    var labels = [];
+    var values = [];
+    var colors = [];
+
+    typeOrder.forEach(function(type, i) {
+        if (data.typeMinutes[type] && data.typeMinutes[type] > 0) {
+            labels.push(type);
+            values.push(data.typeMinutes[type]);
+            colors.push(catColors[i]);
+        }
+    });
+
+    if (labels.length === 0) {
+        labels = ['暂无数据'];
+        values = [1];
+        colors = ['#e1e0d9'];
+    }
+
+    var totalMin = 0;
+    if (labels.length > 0 && labels[0] !== '暂无数据') {
+        totalMin = values.reduce(function(a, b) { return a + b; }, 0);
+    }
+    var totalHours = (totalMin / 60).toFixed(2);
+
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderColor: isDark ? '#1a1a19' : '#fcfcfb',
+                borderWidth: 2,
+                hoverBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '50%',
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (labels[0] === '暂无数据') return '暂无数据';
+                            var hours = (ctx.parsed / 60).toFixed(2);
+                            var pct = totalMin > 0 ? (ctx.parsed / totalMin * 100).toFixed(1) : '0';
+                            return ctx.label + ': ' + hours + 'h (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    this.setChartLegendNote(labels[0] !== '暂无数据' ? '' : '暂无上课时长数据');
+    return chart;
+};
+
+TimetableApp.prototype.renderDurationLineChart = function(ctx, data) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+
+    var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var catColors = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
+    var pointSizes = this.getLinePointSizes(data.labels.length);
+
+    // Build datasets for each type that has data
+    var datasets = [];
+    var hasData = false;
+    typeOrder.forEach(function(type, i) {
+        var typeData = data.typeMinutesByGroup.map(function(g) {
+            return g[type] ? (g[type] / 60) : 0; // Convert to hours
+        });
+        var typeTotal = typeData.reduce(function(a, b) { return a + b; }, 0);
+        if (typeTotal > 0) {
+            hasData = true;
+            datasets.push({
+                label: type,
+                data: typeData,
+                borderColor: catColors[i],
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: Math.min(pointSizes.radius, 2),
+                pointHoverRadius: pointSizes.hoverRadius,
+                pointBackgroundColor: catColors[i],
+                tension: 0.3,
+                fill: false
+            });
+        }
+    });
+
+    if (!hasData) {
+        datasets = [{
+            label: '暂无数据',
+            data: data.labels.map(function() { return 0; }),
+            borderColor: '#e1e0d9',
+            pointRadius: 0
+        }];
+    }
+
+    var totalHours = (data.totalMinutesData.reduce(function(a, b) { return a + b; }, 0) / 60).toFixed(2);
+
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: this.getChartLegendOptions(textColor),
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.dataset.label === '暂无数据') return '暂无数据';
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + 'h';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor, font: { size: 10 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: textColor,
+                        font: { size: 10 },
+                        callback: function(v) { return v.toFixed(1) + 'h'; }
+                    }
+                }
+            }
+        }
+    });
+
+    this.setChartLegendNote(hasData ? '' : '暂无课时数据');
+    return chart;
+};

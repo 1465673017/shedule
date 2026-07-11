@@ -1,0 +1,60 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5faf5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e8f5e8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="400" height="300" fill="url(#bg)" rx="12"/>
+  
+  <!-- 标题 -->
+  <text x="200" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#4a7c59">添加科目</text>
+  
+  <!-- 科目池区域 -->
+  <rect x="30" y="50" width="150" height="200" fill="white" stroke="#a8d5ba" stroke-width="2" rx="8"/>
+  <text x="105" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#2c5530">科目池</text>
+  <rect x="130" y="55" width="40" height="20" fill="#4a7c59" rx="4"/>
+  <text x="150" y="67" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">+ 科目</text>
+  
+  <!-- 科目卡片 -->
+  <rect x="40" y="85" width="130" height="30" fill="#FF0000" rx="6"/>
+  <text x="105" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">数学 - 张老师</text>
+  
+  <rect x="40" y="125" width="130" height="30" fill="#0000FF" rx="6"/>
+  <text x="105" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">语文 - 李老师</text>
+  
+  <rect x="40" y="165" width="130" height="30" fill="#FF69B4" rx="6"/>
+  <text x="105" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white">英语 - 王老师</text>
+  
+  <!-- 添加科目弹窗 -->
+  <rect x="220" y="60" width="150" height="180" fill="white" stroke="#4a7c59" stroke-width="2" rx="8"/>
+  <text x="295" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#4a7c59">科目设置</text>
+  
+  <!-- 表单字段 -->
+  <text x="235" y="105" font-family="Arial, sans-serif" font-size="12" fill="#2c5530">科目名称</text>
+  <rect x="235" y="110" width="120" height="20" fill="#f8fdf8" stroke="#a8d5ba" stroke-width="1" rx="3"/>
+  <text x="240" y="123" font-family="Arial, sans-serif" font-size="10" fill="#666">物理</text>
+  
+  <text x="235" y="145" font-family="Arial, sans-serif" font-size="12" fill="#2c5530">老师姓名</text>
+  <rect x="235" y="150" width="120" height="20" fill="#f8fdf8" stroke="#a8d5ba" stroke-width="1" rx="3"/>
+  <text x="240" y="163" font-family="Arial, sans-serif" font-size="10" fill="#666">赵老师</text>
+  
+  <text x="235" y="185" font-family="Arial, sans-serif" font-size="12" fill="#2c5530">颜色</text>
+  <!-- 颜色选择 -->
+  <circle cx="245" cy="200" r="8" fill="#FFA500"/>
+  <circle cx="265" cy="200" r="8" fill="#800080"/>
+  <circle cx="285" cy="200" r="8" fill="#B8860B"/>
+  <circle cx="305" cy="200" r="8" fill="#FF4500"/>
+  
+  <!-- 保存按钮 -->
+  <rect x="275" y="215" width="60" height="20" fill="#4a7c59" rx="4"/>
+  <text x="305" y="227" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white">保存</text>
+  
+  <!-- 箭头指示 -->
+  <path d="M 185 100 L 215 100 L 210 95 M 215 100 L 210 105" stroke="#4a7c59" stroke-width="2" fill="none"/>
+  
+  <!-- 说明文字 -->
+  <text x="200" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#666">点击"+ 科目"按钮，填写科目信息并选择颜色</text>
+</svg>

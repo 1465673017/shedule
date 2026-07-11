@@ -1,0 +1,11 @@
+@font-face {
+    font-family: "font-jbt";
+    src: url("JinBuTi.eot?v=1.4"); /* IE9 */
+    src: url("JinBuTi.woff?v=1.4") format("woff"), /* chrome、firefox */
+    url("JinBuTi.ttf?v=1.4") format("truetype"), /* chrome、firefox、opera、Safari, Android, iOS 4.2+ */
+    url("JinBuTi.svg#JinBuTi?v=1.4") format("svg"); /* iOS 4.1- */
+    font-style: normal;
+    font-weight: normal;
+}
+
+
