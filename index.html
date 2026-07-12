@@ -8,20 +8,17 @@
 </head>
 
 <body>
-    <div class="top-menu-bar">
-        <div class="menu-buttons">
-            <button id="tutorialBtn" class="btn danger">查看教程</button>
-            <button id="resetBtn" class="btn secondary">重置课表</button>
-            <button id="exportBtn" class="btn tertiary">导出</button>
-            <button id="settingsBtn" class="btn tertiary">⚙️ 设置</button>
-        </div>
-    </div>
-
     <!-- 主要内容区域 -->
     <div class="container">
         <main class="main-content">
             <!-- 左侧栏：菜单按钮、课时控制和科目池 -->
             <div class="left-sidebar">
+                <div class="sidebar-actions">
+                    <button id="exportBtn" class="btn primary">导出</button>
+                    <button id="resetBtn" class="btn secondary">重置课表</button>
+                    <button id="tutorialBtn" class="btn tertiary">查看教程</button>
+                    <button id="settingsBtn" class="btn tertiary">设置</button>
+                </div>
                 <div class="subject-pool">
                     <div class="pool-tabs">
                         <button class="pool-tab active" data-tab="subject">科目池</button>
