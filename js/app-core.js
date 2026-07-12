@@ -145,6 +145,8 @@ class TimetableApp {
         this.editingSubject = null;
         this.editingCell = null;
         this.editingPeriod = null;
+        this.isTemporaryCourseEdit = false;
+        this._temporaryCourseSourceVersion = null;
         this.draggedItem = null;
         
         this.currentDate = new Date();
@@ -760,6 +762,8 @@ class TimetableApp {
         this._attModalCourseInstanceId = null;
         this._attModalRecurrence = null;
         this._courseEditMatchedKeys = null;
+        this.isTemporaryCourseEdit = false;
+        this._temporaryCourseSourceVersion = null;
 
         window.ScheduleErpService.ensureErpData(this);
         window.ScheduleErpService.buildTimetableProjection(this);
@@ -799,6 +803,8 @@ class TimetableApp {
         this._attModalCourseInstanceId = null;
         this._attModalRecurrence = null;
         this._courseEditMatchedKeys = null;
+        this.isTemporaryCourseEdit = false;
+        this._temporaryCourseSourceVersion = null;
 
         localStorage.removeItem('timetableData');
         localStorage.removeItem('timetableGrades');

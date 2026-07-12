@@ -2859,6 +2859,20 @@ body {
     color: #333;
 }
 
+.temporary-swap-btn {
+    margin-left: auto;
+    margin-right: 12px;
+    padding: 6px 12px;
+    min-height: 32px;
+    white-space: nowrap;
+}
+
+.temporary-swap-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
 .modal-close {
     background: none;
     border: none;

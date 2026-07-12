@@ -2,17 +2,138 @@
 
 // Auto-split from script.js
 
+TimetableApp.prototype.ensureTemporarySwapButton = function() {
+
+        const header = document.querySelector('#addLessonModal .modal-header');
+
+        const closeBtn = header ? header.querySelector('.modal-close') : null;
+
+        if (!header || !closeBtn) return null;
+
+        let btn = document.getElementById('temporarySwapBtn');
+
+        if (!btn) {
+
+            btn = document.createElement('button');
+
+            btn.type = 'button';
+
+            btn.id = 'temporarySwapBtn';
+
+            btn.className = 'btn secondary btn-sm temporary-swap-btn';
+
+            btn.textContent = '\u4e34\u65f6\u6362\u8bfe';
+
+            btn.addEventListener('click', () => this.startTemporaryCourseEdit());
+
+            header.insertBefore(btn, closeBtn);
+
+        }
+
+        return btn;
+
+    }
+
+TimetableApp.prototype.updateTemporarySwapButton = function(show, active = false) {
+
+        const btn = this.ensureTemporarySwapButton();
+
+        if (!btn) return;
+
+        btn.style.display = show ? 'inline-flex' : 'none';
+
+        btn.classList.toggle('active', !!active);
+
+        btn.textContent = active ? '\u4e34\u65f6\u6362\u8bfe\u4e2d' : '\u4e34\u65f6\u6362\u8bfe';
+
+    }
+
+TimetableApp.prototype.getNextWeekStartStr = function(weekStartStr) {
+
+        const parts = String(weekStartStr || '').split('-').map(Number);
+
+        const nextDate = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+
+        nextDate.setDate(nextDate.getDate() + 7);
+
+        return this.formatLocalDate(nextDate);
+
+    }
+
+TimetableApp.prototype.canTemporarySwapCellCourse = function(key, weekStartStr, version) {
+
+        if (!key || !weekStartStr || !version || !version.subject) return false;
+
+        const nextWeekStr = this.getNextWeekStartStr(weekStartStr);
+
+        const nextVersion = this.getCellVersion(key, nextWeekStr);
+
+        if (!nextVersion || !nextVersion.subject) return false;
+
+        if (nextVersion.courseInstanceId && version.courseInstanceId && nextVersion.courseInstanceId === version.courseInstanceId) {
+
+            return true;
+
+        }
+
+        if (nextVersion.courseTemplateId && version.courseTemplateId && nextVersion.courseTemplateId === version.courseTemplateId) {
+
+            return true;
+
+        }
+
+        return false;
+
+    }
+
+TimetableApp.prototype.startTemporaryCourseEdit = function() {
+
+        if (!this.selectedCell) return;
+
+        const day = this.selectedCell.dataset.day;
+
+        const section = this.selectedCell.dataset.section;
+
+        const period = this.selectedCell.dataset.period;
+
+        const key = `${day}-${section}-${period}`;
+
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+
+        const version = this.getCellVersion(key, weekStartStr);
+
+        if (!this.canTemporarySwapCellCourse(key, weekStartStr, version)) return;
+
+        this.isTemporaryCourseEdit = true;
+
+        this._temporaryCourseSourceVersion = version ? {
+            ...version,
+            student: Array.isArray(version.student) ? version.student.slice() : []
+        } : null;
+
+        this.renderSubjectPicker('');
+
+        this.renderLessonStudentPicker([], [key]);
+
+        this.updateTemporarySwapButton(true, true);
+
+    }
+
 TimetableApp.prototype.openAddLessonModal = function(cell) {
 
         this.selectedCell = cell;
 
-        this.editingCourse = null;  // æ¸…é™¤è¯¾ç¨‹ç¼–è¾‘çŠ¶æ€?
+        this.editingCourse = null;
+
+        this.isAddingManualCourse = false;
+
+        this.isTemporaryCourseEdit = false;
+
+        this._temporaryCourseSourceVersion = null;
 
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
-
-        title.textContent = 'æ·»åŠ è¯¾ç¨‹';
 
         const day = cell.dataset.day;
 
@@ -26,6 +147,8 @@ TimetableApp.prototype.openAddLessonModal = function(cell) {
 
         const version = this.getCellVersion(key, weekStartStr);
 
+        title.textContent = version ? '\u7f16\u8f91\u8bfe\u7a0b' : '\u6dfb\u52a0\u8bfe\u7a0b';
+
         const selectedSubjectId = version && version.subject ? version.subject : '';
 
         this.renderSubjectPicker(selectedSubjectId);
@@ -38,23 +161,27 @@ TimetableApp.prototype.openAddLessonModal = function(cell) {
 
         this.renderLessonStudentPicker(existingStudentIds, [key]);
 
+        this.updateTemporarySwapButton(this.canTemporarySwapCellCourse(key, weekStartStr, version), false);
+
         modal.style.display = 'block';
 
     }
-
-    // ä»Žè¯¾ç¨‹æ± æ‰“å¼€ç¼–è¾‘å¼¹çª—
 
 TimetableApp.prototype.openCourseEditModal = function(course) {
 
         this.selectedCell = null;
 
-        this.editingCourse = course;  // å­˜å‚¨æ­£åœ¨ç¼–è¾‘çš„è¯¾ç¨?
+        this.editingCourse = course;
+
+        this.isTemporaryCourseEdit = false;
+
+        this._temporaryCourseSourceVersion = null;
 
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
 
-        title.textContent = 'ç¼–è¾‘è¯¾ç¨‹';
+        title.textContent = '\u7f16\u8f91\u8bfe\u7a0b';
 
         this.renderSubjectPicker(course.subjectId);
 
@@ -66,23 +193,17 @@ TimetableApp.prototype.openCourseEditModal = function(course) {
 
         } else {
 
-            const oldSubjectId = course.subjectId;
-
-            const oldStudentIds = course.studentIds.slice().sort();
-
-            const oldSortedKey = [...oldStudentIds].sort().join(',');
-
             const matchedKeys = [];
 
             this.renderLessonStudentPicker(course.studentIds, matchedKeys);
 
         }
 
+        this.updateTemporarySwapButton(false, false);
+
         modal.style.display = 'block';
 
     }
-
-    // æ‰‹åŠ¨æ·»åŠ è¯¾ç¨‹ï¼ˆæ–°å¢žè¯¾ç¨‹å¡ç‰‡ï¼‰
 
 TimetableApp.prototype.openManualCourseModal = function() {
 
@@ -90,17 +211,23 @@ TimetableApp.prototype.openManualCourseModal = function() {
 
         this.editingCourse = null;
 
-        this.isAddingManualCourse = true;  // æ ‡è®°ä¸ºæ‰‹åŠ¨æ·»åŠ æ¨¡å¼?
+        this.isAddingManualCourse = true;
+
+        this.isTemporaryCourseEdit = false;
+
+        this._temporaryCourseSourceVersion = null;
 
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
 
-        title.textContent = 'æ·»åŠ è¯¾ç¨‹';
+        title.textContent = '\u6dfb\u52a0\u8bfe\u7a0b';
 
         this.renderSubjectPicker('');
 
         this.renderLessonStudentPicker([]);
+
+        this.updateTemporarySwapButton(false, false);
 
         modal.style.display = 'block';
 
@@ -162,7 +289,13 @@ TimetableApp.prototype.closeAddLessonModal = function() {
 
         this.isAddingManualCourse = false;
 
+        this.isTemporaryCourseEdit = false;
+
+        this._temporaryCourseSourceVersion = null;
+
         this._courseEditMatchedKeys = null;
+
+        this.updateTemporarySwapButton(false, false);
 
     }
 
@@ -508,6 +641,14 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
         }
 
+        if (this.isTemporaryCourseEdit) {
+
+            this.saveTemporaryCourseEdit();
+
+            return;
+
+        }
+
         if (!this.selectedCell) return;
 
         const selectedSubjectChip = document.querySelector('#lessonSubjectPicker .subject-chip.selected');
@@ -595,6 +736,126 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
     }
 
     // ä¿å­˜æ‰‹åŠ¨æ·»åŠ çš„è¯¾ç¨‹åˆ° manualCourses æ•°ç»„
+
+TimetableApp.prototype.saveTemporaryCourseEdit = function() {
+
+        if (!this.selectedCell) return;
+
+        const selectedSubjectChip = document.querySelector('#lessonSubjectPicker .subject-chip.selected');
+
+        if (!selectedSubjectChip) {
+
+            alert('ÇëÑ¡Ôñ¿ÆÄ¿');
+
+            return;
+
+        }
+
+        const subjectId = selectedSubjectChip.dataset.subjectId;
+
+        const subject = this.subjects.find(s => s.id == subjectId);
+
+        if (!subject) return;
+
+        const selectedStudentIds = Array.from(document.querySelectorAll('#lessonStudentPicker .student-chip.selected'))
+
+            .map(chip => chip.dataset.studentId);
+
+        if (selectedStudentIds.length > this.MAX_STUDENTS_PER_COURSE) {
+
+            alert(`Ã¿½Ú¿Î×î¶àÖ»ÄÜÓÐ ${this.MAX_STUDENTS_PER_COURSE} ¸öÑ§Éú`);
+
+            return;
+
+        }
+
+        const has1v1Student = selectedStudentIds.some(id => {
+
+            const s = this.students.find(st => st.id === id);
+
+            return s && s.is1v1;
+
+        });
+
+        if (has1v1Student && selectedStudentIds.length > 1) {
+
+            alert('1v1Ñ§ÉúÖ»ÄÜµ¥¶ÀÉÏ¿Î');
+
+            return;
+
+        }
+
+        const day = this.selectedCell.dataset.day;
+
+        const section = this.selectedCell.dataset.section;
+
+        const period = this.selectedCell.dataset.period;
+
+        const key = `${day}-${section}-${period}`;
+
+        for (const studentId of selectedStudentIds) {
+
+            const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [key]);
+
+            if (auditionAssigned.length > 0) {
+
+                const student = this.students.find(s => s.id === studentId);
+
+                alert(`ÊÔÌýÑ§Éú¡¸${student ? student.name : 'Î´Öª'}¡¹ÒÑÅÅÔÚÆäËû¿Î³ÌÖÐ£¬²»¿ÉÖØ¸´ÅÅ¿Î`);
+
+                return;
+
+            }
+
+        }
+
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+
+        const nextWeekStr = this.getNextWeekStartStr(weekStartStr);
+
+        const sourceVersion = this._temporaryCourseSourceVersion || this.getCellVersion(key, weekStartStr);
+
+        const nextVersion = this.getCellVersion(key, nextWeekStr);
+
+        this.setCellVersion(key, weekStartStr, subjectId,
+
+            selectedStudentIds.length > 0 ? selectedStudentIds.map(id => id.toString()) : []);
+
+        this.ensureAuditionStudentsTemporary(key, selectedStudentIds);
+
+        for (const studentId of selectedStudentIds) {
+
+            this.setStudentRecurrence(key, studentId, 'temporary');
+
+        }
+
+        const restoreVersion = nextVersion || sourceVersion;
+
+        if (restoreVersion && (restoreVersion.subject || (restoreVersion.student || []).length > 0)) {
+
+            this.setCellVersion(key, nextWeekStr, restoreVersion.subject, restoreVersion.student || []);
+
+            const restoredVersion = this.getCellVersion(key, nextWeekStr);
+
+            if (restoredVersion && window.ScheduleErpService && typeof window.ScheduleErpService.inheritStudentBranchState === 'function') {
+
+                window.ScheduleErpService.inheritStudentBranchState(
+                    this,
+                    restoreVersion,
+                    restoredVersion,
+                    restoreVersion.student || [],
+                    nextWeekStr
+                );
+
+            }
+
+        }
+
+        this.syncRealtime();
+
+        this.closeAddLessonModal();
+
+    }
 
 TimetableApp.prototype.saveManualCourse = function() {
 
