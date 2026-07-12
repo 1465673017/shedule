@@ -64,8 +64,6 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                     sourceDay: studentCard.dataset.sourceDay,
 
-                    sourceSection: studentCard.dataset.sourceSection,
-
                     sourcePeriod: studentCard.dataset.sourcePeriod
 
                 };
@@ -78,7 +76,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                 e.dataTransfer.setData('text/plain', '');
 
-                const key = `${subjectCell.dataset.day}-${subjectCell.dataset.section}-${subjectCell.dataset.period}`;
+                const key = this.buildCellKey(subjectCell.dataset.day, subjectCell.dataset.period);
 
                 const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 
@@ -91,8 +89,6 @@ TimetableApp.prototype.setupDragAndDrop = function() {
                     type: 'subject',
 
                     sourceDay: subjectCell.dataset.day,
-
-                    sourceSection: subjectCell.dataset.section,
 
                     sourcePeriod: subjectCell.dataset.period,
 
@@ -184,21 +180,14 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                 const day = cell.dataset.day;
 
-                const section = cell.dataset.section;
-
                 const period = cell.dataset.period;
-
-                const key = `${day}-${section}-${period}`;
+                const key = this.buildCellKey(day, period);
 
                 const isInternalDrag = this.draggedItem && this.draggedItem.sourceDay !== undefined;
 
                 if (isInternalDrag && this.draggedItem.type === 'subject') {
 
-                    const isSameCell = this.draggedItem.sourceDay === day && 
-
-                        this.draggedItem.sourceSection === section && 
-
-                        this.draggedItem.sourcePeriod === period;
+                    const isSameCell = this.draggedItem.sourceDay === day && this.draggedItem.sourcePeriod === period;
 
                     if (isSameCell) {
 
@@ -214,7 +203,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                 } else if (this.draggedItem) {
 
-                    const excludeKeys = isInternalDrag ? [`${this.draggedItem.sourceDay}-${this.draggedItem.sourceSection}-${this.draggedItem.sourcePeriod}`] : [];
+                    const excludeKeys = isInternalDrag ? [this.buildCellKey(this.draggedItem.sourceDay, this.draggedItem.sourcePeriod)] : [];
 
                     if (validateDrop(this.draggedItem, key, excludeKeys)) {
 
@@ -254,29 +243,22 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                     const day = cell.dataset.day;
 
-                    const section = cell.dataset.section;
-
                     const period = cell.dataset.period;
-
-                    const key = `${day}-${section}-${period}`;
+                    const key = this.buildCellKey(day, period);
 
                     const isInternalDrag = this.draggedItem.sourceDay !== undefined;
 
-                    const excludeKeys = isInternalDrag ? [`${this.draggedItem.sourceDay}-${this.draggedItem.sourceSection}-${this.draggedItem.sourcePeriod}`] : [];
+                    const excludeKeys = isInternalDrag ? [this.buildCellKey(this.draggedItem.sourceDay, this.draggedItem.sourcePeriod)] : [];
 
                     if (this.draggedItem.type === 'subject') {
 
                         if (isInternalDrag) {
 
-                            const isSameCell = this.draggedItem.sourceDay === day && 
-
-                                this.draggedItem.sourceSection === section && 
-
-                                this.draggedItem.sourcePeriod === period;
+                            const isSameCell = this.draggedItem.sourceDay === day && this.draggedItem.sourcePeriod === period;
 
                             if (!isSameCell) {
 
-                                const sourceKey = `${this.draggedItem.sourceDay}-${this.draggedItem.sourceSection}-${this.draggedItem.sourcePeriod}`;
+                                const sourceKey = this.buildCellKey(this.draggedItem.sourceDay, this.draggedItem.sourcePeriod);
 
                                 this.moveSubject(sourceKey, key);
 
@@ -284,7 +266,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                         } else if (validateDrop(this.draggedItem, key, excludeKeys)) {
 
-                            this.addItemToCell(this.draggedItem, day, section, period);
+                            this.addItemToCell(this.draggedItem, day, period);
 
                         }
 
@@ -292,15 +274,11 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                         if (isInternalDrag) {
 
-                            const isSameCell = this.draggedItem.sourceDay === day &&
-
-                                this.draggedItem.sourceSection === section &&
-
-                                this.draggedItem.sourcePeriod === period;
+                            const isSameCell = this.draggedItem.sourceDay === day && this.draggedItem.sourcePeriod === period;
 
                             if (!isSameCell) {
 
-                                const sourceKey = `${this.draggedItem.sourceDay}-${this.draggedItem.sourceSection}-${this.draggedItem.sourcePeriod}`;
+                                const sourceKey = this.buildCellKey(this.draggedItem.sourceDay, this.draggedItem.sourcePeriod);
 
                                 this.moveStudent(sourceKey, key, this.draggedItem.id);
 
@@ -308,7 +286,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                         } else if (validateDrop(this.draggedItem, key, excludeKeys)) {
 
-                            this.addItemToCell(this.draggedItem, day, section, period);
+                            this.addItemToCell(this.draggedItem, day, period);
 
                         }
 
@@ -376,7 +354,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                 e.stopPropagation();
 
-                const sourceKey = `${this.draggedItem.sourceDay}-${this.draggedItem.sourceSection}-${this.draggedItem.sourcePeriod}`;
+                const sourceKey = this.buildCellKey(this.draggedItem.sourceDay, this.draggedItem.sourcePeriod);
 
                 const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 

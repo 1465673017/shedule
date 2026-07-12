@@ -12,9 +12,7 @@
         <div class="menu-buttons">
             <button id="tutorialBtn" class="btn danger">查看教程</button>
             <button id="resetBtn" class="btn secondary">重置课表</button>
-            <button id="saveImageBtn" class="btn tertiary">保存图片</button>
-            <button id="exportWordBtn" class="btn tertiary">导出Word</button>
-            <button id="exportExcelBtn" class="btn tertiary">导出Excel</button>
+            <button id="exportBtn" class="btn tertiary">导出</button>
             <button id="settingsBtn" class="btn tertiary">⚙️ 设置</button>
         </div>
     </div>
@@ -573,19 +571,19 @@
                                         <input type="number" id="breakDuration" value="10" min="0" max="60" class="setting-input">
                                     </div>
                                     <div class="form-group">
-                                        <label>午休插入位置</label>
+                                        <label>休息1插入位置</label>
                                         <select id="lunchBreakPosition" class="setting-input"></select>
                                     </div>
                                     <div class="form-group">
-                                        <label>午休时长(分钟)</label>
+                                        <label>休息1时长(分钟)</label>
                                         <input type="number" id="lunchBreakDuration" value="120" min="30" max="180" class="setting-input">
                                     </div>
                                     <div class="form-group">
-                                        <label>晚饭插入位置</label>
+                                        <label>休息2插入位置</label>
                                         <select id="dinnerBreakPosition" class="setting-input"></select>
                                     </div>
                                     <div class="form-group">
-                                        <label>晚饭时长(分钟)</label>
+                                        <label>休息2时长(分钟)</label>
                                         <input type="number" id="dinnerBreakDuration" value="60" min="30" max="120" class="setting-input">
                                     </div>
                                 </div>
@@ -694,6 +692,58 @@
         </div>
     </div>
 
+    <div id="exportModal" class="modal">
+        <div class="modal-content export-modal-content">
+            <div class="modal-header">
+                <h3>导出选项</h3>
+                <button class="modal-close" onclick="app.closeExportModal()">×</button>
+            </div>
+            <div class="export-tabs">
+                <button type="button" id="exportTabSchedule" class="export-tab active" onclick="app.switchExportTab('schedule')">课表</button>
+                <button type="button" id="exportTabLessonSheet" class="export-tab" onclick="app.switchExportTab('lessonSheet')">课时单</button>
+            </div>
+            <div id="exportPanelSchedule" class="export-panel active">
+                <div class="export-options">
+                    <button type="button" class="export-option-card" onclick="app.handleExportOption('image')">
+                        <span class="export-option-title">导出图片</span>
+                        <span class="export-option-desc">保存当前课表为高清 PNG 图片，方便分享和打印。</span>
+                    </button>
+                    <button type="button" class="export-option-card" onclick="app.handleExportOption('word')">
+                        <span class="export-option-title">导出 Word</span>
+                        <span class="export-option-desc">生成当前课表的可编辑 Word 文档，便于继续整理。</span>
+                    </button>
+                    <button type="button" class="export-option-card" onclick="app.handleExportOption('excel')">
+                        <span class="export-option-title">导出 Excel</span>
+                        <span class="export-option-desc">导出当前课表为表格文件，适合统计、归档和二次处理。</span>
+                    </button>
+                </div>
+            </div>
+            <div id="exportPanelLessonSheet" class="export-panel">
+                <div class="export-panel-tip">课时单支持按日期范围导出，默认范围为当前查看月份，包含日期、学生、出勤和实际上课时长。</div>
+                <div class="export-range-row">
+                    <div class="export-range-field">
+                        <label for="lessonSheetStartDate">开始日期</label>
+                        <input type="date" id="lessonSheetStartDate" class="setting-input">
+                    </div>
+                    <div class="export-range-field">
+                        <label for="lessonSheetEndDate">结束日期</label>
+                        <input type="date" id="lessonSheetEndDate" class="setting-input">
+                    </div>
+                </div>
+                <div class="export-options">
+                    <button type="button" class="export-option-card" onclick="app.handleExportOption('lessonSheetWord')">
+                        <span class="export-option-title">导出课时单 Word</span>
+                        <span class="export-option-desc">按所选日期范围生成课时单明细，适合打印、汇报和人工补充备注。</span>
+                    </button>
+                    <button type="button" class="export-option-card" onclick="app.handleExportOption('lessonSheetExcel')">
+                        <span class="export-option-title">导出课时单 Excel</span>
+                        <span class="export-option-desc">默认导出当月课时单，也可修改日期范围后再导出。</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="tutorialModal" class="modal" style="background: rgba(0, 0, 0, 0.7);" onclick="if(event.target===this)app.closeTutorialModal()">
         <div class="modal-content" style="max-width: 800px; max-height: 85vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); margin: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 20px 25px 15px; margin: 0 -25px 20px;">
@@ -704,7 +754,7 @@
                 <h4>📋 快速上手指南</h4>
                 <p><strong>🎯 第一步：设置课时</strong></p>
                 <ul>
-                    <li>使用左侧"上午课时"和"下午课时"的 + - 按钮调整每天课程数量</li>
+                    <li>使用时间设置中的课时管理功能调整每天课程数量</li>
                     <li>点击时间单元格可修改课时名称（如：第1课时、早读等）和时间</li>
                     <li>系统会自动保存您的设置</li>
                 </ul>

@@ -23,23 +23,17 @@ function createDefaultSubjects() {
 }
 
 function createDefaultPeriods() {
-    return {
-        morning: [
-            { name: '第1节', time: '08:00-08:40' },
-            { name: '第2节', time: '08:50-09:30' },
-            { name: '第3节', time: '10:00-10:40' },
-            { name: '第4节', time: '10:50-11:30' }
-        ],
-        afternoon: [
-            { name: '第5节', time: '14:00-14:40' },
-            { name: '第6节', time: '14:50-15:30' },
-            { name: '第7节', time: '15:40-16:20' }
-        ],
-        evening: [
-            { name: '第8节', time: '19:00-19:40' },
-            { name: '第9节', time: '19:50-20:30' }
-        ]
-    };
+    return [
+        { name: '第1节', time: '08:00-08:40' },
+        { name: '第2节', time: '08:50-09:30' },
+        { name: '第3节', time: '10:00-10:40' },
+        { name: '第4节', time: '10:50-11:30' },
+        { name: '第5节', time: '14:00-14:40' },
+        { name: '第6节', time: '14:50-15:30' },
+        { name: '第7节', time: '15:40-16:20' },
+        { name: '第8节', time: '19:00-19:40' },
+        { name: '第9节', time: '19:50-20:30' }
+    ];
 }
 
 function createDefaultSettings() {
@@ -102,23 +96,7 @@ class TimetableApp {
         this.manualCourses = [];   // 手动添加的课程（未排入课表的）
         this.currentPool = 'subject';
         this.timetable = {};
-        this.periods = {
-            morning: [
-                { name: '第1节', time: '08:00-08:40' },
-                { name: '第2节', time: '08:50-09:30' },
-                { name: '第3节', time: '10:00-10:40' },
-                { name: '第4节', time: '10:50-11:30' }
-            ],
-            afternoon: [
-                { name: '第1节', time: '14:00-14:40' },
-                { name: '第2节', time: '14:50-15:30' },
-                { name: '第3节', time: '15:40-16:20' }
-            ],
-            evening: [
-                { name: '第1节', time: '19:00-19:40' },
-                { name: '第2节', time: '19:50-20:30' }
-            ]
-        };
+        this.periods = createDefaultPeriods();
         this.settings = {
             showEvening: true,
             showSaturday: true,
@@ -213,9 +191,7 @@ class TimetableApp {
         
         // 重置和打印
         bind('resetBtn', 'click', () => this.openResetModal());
-        bind('saveImageBtn', 'click', () => this.saveAsImage());
-        bind('exportWordBtn', 'click', () => this.exportToWord());
-        bind('exportExcelBtn', 'click', () => this.exportToExcel());
+        bind('exportBtn', 'click', () => this.openExportModal());
         bind('settingsBtn', 'click', () => this.openSettingsModal());
         
         // 设置弹窗相关
@@ -298,6 +274,7 @@ class TimetableApp {
                 this.closeGradeModal();
                 this.closeStatsModal();
                 this.closeTextStatsModal();
+                this.closeExportModal();
             }
         });
         
@@ -313,7 +290,8 @@ class TimetableApp {
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
             tutorialModal: () => this.closeTutorialModal(),
-            resetModal: () => this.closeResetModal()
+            resetModal: () => this.closeResetModal(),
+            exportModal: () => this.closeExportModal()
         };
         
         Object.keys(modalCloseHandlers).forEach(modalId => {
@@ -412,6 +390,7 @@ class TimetableApp {
             this.students = Array.isArray(parsed.students) ? parsed.students : [];
             this.manualCourses = Array.isArray(parsed.manualCourses) ? parsed.manualCourses : [];
             this.erpData = parsed.erpData || null;
+            this._legacyPeriodsForMigration = parsed.periods && !Array.isArray(parsed.periods) ? parsed.periods : null;
             this.periods = parsed.periods || this.periods;
             this.quickSettingsState = parsed.quickSettingsState || null;
 
@@ -442,12 +421,8 @@ class TimetableApp {
             ];
         }
 
-        if (!this.periods.evening) {
-            this.periods.evening = [
-                { name: 'Period 8', time: '19:00-19:40' },
-                { name: 'Period 9', time: '19:50-20:30' }
-            ];
-        }
+        this.periods = this.normalizePeriods(this.periods);
+        this.migrateLegacyScheduleKeys();
 
         window.ScheduleErpService.ensureErpData(this);
         window.ScheduleErpService.buildTimetableProjection(this);
@@ -955,14 +930,9 @@ class TimetableApp {
     // 判断一节课是否已经结束（当前时间已超过该节课的结束时间）
     // date: 参考日期（用于确定该节课所在的日期）
     isClassFinished(key, date) {
-        const parts = key.split('-');
-        if (parts.length !== 3) return true; // 无法解析，默认认为已结束
-        const dayNum = parseInt(parts[0]);
-        const section = parts[1];
-        const period = parseInt(parts[2]);
-
-        const periodInfo = this.periods[section] && this.periods[section][period]
-            ? this.periods[section][period] : null;
+        const parsedKey = this.parseCellKey(key);
+        if (!parsedKey) return true; // 无法解析，默认认为已结束
+        const periodInfo = this.getPeriod(parsedKey.periodIndex);
         if (!periodInfo || !periodInfo.time) return true; // 无课时信息，默认认为已结束
 
         const endTimeStr = periodInfo.time.split('-')[1]; // e.g., "08:40"
@@ -1010,6 +980,114 @@ class TimetableApp {
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
+    }
+
+    normalizePeriods(periods) {
+        if (Array.isArray(periods)) {
+            return periods.map((period, index) => ({
+                name: period && period.name ? period.name : `第${index + 1}节`,
+                time: period && period.time ? period.time : '08:00-08:40'
+            }));
+        }
+
+        const normalized = [];
+        const legacy = periods && typeof periods === 'object' ? periods : {};
+        ['morning', 'afternoon', 'evening'].forEach(section => {
+            const list = Array.isArray(legacy[section]) ? legacy[section] : [];
+            list.forEach(period => normalized.push({
+                name: period && period.name ? period.name : `第${normalized.length + 1}节`,
+                time: period && period.time ? period.time : '08:00-08:40'
+            }));
+        });
+
+        return normalized.length > 0 ? normalized : createDefaultPeriods();
+    }
+
+    getLegacySectionOffset(periods, section) {
+        const legacy = periods && typeof periods === 'object' ? periods : {};
+        const morningCount = Array.isArray(legacy.morning) ? legacy.morning.length : 0;
+        const afternoonCount = Array.isArray(legacy.afternoon) ? legacy.afternoon.length : 0;
+        if (section === 'morning') return 0;
+        if (section === 'afternoon') return morningCount;
+        if (section === 'evening') return morningCount + afternoonCount;
+        return 0;
+    }
+
+    migrateLegacyCellKey(cellKey, legacyPeriods = null) {
+        const parts = String(cellKey || '').split('-');
+        if (parts.length === 2) return cellKey;
+        if (parts.length !== 3) return cellKey;
+        const day = parseInt(parts[0], 10);
+        const section = parts[1];
+        const period = parseInt(parts[2], 10);
+        if (!day || Number.isNaN(period)) return cellKey;
+        const periodIndex = this.getLegacySectionOffset(legacyPeriods || this.periods, section) + period;
+        return `${day}-${periodIndex}`;
+    }
+
+    buildCellKey(day, sectionOrPeriod, maybePeriod) {
+        const dayNum = Number(day);
+        let periodIndex;
+        if (maybePeriod === undefined) {
+            periodIndex = Number(sectionOrPeriod);
+        } else {
+            periodIndex = this.getLegacySectionOffset(this._legacyPeriodsForMigration || null, sectionOrPeriod) + Number(maybePeriod);
+        }
+        return `${dayNum}-${periodIndex}`;
+    }
+
+    parseCellKey(cellKey) {
+        const parts = String(cellKey || '').split('-');
+        if (parts.length === 2) {
+            const day = parseInt(parts[0], 10);
+            const periodIndex = parseInt(parts[1], 10);
+            if (Number.isNaN(day) || Number.isNaN(periodIndex)) return null;
+            return { day, periodIndex };
+        }
+        if (parts.length === 3) {
+            const migrated = this.migrateLegacyCellKey(cellKey, this._legacyPeriodsForMigration || null);
+            return this.parseCellKey(migrated);
+        }
+        return null;
+    }
+
+    getPeriod(periodOrSection, maybeIndex) {
+        const periodIndex = maybeIndex === undefined
+            ? Number(periodOrSection)
+            : this.parseCellKey(this.buildCellKey(1, periodOrSection, maybeIndex)).periodIndex;
+        return this.periods[periodIndex] || null;
+    }
+
+    getOrderedPeriods() {
+        return this.periods.map((period, index) => ({
+            period,
+            index,
+            periodNum: index + 1
+        }));
+    }
+
+    getPeriodNumber(sectionOrIndex, periodIndex) {
+        if (periodIndex === undefined) return Number(sectionOrIndex) + 1;
+        const parsed = this.parseCellKey(this.buildCellKey(1, sectionOrIndex, periodIndex));
+        return parsed ? parsed.periodIndex + 1 : Number(periodIndex) + 1;
+    }
+
+    migrateLegacyScheduleKeys() {
+        const legacyPeriods = this._legacyPeriodsForMigration;
+        if (!legacyPeriods) return;
+
+        if (this.erpData) {
+            const migrateKeyField = item => {
+                if (item && item.cellKey) {
+                    item.cellKey = this.migrateLegacyCellKey(item.cellKey, legacyPeriods);
+                }
+            };
+            (this.erpData.courseInstances || []).forEach(migrateKeyField);
+            (this.erpData.attendanceRecords || []).forEach(migrateKeyField);
+            (this.erpData.exceptionRules || []).forEach(migrateKeyField);
+        }
+
+        this._legacyPeriodsForMigration = null;
     }
 
     // 获取某课位在当前周应使用的版本（最新 weekStart <= 当前周的版本）

@@ -6,9 +6,8 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
         const modal = document.getElementById('attendanceModal');
 
         const day = cell.dataset.day;
-        const section = cell.dataset.section;
         const period = cell.dataset.period;
-        const key = `${day}-${section}-${period}`;
+        const key = this.buildCellKey(day, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
         const version = this.getCellVersion(key, weekStartStr);
 
@@ -26,10 +25,10 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
         const dayIndex = parseInt(day);
         const dayName = dayIndex >= 0 && dayIndex <= 6 ? dayNames[dayIndex] : '';
         
-        const sectionName = section === 'morning' ? '上午' : section === 'afternoon' ? '下午' : '晚上';
-        const periodInfo = this.periods[section] && this.periods[section][period] 
-            ? this.periods[section][period] 
-            : null;
+        const periodInfo = this.getPeriod(period);
+        const periodLabel = periodInfo && periodInfo.name
+            ? periodInfo.name
+            : `第${this.getPeriodNumber(period)}节`;
         const weekRange = this.getWeekRange(this.currentDate);
         const classDate = new Date(weekRange.start);
         classDate.setDate(weekRange.start.getDate() + (dayIndex - 1));
@@ -52,7 +51,7 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
         lessonInfo.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;">
                 <div>
-                    <strong>${dayName} ${sectionName} ${periodInfo ? periodInfo.name : ''}</strong>
+                    <strong>${dayName} ${periodLabel}</strong>
                     <div>${subject ? subject.name : '无科目'} ${periodInfo ? ' - ' + periodInfo.time : ''}</div>
                 </div>
                 <div class="actual-duration-display" onclick="app.showDurationEditor(event, '${key}')" title="点击修改实际上课时间">
@@ -217,13 +216,9 @@ TimetableApp.prototype.hideDurationEditor = function() {
     }
 
 TimetableApp.prototype.getScheduledMinutes = function(key) {
-        const parts = key.split('-');
-        if (parts.length !== 3) return 120;
-        const section = parts[1];
-        const period = parseInt(parts[2]);
-        const periodInfo = this.periods[section] && this.periods[section][period]
-            ? this.periods[section][period]
-            : null;
+        const parsed = this.parseCellKey(key);
+        if (!parsed) return 120;
+        const periodInfo = this.getPeriod(parsed.periodIndex);
         if (periodInfo && periodInfo.time) {
             const timeParts = periodInfo.time.split('-');
             if (timeParts.length === 2) {
@@ -513,15 +508,11 @@ TimetableApp.prototype.isStudentCompleted = function(studentId) {
     }
 
 TimetableApp.prototype.getCellLessonStart = function(cellKey, weekStartDate) {
-        const parts = cellKey.split('-');
-        if (parts.length !== 3) return null;
+        const parsed = this.parseCellKey(cellKey);
+        if (!parsed) return null;
 
-        const day = parseInt(parts[0], 10);
-        const section = parts[1];
-        const periodIndex = parseInt(parts[2], 10);
-        const period = this.periods[section] && this.periods[section][periodIndex]
-            ? this.periods[section][periodIndex]
-            : null;
+        const day = parsed.day;
+        const period = this.getPeriod(parsed.periodIndex);
         if (!day || !period || !period.time) return null;
 
         const startTime = period.time.split('-')[0] || '00:00';

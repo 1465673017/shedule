@@ -45,8 +45,8 @@ TimetableApp.prototype.getCell1v1Status = function(key) {
         return { has1v1, studentCount };
     }
 
-TimetableApp.prototype.addItemToCell = function(item, day, section, period) {
-        const key = `${day}-${section}-${period}`;
+TimetableApp.prototype.addItemToCell = function(item, day, period) {
+        const key = this.buildCellKey(day, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 
         // 获取或创建当前周的版本
@@ -102,8 +102,8 @@ TimetableApp.prototype.addItemToCell = function(item, day, section, period) {
     }
 
     // 从课程池拖入整个课程（科目 + 所有学生）
-TimetableApp.prototype.addCourseToCell = function(courseItem, day, section, period) {
-        const key = `${day}-${section}-${period}`;
+TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
+        const key = this.buildCellKey(day, period);
 
         const studentIds = courseItem.courseStudentIds || [];
         if (studentIds.length > this.MAX_STUDENTS_PER_COURSE) {
@@ -169,9 +169,8 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
         if (!cell.classList.contains('occupied')) return;
 
         const day = cell.dataset.day;
-        const section = cell.dataset.section;
         const period = cell.dataset.period;
-        const key = `${day}-${section}-${period}`;
+        const key = this.buildCellKey(day, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
         const version = this.getCellVersion(key, weekStartStr);
 
@@ -406,59 +405,38 @@ TimetableApp.prototype.renderTimetable = function() {
         
         let totalPeriodNum = 0;
         
-        // 渲染上午
-        if (this.periods.morning.length > 0) {
-            this.periods.morning.forEach((period, index) => {
-                totalPeriodNum++;
-                const row = this.createPeriodRow('morning', index, period, totalPeriodNum);
-                tbody.appendChild(row);
-            });
-        }
-        
-        // 渲染下午
-        if (this.periods.afternoon.length > 0) {
-            this.periods.afternoon.forEach((period, index) => {
-                totalPeriodNum++;
-                const row = this.createPeriodRow('afternoon', index, period, totalPeriodNum);
-                tbody.appendChild(row);
-            });
-        }
-
-        // 渲染晚上
-        if (this.settings.showEvening && this.periods.evening.length > 0) {
-            this.periods.evening.forEach((period, index) => {
-                totalPeriodNum++;
-                const row = this.createPeriodRow('evening', index, period, totalPeriodNum);
-                tbody.appendChild(row);
-            });
-        }
+        this.periods.forEach((period, index) => {
+            totalPeriodNum++;
+            const row = this.createPeriodRow(index, period, totalPeriodNum);
+            tbody.appendChild(row);
+        });
 
         this.highlightTodayColumn();
 }
 
 
 
-TimetableApp.prototype.createPeriodRow = function(section, periodIndex, period, periodNum) {
+TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum) {
         const row = document.createElement('tr');
         
         // 节次/时间列
         const periodCell = document.createElement('td');
         periodCell.className = 'period-cell';
         periodCell.innerHTML = `
-                        <div class="period-name" data-section="${section}" data-period="${periodIndex}" style="cursor: pointer; font-weight: bold; color: var(--text-1); font-size: 14px;">
+                        <div class="period-name" data-period="${periodIndex}" style="cursor: pointer; font-weight: bold; color: var(--text-1); font-size: 14px;">
                             第${periodNum}节
                         </div>
-                        <div class="time-display" data-section="${section}" data-period="${periodIndex}" style="cursor: pointer; font-size: 12px; color: var(--text-3); display: block;">
+                        <div class="time-display" data-period="${periodIndex}" style="cursor: pointer; font-size: 12px; color: var(--text-3); display: block;">
                             ${period.time}
                         </div>
                     `;
         
         // 添加课时名称和时间段点击事件
         periodCell.querySelector('.period-name').addEventListener('click', (e) => {
-            this.openTimeModal(e, section, periodIndex);
+            this.openTimeModal(e, periodIndex);
         });
         periodCell.querySelector('.time-display').addEventListener('click', (e) => {
-            this.openTimeModal(e, section, periodIndex);
+            this.openTimeModal(e, periodIndex);
         });
         
         row.appendChild(periodCell);
@@ -475,10 +453,9 @@ TimetableApp.prototype.createPeriodRow = function(section, periodIndex, period, 
                 cell.classList.add('weekend-col');
             }
             cell.dataset.day = day;
-            cell.dataset.section = section;
             cell.dataset.period = periodIndex;
             
-            const key = `${day}-${section}-${periodIndex}`;
+            const key = this.buildCellKey(day, periodIndex);
             const weekStart = this.getWeekRange(this.currentDate).start;
             const weekStartStr = this.formatLocalDate(weekStart);
             const version = this.getCellVersion(key, weekStartStr);
@@ -521,7 +498,6 @@ TimetableApp.prototype.createPeriodRow = function(section, periodIndex, period, 
                         studentCard.dataset.itemId = student.id;
                         studentCard.dataset.itemType = 'student';
                         studentCard.dataset.sourceDay = day;
-                        studentCard.dataset.sourceSection = section;
                         studentCard.dataset.sourcePeriod = periodIndex;
                         const dynamicColor = this.getStudentGradeColor(student);
                         const bgColor = dynamicColor ? 'rgba(255,255,255,0.7)' : 'transparent';
@@ -630,7 +606,6 @@ TimetableApp.prototype.createPeriodRow = function(section, periodIndex, period, 
                         studentCard.dataset.itemId = student.id;
                         studentCard.dataset.itemType = 'student';
                         studentCard.dataset.sourceDay = day;
-                        studentCard.dataset.sourceSection = section;
                         studentCard.dataset.sourcePeriod = periodIndex;
                         const dynamicColor = this.getStudentGradeColor(student);
                         const bgColor = dynamicColor || 'transparent';
@@ -737,8 +712,8 @@ TimetableApp.prototype.createPeriodRow = function(section, periodIndex, period, 
         return row;
     }
 
-TimetableApp.prototype.openTimeModal = function(e, section, periodIndex) {
-        this.editingPeriod = { section, periodIndex };
+TimetableApp.prototype.openTimeModal = function(e, periodIndex) {
+        this.editingPeriod = { periodIndex };
         const modal = document.getElementById('timeModal');
         const nameInput = document.getElementById('periodName');
         const startHourSelect = document.getElementById('startHour');
@@ -746,7 +721,7 @@ TimetableApp.prototype.openTimeModal = function(e, section, periodIndex) {
         const endHourSelect = document.getElementById('endHour');
         const endMinuteSelect = document.getElementById('endMinute');
         
-        const period = this.periods[section][periodIndex];
+        const period = this.periods[periodIndex];
         nameInput.value = period.name;
         
         // 解析现有时间
@@ -767,7 +742,7 @@ TimetableApp.prototype.savePeriodTime = function(e) {
         
         if (!this.editingPeriod) return;
         
-        const { section, periodIndex } = this.editingPeriod;
+        const { periodIndex } = this.editingPeriod;
         const nameInput = document.getElementById('periodName');
         const startHourSelect = document.getElementById('startHour');
         const startMinuteSelect = document.getElementById('startMinute');
@@ -783,8 +758,8 @@ TimetableApp.prototype.savePeriodTime = function(e) {
         if (!newName || !startHour || !startMinute || !endHour || !endMinute) return;
         
         const newTime = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
-        this.periods[section][periodIndex].time = newTime;
-        this.periods[section][periodIndex].name = newName;
+        this.periods[periodIndex].time = newTime;
+        this.periods[periodIndex].name = newName;
         this.syncRealtime({ subjects: false });
         this.closeTimeModal();
     }

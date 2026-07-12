@@ -2894,6 +2894,114 @@ body {
     color: #333;
 }
 
+.export-modal-content {
+    width: 560px;
+}
+
+.export-tabs {
+    display: inline-flex;
+    gap: 8px;
+    margin: 4px 0 14px;
+    padding: 4px;
+    background: #f3f7fb;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.export-tab {
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    padding: 8px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.export-tab.active {
+    background: #fff;
+    color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.export-panel {
+    display: none;
+}
+
+.export-panel.active {
+    display: block;
+}
+
+.export-options {
+    display: grid;
+    gap: 14px;
+    padding-top: 12px;
+}
+
+.export-panel-tip {
+    margin: 4px 0 2px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fbff;
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.export-range-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.export-range-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.export-range-field label {
+    font-size: 13px;
+    color: var(--text-2);
+    font-weight: 600;
+}
+
+.export-option-card {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    padding: 18px 20px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.export-option-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary-color);
+    box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.12);
+}
+
+.export-option-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.export-option-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-3);
+}
+
 .settings-content {
     margin-bottom: 25px;
 }

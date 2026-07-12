@@ -63,9 +63,14 @@
 
     function cellKeyParts(cellKey) {
         const parts = String(cellKey || '').split('-');
+        if (parts.length === 2) {
+            return {
+                day: parseInt(parts[0], 10),
+                period: parseInt(parts[1], 10)
+            };
+        }
         return {
             day: parseInt(parts[0], 10),
-            section: parts[1] || '',
             period: parseInt(parts[2], 10)
         };
     }
@@ -74,15 +79,14 @@
         const erp = ensureErpData(app);
         const existing = erp.repeatRules.find(r => r.courseInstanceId === instance.id);
         const parts = cellKeyParts(instance.cellKey);
-        const periodInfo = app.periods && app.periods[parts.section] ? app.periods[parts.section][parts.period] : null;
+        const periodInfo = app.getPeriod(parts.period);
         const timeRange = periodInfo ? periodInfo.time : '';
         const payload = {
             id: existing ? existing.id : makeId('rr'),
             courseInstanceId: instance.id,
             frequency: 'weekly',
             dayOfWeek: parts.day,
-            section: parts.section,
-            period: parts.period,
+            periodIndex: parts.period,
             timeRange,
             startDate: instance.weekStart,
             status: instance.status || 'recurring',

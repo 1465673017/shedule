@@ -295,7 +295,6 @@ TimetableApp.prototype.loadSettings = function() {
         if (savedSettings) {
             this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
         }
-        this.settings.showEvening = true;
         this.settings.showSaturday = true;
         this.settings.showSunday = true;
         // Initialize theme settings with defaults if not present
@@ -311,14 +310,6 @@ TimetableApp.prototype.loadSettings = function() {
     }
 
 TimetableApp.prototype.applySettings = function() {
-        // 应用晚上课时显示设置
-        const eveningControls = document.querySelectorAll('#addEveningBtn, #removeEveningBtn');
-        eveningControls.forEach(btn => {
-            if (btn) {
-                btn.style.display = this.settings.showEvening ? 'inline-block' : 'none';
-            }
-        });
-
         // Make sure theme colors are initialized before applying
         this.settings.menuColor = this.settings.menuColor || '#ffffff';
         this.settings.scheduleColor = this.settings.scheduleColor || '#ffffff';

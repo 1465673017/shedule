@@ -92,11 +92,8 @@ TimetableApp.prototype.startTemporaryCourseEdit = function() {
 
         const day = this.selectedCell.dataset.day;
 
-        const section = this.selectedCell.dataset.section;
-
         const period = this.selectedCell.dataset.period;
-
-        const key = `${day}-${section}-${period}`;
+        const key = this.buildCellKey(day, period);
 
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 
@@ -137,11 +134,8 @@ TimetableApp.prototype.openAddLessonModal = function(cell) {
 
         const day = cell.dataset.day;
 
-        const section = cell.dataset.section;
-
         const period = cell.dataset.period;
-
-        const key = `${day}-${section}-${period}`;
+        const key = this.buildCellKey(day, period);
 
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 
@@ -697,11 +691,8 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
         const day = this.selectedCell.dataset.day;
 
-        const section = this.selectedCell.dataset.section;
-
         const period = this.selectedCell.dataset.period;
-
-        const key = `${day}-${section}-${period}`;
+        const key = this.buildCellKey(day, period);
 
         for (const studentId of selectedStudentIds) {
 
@@ -787,11 +778,8 @@ TimetableApp.prototype.saveTemporaryCourseEdit = function() {
 
         const day = this.selectedCell.dataset.day;
 
-        const section = this.selectedCell.dataset.section;
-
         const period = this.selectedCell.dataset.period;
-
-        const key = `${day}-${section}-${period}`;
+        const key = this.buildCellKey(day, period);
 
         for (const studentId of selectedStudentIds) {
 

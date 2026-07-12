@@ -26,61 +26,27 @@ TimetableApp.prototype.renderPeriods = function() {
     }
 
 TimetableApp.prototype.renderPeriodSection = function(section, container) {
-        const periods = this.periods[section];
         container.innerHTML = '';
-        
-        let periodNum = this.periods.morning.length;
-        if (section === 'morning') {
-            periodNum = 0;
-        } else if (section === 'afternoon') {
-            periodNum = this.periods.morning.length;
-        } else if (section === 'evening') {
-            periodNum = this.periods.morning.length + this.periods.afternoon.length;
-        }
-        
-        periods.forEach((period, index) => {
-            const [start, end] = period.time.split('-');
-            const currentNum = periodNum + index + 1;
-            const item = document.createElement('div');
-            item.className = 'time-period-item';
-            item.innerHTML = `
-                <input type="text" class="period-name-input" value="${period.name}" 
-                    onchange="app.updatePeriod('${section}', ${index}, 'name', this.value)">
-                <input type="time" class="period-time-input" value="${start}" 
-                    onchange="app.updatePeriodTime('${section}', ${index}, 'start', this.value)">
-                <span class="period-time-separator">-</span>
-                <input type="time" class="period-time-input" value="${end}" 
-                    onchange="app.updatePeriodTime('${section}', ${index}, 'end', this.value)">
-                <button class="delete-period-btn" onclick="app.deletePeriod('${section}', ${index})">×</button>
-            `;
-            container.appendChild(item);
-        });
     }
 
 TimetableApp.prototype.renderAllPeriods = function() {
         const container = document.getElementById('periodsList');
         container.innerHTML = '';
-        
-        const allPeriods = [
-            ...this.periods.morning.map((p, i) => ({ ...p, section: 'morning', index: i })),
-            ...this.periods.afternoon.map((p, i) => ({ ...p, section: 'afternoon', index: i })),
-            ...this.periods.evening.map((p, i) => ({ ...p, section: 'evening', index: i }))
-        ];
-        
-        allPeriods.forEach((period, i) => {
+
+        this.periods.forEach((period, index) => {
             const [start, end] = period.time.split('-');
             
             const item = document.createElement('div');
             item.className = 'time-period-item';
             item.innerHTML = `
                 <input type="text" class="period-name-input" value="${period.name}" 
-                    onchange="app.updatePeriod('${period.section}', ${period.index}, 'name', this.value)">
+                    onchange="app.updatePeriod(${index}, 'name', this.value)">
                 <input type="time" class="period-time-input" value="${start}" 
-                    onchange="app.updatePeriodTime('${period.section}', ${period.index}, 'start', this.value)">
+                    onchange="app.updatePeriodTime(${index}, 'start', this.value)">
                 <span class="period-time-separator">-</span>
                 <input type="time" class="period-time-input" value="${end}" 
-                    onchange="app.updatePeriodTime('${period.section}', ${period.index}, 'end', this.value)">
-                <button class="delete-period-btn" onclick="app.deletePeriod('${period.section}', ${period.index})">×</button>
+                    onchange="app.updatePeriodTime(${index}, 'end', this.value)">
+                <button class="delete-period-btn" onclick="app.deletePeriod(${index})">×</button>
             `;
             container.appendChild(item);
         });
@@ -93,14 +59,7 @@ TimetableApp.prototype.renderAllPeriods = function() {
     }
 
 TimetableApp.prototype.insertPeriodAfter = function(index) {
-        const allPeriods = [
-            ...this.periods.morning.map((p, i) => ({ ...p, section: 'morning', index: i })),
-            ...this.periods.afternoon.map((p, i) => ({ ...p, section: 'afternoon', index: i })),
-            ...this.periods.evening.map((p, i) => ({ ...p, section: 'evening', index: i }))
-        ];
-        
-        const prevPeriod = allPeriods[index];
-        const nextPeriod = allPeriods[index + 1];
+        const prevPeriod = this.periods[index];
         
         let newStart = '08:00';
         let newEnd = '08:40';
@@ -112,57 +71,25 @@ TimetableApp.prototype.insertPeriodAfter = function(index) {
         }
         
         const newPeriod = { name: `第${index + 2}节`, time: `${newStart}-${newEnd}` };
-        
-        if (prevPeriod.section === 'morning') {
-            if (index < this.periods.morning.length - 1) {
-                this.periods.morning.splice(prevPeriod.index + 1, 0, newPeriod);
-            } else {
-                if (this.periods.afternoon.length === 0 && this.periods.evening.length === 0) {
-                    this.periods.morning.push(newPeriod);
-                } else {
-                    this.periods.afternoon.splice(0, 0, newPeriod);
-                }
-            }
-        } else if (prevPeriod.section === 'afternoon') {
-            if (index < this.periods.morning.length + this.periods.afternoon.length - 1) {
-                this.periods.afternoon.splice(prevPeriod.index + 1, 0, newPeriod);
-            } else {
-                this.periods.evening.splice(0, 0, newPeriod);
-            }
-        } else {
-            this.periods.evening.splice(prevPeriod.index + 1, 0, newPeriod);
-        }
+        this.periods.splice(index + 1, 0, newPeriod);
         
         this.renumberPeriods();
         this.renderPeriods();
     }
 
 TimetableApp.prototype.addPeriodToEnd = function() {
-        const allPeriods = [
-            ...this.periods.morning,
-            ...this.periods.afternoon,
-            ...this.periods.evening
-        ];
-        
         let newStart = '08:00';
         let newEnd = '08:40';
         
-        if (allPeriods.length > 0) {
-            const lastPeriod = allPeriods[allPeriods.length - 1];
+        if (this.periods.length > 0) {
+            const lastPeriod = this.periods[this.periods.length - 1];
             const lastEnd = lastPeriod.time.split('-')[1];
             newStart = lastEnd;
             newEnd = this.addMinutesToTime(lastEnd, 40);
         }
         
-        const newPeriod = { name: `第${allPeriods.length + 1}节`, time: `${newStart}-${newEnd}` };
-        
-        if (this.periods.morning.length > 0 && this.periods.afternoon.length === 0) {
-            this.periods.morning.push(newPeriod);
-        } else if (this.periods.afternoon.length > 0 && this.periods.evening.length === 0) {
-            this.periods.afternoon.push(newPeriod);
-        } else {
-            this.periods.evening.push(newPeriod);
-        }
+        const newPeriod = { name: `第${this.periods.length + 1}节`, time: `${newStart}-${newEnd}` };
+        this.periods.push(newPeriod);
         
         this.renderPeriods();
     }
@@ -175,12 +102,12 @@ TimetableApp.prototype.addMinutesToTime = function(timeStr, minutes) {
         return `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;
     }
 
-TimetableApp.prototype.updatePeriod = function(section, index, field, value) {
-        this.periods[section][index][field] = value;
+TimetableApp.prototype.updatePeriod = function(index, field, value) {
+        this.periods[index][field] = value;
     }
 
-TimetableApp.prototype.updatePeriodTime = function(section, index, type, value) {
-        const period = this.periods[section][index];
+TimetableApp.prototype.updatePeriodTime = function(index, type, value) {
+        const period = this.periods[index];
         const [start, end] = period.time.split('-');
         if (type === 'start') {
             period.time = `${value}-${end}`;
@@ -189,19 +116,16 @@ TimetableApp.prototype.updatePeriodTime = function(section, index, type, value) 
         }
     }
 
-TimetableApp.prototype.deletePeriod = function(section, index) {
-        this.periods[section].splice(index, 1);
+TimetableApp.prototype.deletePeriod = function(index) {
+        this.periods.splice(index, 1);
         this.renumberPeriods();
         this.renderPeriods();
     }
 
 TimetableApp.prototype.renumberPeriods = function() {
-        let num = 1;
-        ['morning', 'afternoon', 'evening'].forEach(section => {
-            this.periods[section].forEach(period => {
-                period.name = `第${num}节`;
-                num++;
-            });
+        this.periods.forEach((period, index) => {
+            if (!period) return;
+            period.name = `第${index + 1}节`;
         });
     }
 
@@ -225,62 +149,35 @@ TimetableApp.prototype.initQuickSettings = function() {
         }
 
         // 没有保存值时，从当前 periods 计算
-        const totalPeriods = this.periods.morning.length + this.periods.afternoon.length + (this.settings.showEvening ? this.periods.evening.length : 0);
+        const totalPeriods = this.periods.length;
         document.getElementById('totalPeriodCount').value = totalPeriods;
 
-        if (this.periods.morning.length > 0) {
-            const firstPeriod = this.periods.morning[0].time;
+        if (this.periods.length > 0) {
+            const firstPeriod = this.periods[0].time;
             document.getElementById('firstPeriodStart').value = firstPeriod.split('-')[0];
         }
 
         let periodDuration = 40;
-        if (this.periods.morning.length > 0) {
-            const [start, end] = this.periods.morning[0].time.split('-');
+        if (this.periods.length > 0) {
+            const [start, end] = this.periods[0].time.split('-');
             periodDuration = this.timeToMinutes(end) - this.timeToMinutes(start);
         }
         document.getElementById('periodDuration').value = periodDuration;
 
         let breakDuration = 10;
-        if (this.periods.morning.length >= 2) {
-            const end1 = this.periods.morning[0].time.split('-')[1];
-            const start2 = this.periods.morning[1].time.split('-')[0];
+        if (this.periods.length >= 2) {
+            const end1 = this.periods[0].time.split('-')[1];
+            const start2 = this.periods[1].time.split('-')[0];
             breakDuration = this.timeToMinutes(start2) - this.timeToMinutes(end1);
-        } else if (this.periods.morning.length === 1 && this.periods.afternoon.length > 0) {
-            const endMorning = this.periods.morning[0].time.split('-')[1];
-            const startAfternoon = this.periods.afternoon[0].time.split('-')[0];
-            const gap = this.timeToMinutes(startAfternoon) - this.timeToMinutes(endMorning);
-            if (gap < 100) {
-                breakDuration = gap;
-            }
         }
         document.getElementById('breakDuration').value = breakDuration;
 
         this.updateLunchBreakOptions(totalPeriods);
         this.updateDinnerBreakOptions(totalPeriods);
-
-        const lunchPosition = this.periods.morning.length;
-        document.getElementById('lunchBreakPosition').value = lunchPosition;
-
-        let lunchDuration = 120;
-        if (this.periods.morning.length > 0 && this.periods.afternoon.length > 0) {
-            const endMorning = this.periods.morning[this.periods.morning.length - 1].time.split('-')[1];
-            const startAfternoon = this.periods.afternoon[0].time.split('-')[0];
-            lunchDuration = this.timeToMinutes(startAfternoon) - this.timeToMinutes(endMorning) - breakDuration;
-            if (lunchDuration < 0) lunchDuration = 120;
-        }
-        document.getElementById('lunchBreakDuration').value = lunchDuration;
-
-        const dinnerPosition = this.periods.morning.length + this.periods.afternoon.length;
-        document.getElementById('dinnerBreakPosition').value = dinnerPosition;
-
-        let dinnerDuration = 60;
-        if (this.periods.afternoon.length > 0 && this.periods.evening.length > 0) {
-            const endAfternoon = this.periods.afternoon[this.periods.afternoon.length - 1].time.split('-')[1];
-            const startEvening = this.periods.evening[0].time.split('-')[0];
-            dinnerDuration = this.timeToMinutes(startEvening) - this.timeToMinutes(endAfternoon) - breakDuration;
-            if (dinnerDuration < 0) dinnerDuration = 60;
-        }
-        document.getElementById('dinnerBreakDuration').value = dinnerDuration;
+        document.getElementById('lunchBreakPosition').value = '0';
+        document.getElementById('lunchBreakDuration').value = 120;
+        document.getElementById('dinnerBreakPosition').value = '0';
+        document.getElementById('dinnerBreakDuration').value = 60;
     }
 
 TimetableApp.prototype.updateLunchBreakOptions = function(totalPeriods) {
@@ -289,7 +186,7 @@ TimetableApp.prototype.updateLunchBreakOptions = function(totalPeriods) {
         
         const option0 = document.createElement('option');
         option0.value = '0';
-        option0.textContent = '不插入午休';
+        option0.textContent = '不插入休息1';
         select.appendChild(option0);
         
         for (let i = 1; i <= totalPeriods; i++) {
@@ -306,7 +203,7 @@ TimetableApp.prototype.updateDinnerBreakOptions = function(totalPeriods) {
         
         const option0 = document.createElement('option');
         option0.value = '0';
-        option0.textContent = '不插入晚饭';
+        option0.textContent = '不插入休息2';
         select.appendChild(option0);
         
         for (let i = 1; i <= totalPeriods; i++) {
@@ -337,9 +234,7 @@ TimetableApp.prototype.applyQuickSettings = function() {
         const [startHour, startMinute] = firstStart.split(':').map(Number);
         let currentMinutes = startHour * 60 + startMinute;
         
-        const morningPeriods = [];
-        const afternoonPeriods = [];
-        const eveningPeriods = [];
+        const nextPeriods = [];
 
         for (let i = 1; i <= totalPeriods; i++) {
             const startStr = this.formatTime(currentMinutes);
@@ -354,13 +249,7 @@ TimetableApp.prototype.applyQuickSettings = function() {
             const hasLunch = lunchPosition > 0 && i === lunchPosition;
             const hasDinner = dinnerPosition > 0 && i === dinnerPosition;
 
-            if (lunchPosition > 0 && i <= lunchPosition) {
-                morningPeriods.push(period);
-            } else if (dinnerPosition === 0 || (dinnerPosition > 0 && i <= dinnerPosition)) {
-                afternoonPeriods.push(period);
-            } else {
-                eveningPeriods.push(period);
-            }
+            nextPeriods.push(period);
 
             if (i < totalPeriods) {
                 if (hasLunch) {
@@ -373,9 +262,7 @@ TimetableApp.prototype.applyQuickSettings = function() {
             }
         }
 
-        this.periods.morning = morningPeriods;
-        this.periods.afternoon = afternoonPeriods;
-        this.periods.evening = eveningPeriods;
+        this.periods = nextPeriods;
 
         // 记住本次应用的值，下次打开弹窗时显示
         this.quickSettingsState = {
@@ -502,4 +389,3 @@ TimetableApp.prototype.startCreatingTimetable = function() {
             }
         }
     }
-

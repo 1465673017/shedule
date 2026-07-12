@@ -365,13 +365,12 @@ TimetableApp.prototype.collectLessonsForDate = function (date) {
     const lessons = [];
 
     cells.forEach(cell => {
-        const section = cell.dataset.section;
         const period = cell.dataset.period;
-        const key = `${dayNum}-${section}-${period}`;
+        const key = this.buildCellKey(dayNum, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
         const cellData = this.getCellVersion(key, weekStartStr);
 
-        const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
+        const lesson = this.buildLessonStats(cellData, { key, period, date, dateKey });
         if (lesson) {
             lessons.push({
                 ...lesson,
@@ -383,7 +382,7 @@ TimetableApp.prototype.collectLessonsForDate = function (date) {
     return lessons;
 }
 
-TimetableApp.prototype.buildLessonStats = function (cellData, { key, section, period, date, dateKey }) {
+TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, date, dateKey }) {
     if (!cellData) return null;
 
     // 统计课时只统计当前时间之前已上完的课程，后续未上的课程不统计
@@ -396,8 +395,7 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, section, pe
     // 没有记录的学生默认视为"出勤"
 
     const subject = cellData.subject ? this.subjects.find(s => s.id == cellData.subject) : null;
-    const periodInfo = this.periods[section] && this.periods[section][period]
-        ? this.periods[section][period] : null;
+    const periodInfo = this.getPeriod(period);
 
     let studentCount = 0, leaveCount = 0, absentCount = 0;
     let presentNonAuditionCount = 0, auditionStudentCount = 0;
@@ -429,7 +427,6 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, section, pe
         absentCount,
         presentNonAuditionCount,
         auditionStudentCount,
-        section,
         period,
         key,
         courseInstanceId: cellData.courseInstanceId || null,
@@ -527,7 +524,6 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     presentNonAuditionCount: 0,
                     auditionStudentCount: 0,
                     perSessionStudents: lesson.studentCount + lesson.leaveCount + lesson.absentCount,
-                    section: lesson.section,
                     period: lesson.period,
                     key: lesson.key,
                     courseInstanceId: lesson.courseInstanceId || null,
@@ -892,13 +888,12 @@ TimetableApp.prototype.refreshStatsAfterAttendanceChange = function () {
     const lessons = [];
 
     cells.forEach(cell => {
-        const section = cell.dataset.section;
         const period = cell.dataset.period;
-        const key = `${dayNum}-${section}-${period}`;
+        const key = this.buildCellKey(dayNum, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
         const cellData = this.getCellVersion(key, weekStartStr);
 
-        const lesson = this.buildLessonStats(cellData, { key, section, period, date, dateKey });
+        const lesson = this.buildLessonStats(cellData, { key, period, date, dateKey });
         if (lesson) {
             lessons.push(lesson);
         }

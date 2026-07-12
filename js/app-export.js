@@ -1,3 +1,369 @@
+TimetableApp.prototype._saveFile = async function(data, encoding, defaultName, mimeType) {
+        if (window.electronAPI && typeof window.electronAPI.saveFile === 'function') {
+            return window.electronAPI.saveFile(data, encoding, defaultName, mimeType);
+        }
+
+        let blob;
+        if (encoding === 'base64') {
+            const binary = atob(data);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+        } else {
+            blob = new Blob([data], { type: `${mimeType || 'application/octet-stream'};charset=utf-8` });
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = defaultName || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        return { canceled: false, filePath: defaultName || 'download' };
+    }
+
+TimetableApp.prototype.openExportModal = function() {
+        const modal = document.getElementById('exportModal');
+        if (modal) {
+            this.initLessonSheetExportRange(true);
+            this.switchExportTab('schedule');
+            modal.style.display = 'block';
+        }
+    }
+
+TimetableApp.prototype.closeExportModal = function() {
+        const modal = document.getElementById('exportModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+TimetableApp.prototype.handleExportOption = async function(type) {
+        this.closeExportModal();
+
+        if (type === 'image') {
+            await this.saveAsImage();
+            return;
+        }
+
+        if (type === 'word') {
+            await this.exportToWord();
+            return;
+        }
+
+        if (type === 'excel') {
+            await this.exportToExcel();
+            return;
+        }
+
+        if (type === 'lessonSheetWord') {
+            await this.exportLessonSheetToWord();
+            return;
+        }
+
+        if (type === 'lessonSheetExcel') {
+            await this.exportLessonSheetToExcel();
+        }
+    }
+
+TimetableApp.prototype.switchExportTab = function(tab) {
+        const tabs = {
+            schedule: document.getElementById('exportTabSchedule'),
+            lessonSheet: document.getElementById('exportTabLessonSheet')
+        };
+        const panels = {
+            schedule: document.getElementById('exportPanelSchedule'),
+            lessonSheet: document.getElementById('exportPanelLessonSheet')
+        };
+
+        Object.keys(tabs).forEach(key => {
+            if (tabs[key]) tabs[key].classList.toggle('active', key === tab);
+            if (panels[key]) panels[key].classList.toggle('active', key === tab);
+        });
+
+        if (tab === 'lessonSheet') {
+            this.initLessonSheetExportRange();
+        }
+    }
+
+TimetableApp.prototype.initLessonSheetExportRange = function(forceReset) {
+        const startInput = document.getElementById('lessonSheetStartDate');
+        const endInput = document.getElementById('lessonSheetEndDate');
+        if (!startInput || !endInput) return;
+
+        if (!forceReset && startInput.value && endInput.value) return;
+
+        const baseDate = this.currentDate instanceof Date ? this.currentDate : new Date();
+        const start = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+        const end = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+
+        startInput.value = this.formatLocalDate(start);
+        endInput.value = this.formatLocalDate(end);
+    }
+
+TimetableApp.prototype.getLessonSheetExportRange = function() {
+        const startInput = document.getElementById('lessonSheetStartDate');
+        const endInput = document.getElementById('lessonSheetEndDate');
+        const startValue = startInput ? startInput.value : '';
+        const endValue = endInput ? endInput.value : '';
+
+        if (!startValue || !endValue) {
+            alert('请选择完整的课时单导出日期范围');
+            return null;
+        }
+
+        const [startY, startM, startD] = startValue.split('-').map(Number);
+        const [endY, endM, endD] = endValue.split('-').map(Number);
+        const startDate = new Date(startY, startM - 1, startD);
+        const endDate = new Date(endY, endM - 1, endD);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+            alert('课时单导出日期无效，请重新选择');
+            return null;
+        }
+
+        if (startDate > endDate) {
+            alert('开始日期不能晚于结束日期');
+            return null;
+        }
+
+        return {
+            startDate,
+            endDate,
+            startLabel: startValue,
+            endLabel: endValue
+        };
+    }
+
+TimetableApp.prototype.getLessonSheetRowsByRange = function(startDate, endDate) {
+        const rows = [];
+        const dayLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+
+        while (current <= end) {
+            const date = new Date(current);
+            const lessons = this.collectLessonsForDate(date) || [];
+            lessons.forEach(lesson => {
+                const dateKey = lesson.dates && lesson.dates[0] ? lesson.dates[0] : this.formatLocalDate(date);
+                const studentNames = (lesson.students || [])
+                    .map(student => student && student.name)
+                    .filter(Boolean)
+                    .join('、');
+                const actualMinutes = this.getLessonActualMinutesForStats(lesson);
+                const durationMinutes = actualMinutes !== undefined
+                    ? actualMinutes
+                    : this.getLessonDurationMinutesForStats(lesson);
+                const durationDisplay = this.formatDuration(
+                    Math.floor(durationMinutes / 60),
+                    durationMinutes % 60
+                );
+
+                rows.push({
+                    dateKey,
+                    dayLabel: dayLabels[date.getDay()],
+                    subject: lesson.subject || '',
+                    periodLabel: this.getLessonPeriodLabel(lesson.period),
+                    periodIndex: this.getPeriodNumber(lesson.period),
+                    time: lesson.time || '',
+                    students: studentNames,
+                    scheduledStudents: (lesson.studentCount || 0) + (lesson.leaveCount || 0) + (lesson.absentCount || 0),
+                    presentCount: lesson.studentCount || 0,
+                    leaveCount: lesson.leaveCount || 0,
+                    absentCount: lesson.absentCount || 0,
+                    auditionCount: lesson.auditionStudentCount || 0,
+                    typeLabel: this.getLessonTypeKeyForStats(lesson) || '-',
+                    actualDuration: durationDisplay
+                });
+            });
+
+            current.setDate(current.getDate() + 1);
+        }
+
+        return rows.sort((a, b) => {
+            if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
+            return a.periodIndex - b.periodIndex;
+        });
+    }
+
+TimetableApp.prototype.getLessonPeriodLabel = function(periodIndex) {
+        const periodInfo = this.getPeriod(periodIndex);
+        return periodInfo && periodInfo.name ? periodInfo.name : `第${this.getPeriodNumber(periodIndex)}节`;
+    }
+
+TimetableApp.prototype.exportLessonSheetToWord = async function() {
+        try {
+            const range = this.getLessonSheetExportRange();
+            if (!range) return;
+
+            const rows = this.getLessonSheetRowsByRange(range.startDate, range.endDate);
+            if (rows.length === 0) {
+                alert('所选日期范围内暂无已完成的课程可导出为课时单');
+                return;
+            }
+
+            const title = `课时单-${range.startLabel}至${range.endLabel}`;
+            let wordContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <title>${title}</title>
+                <style>
+                    @page { margin: 1.8cm; }
+                    body { font-family: 'Microsoft YaHei', 'SimSun', Arial, sans-serif; margin: 18px; color: #333; }
+                    .main-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+                    .sub-title { text-align: center; font-size: 13px; color: #666; margin-bottom: 18px; }
+                    table { border-collapse: collapse; width: 100%; table-layout: fixed; border: 1px solid #333; }
+                    th, td { border: 1px solid #333; padding: 8px 6px; text-align: center; vertical-align: middle; font-size: 12px; word-break: break-word; }
+                    th { background: #f5f7fb; font-weight: bold; }
+                    .left { text-align: left; }
+                </style>
+            </head>
+            <body>
+                <div class="main-title">${title}</div>
+                <div class="sub-title">仅包含所选范围内已完成课程</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>星期</th>
+                            <th>科目</th>
+                            <th>课时</th>
+                            <th>时间</th>
+                            <th>学生</th>
+                            <th>应到</th>
+                            <th>到课</th>
+                            <th>请假</th>
+                            <th>缺勤</th>
+                            <th>试听</th>
+                            <th>课型</th>
+                            <th>实上时长</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            rows.forEach(row => {
+                wordContent += `<tr>
+                    <td>${row.dateKey}</td>
+                    <td>${row.dayLabel}</td>
+                    <td>${row.subject}</td>
+                    <td>${row.periodLabel}</td>
+                    <td>${row.time}</td>
+                    <td class="left">${row.students || '-'}</td>
+                    <td>${row.scheduledStudents}</td>
+                    <td>${row.presentCount}</td>
+                    <td>${row.leaveCount}</td>
+                    <td>${row.absentCount}</td>
+                    <td>${row.auditionCount}</td>
+                    <td>${row.typeLabel}</td>
+                    <td>${row.actualDuration}</td>
+                </tr>`;
+            });
+
+            wordContent += `</tbody></table></body></html>`;
+            await this._saveFile('\ufeff' + wordContent, 'utf-8', `${title}.doc`, 'application/msword', 'doc');
+        } catch (error) {
+            console.error('导出课时单 Word 出错:', error);
+            alert('导出课时单 Word 出错: ' + (error && error.message ? error.message : error));
+        }
+    }
+
+TimetableApp.prototype.exportLessonSheetToExcel = async function() {
+        try {
+            const range = this.getLessonSheetExportRange();
+            if (!range) return;
+
+            const rows = this.getLessonSheetRowsByRange(range.startDate, range.endDate);
+            if (rows.length === 0) {
+                alert('所选日期范围内暂无已完成的课程可导出为课时单');
+                return;
+            }
+
+            const title = `课时单-${range.startLabel}至${range.endLabel}`;
+            let excelContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <title>${title}</title>
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>${title}</x:Name>
+                                <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 18px; }
+                    h1 { text-align: center; font-size: 22px; margin-bottom: 8px; }
+                    .sub-title { text-align: center; color: #666; margin-bottom: 16px; font-size: 13px; }
+                    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+                    th, td { border: 1px solid #333; padding: 8px 6px; text-align: center; vertical-align: middle; font-size: 12px; }
+                    th { background: #f5f7fb; font-weight: bold; }
+                    .left { text-align: left; }
+                </style>
+            </head>
+            <body>
+                <h1>${title}</h1>
+                <div class="sub-title">仅包含所选范围内已完成课程</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>星期</th>
+                            <th>科目</th>
+                            <th>课时</th>
+                            <th>时间</th>
+                            <th>学生</th>
+                            <th>应到</th>
+                            <th>到课</th>
+                            <th>请假</th>
+                            <th>缺勤</th>
+                            <th>试听</th>
+                            <th>课型</th>
+                            <th>实上时长</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            rows.forEach(row => {
+                excelContent += `<tr>
+                    <td>${row.dateKey}</td>
+                    <td>${row.dayLabel}</td>
+                    <td>${row.subject}</td>
+                    <td>${row.periodLabel}</td>
+                    <td>${row.time}</td>
+                    <td class="left">${row.students || '-'}</td>
+                    <td>${row.scheduledStudents}</td>
+                    <td>${row.presentCount}</td>
+                    <td>${row.leaveCount}</td>
+                    <td>${row.absentCount}</td>
+                    <td>${row.auditionCount}</td>
+                    <td>${row.typeLabel}</td>
+                    <td>${row.actualDuration}</td>
+                </tr>`;
+            });
+
+            excelContent += `</tbody></table></body></html>`;
+            await this._saveFile('\ufeff' + excelContent, 'utf-8', `${title}.xls`, 'application/vnd.ms-excel', 'xls');
+        } catch (error) {
+            console.error('导出课时单 Excel 出错:', error);
+            alert('导出课时单 Excel 出错: ' + (error && error.message ? error.message : error));
+        }
+    }
+
 TimetableApp.prototype.saveAsImage = function() {
         try {
             const titleInput = document.getElementById('tableTitle') || document.getElementById('timetableTitle');
@@ -25,6 +391,9 @@ TimetableApp.prototype.saveAsImage = function() {
 
             const controls = tableClone.querySelectorAll('.section-controls');
             controls.forEach(control => control.remove());
+
+            const navigators = tableClone.querySelectorAll('.date-navigator');
+            navigators.forEach(navigator => navigator.remove());
 
             const existingTitles = tableClone.querySelectorAll('h1, h2, h3, .title, .timetable-title-section, .table-title-input');
             existingTitles.forEach(title => title.remove());
@@ -136,10 +505,7 @@ TimetableApp.prototype.exportToWord = async function() {
                 table { border-collapse: collapse; width: 100%; margin: 0 auto; table-layout: fixed; border: 2px solid #333; }
                 th, td { border: 1px solid #333; padding: 12px 8px; text-align: center; font-size: 14px; vertical-align: middle; min-height: 60px; }
                 th { background-color: #f8f9fa; font-weight: bold; }
-                .time-header { background-color: #e6f3ff; font-weight: bold; width: 80px; font-size: 14px; }
                 .period-header { background-color: #f0f0f0; font-weight: bold; width: 100px; font-size: 14px; }
-                .time-section { background-color: #e6f3ff; font-weight: bold; vertical-align: middle; }
-                .time-section.pm { background-color: #fff2e6; }
                 .subject { font-weight: bold; color: #333; font-size: 14px; }
                 .teacher { font-size: 12px; color: #666; margin-top: 4px; display: block; }
                 .period-time { font-size: 12px; color: #666; }
@@ -150,7 +516,6 @@ TimetableApp.prototype.exportToWord = async function() {
             <table>
                 <thead>
                     <tr>
-                        <th class="time-header">时段</th>
                         <th class="period-header">节次</th>
                         ${(() => {
                             let headers = ['周一', '周二', '周三', '周四', '周五'];
@@ -162,122 +527,36 @@ TimetableApp.prototype.exportToWord = async function() {
                 </thead>
                 <tbody>`;
 
-        // 生成课程表内容
-        
-        // 上午课程
-        if (this.periods.morning && this.periods.morning.length > 0) {
-            this.periods.morning.forEach((period, periodIndex) => {
-                wordContent += `<tr>`;
-                
-                // 添加时段单元格
-                if (periodIndex === 0) {
-                    wordContent += `<td class="time-header" rowspan="${this.periods.morning.length}">上午</td>`;
-                }
-                
-                wordContent += `<td class="period-header">${period.name}${this.settings.showPeriodTime ? `<br><small>${period.time}</small>` : ''}</td>`;
-                
-                // 添加每天的课程单元格
-                const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
-                for (let day = 1; day <= dayCount; day++) {
-                    const key = `${day}-morning-${periodIndex}`;
-                    const version = this.getCellVersion(key, this.formatLocalDate(this.getWeekRange(this.currentDate).start));
-                    const subjectId = version ? version.subject : null;
-                    
-                    if (subjectId) {
-                        const subject = this.subjects.find(s => s.id === subjectId);
-                        if (subject) {
-                            wordContent += `<td>
-                                <div class="subject">${subject.name}</div>
-                                <div class="teacher">${subject.teacher || ''}</div>
-                            </td>`;
-                        } else {
-                            wordContent += `<td></td>`;
-                        }
-                    } else {
-                        wordContent += `<td></td>`;
-                    }
-                }
-                
-                wordContent += `</tr>`;
-            });
-        }
-        
-        // 下午课程
-        if (this.periods.afternoon && this.periods.afternoon.length > 0) {
-            this.periods.afternoon.forEach((period, periodIndex) => {
-                wordContent += `<tr>`;
-                
-                // 添加时段单元格
-                if (periodIndex === 0) {
-                    wordContent += `<td class="time-header" rowspan="${this.periods.afternoon.length}">下午</td>`;
-                }
-                
-                wordContent += `<td class="period-header">${period.name}${this.settings.showPeriodTime ? `<br><small>${period.time}</small>` : ''}</td>`;
-                
-                // 添加每天的课程单元格
-                const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
-                for (let day = 1; day <= dayCount; day++) {
-                    const key = `${day}-afternoon-${periodIndex}`;
-                    const version = this.getCellVersion(key, this.formatLocalDate(this.getWeekRange(this.currentDate).start));
-                    const subjectId = version ? version.subject : null;
-                    
-                    if (subjectId) {
-                        const subject = this.subjects.find(s => s.id === subjectId);
-                        if (subject) {
-                            wordContent += `<td>
-                                <div class="subject">${subject.name}</div>
-                                <div class="teacher">${subject.teacher || ''}</div>
-                            </td>`;
-                        } else {
-                            wordContent += `<td></td>`;
-                        }
-                    } else {
-                        wordContent += `<td></td>`;
-                    }
-                }
-                
-                wordContent += `</tr>`;
-            });
-        }
+        const orderedPeriods = this.getOrderedPeriods();
+        const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 
-        
-        // 晚上课程（如果启用）
-        if (this.settings.showEvening && this.periods.evening && this.periods.evening.length > 0) {
-            this.periods.evening.forEach((period, periodIndex) => {
-                wordContent += `<tr>`;
-                
-                // 添加时段单元格
-                if (periodIndex === 0) {
-                    wordContent += `<td class="time-header" rowspan="${this.periods.evening.length}">晚上</td>`;
-                }
-                
-                wordContent += `<td class="period-header">${period.name}${this.settings.showPeriodTime ? `<br><small>${period.time}</small>` : ''}</td>`;
-                
-                // 添加每天的课程单元格
-                const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
-                for (let day = 1; day <= dayCount; day++) {
-                    const key = `${day}-evening-${periodIndex}`;
-                    const version = this.getCellVersion(key, this.formatLocalDate(this.getWeekRange(this.currentDate).start));
-                    const subjectId = version ? version.subject : null;
-                    
-                    if (subjectId) {
-                        const subject = this.subjects.find(s => s.id === subjectId);
-                        if (subject) {
-                            wordContent += `<td>
-                                <div class="subject">${subject.name}</div>
-                                <div class="teacher">${subject.teacher || ''}</div>
-                            </td>`;
-                        } else {
-                            wordContent += `<td></td>`;
-                        }
+        orderedPeriods.forEach(({ index, period, periodNum }) => {
+            wordContent += `<tr>`;
+            wordContent += `<td class="period-header">第${periodNum}节${this.settings.showPeriodTime ? `<br><small>${period.time}</small>` : ''}</td>`;
+
+            for (let day = 1; day <= dayCount; day++) {
+                const key = this.buildCellKey(day, index);
+                const version = this.getCellVersion(key, weekStartStr);
+                const subjectId = version ? version.subject : null;
+
+                if (subjectId) {
+                    const subject = this.subjects.find(s => s.id === subjectId);
+                    if (subject) {
+                        wordContent += `<td>
+                            <div class="subject">${subject.name}</div>
+                            <div class="teacher">${subject.teacher || ''}</div>
+                        </td>`;
                     } else {
                         wordContent += `<td></td>`;
                     }
+                } else {
+                    wordContent += `<td></td>`;
                 }
-                
-                wordContent += `</tr>`;
-            });
-        }
+            }
+
+            wordContent += `</tr>`;
+        });
 
         wordContent += `</tbody></table></body></html>`;
 
@@ -339,28 +618,11 @@ TimetableApp.prototype.exportToExcel = async function() {
                         background-color: #f8f9fa; 
                         font-weight: bold; 
                     }
-                    .time-header { 
-                        background-color: #e6f3ff; 
-                        font-weight: bold; 
-                        width: 80px; 
-                        font-size: 14px;
-                    }
                     .period-header { 
                         background-color: #f0f0f0; 
                         font-weight: bold; 
                         width: 100px; 
                         font-size: 14px;
-                    }
-                    .time-section { 
-                        background-color: #e6f3ff; 
-                        font-weight: bold; 
-                        vertical-align: middle;
-                    }
-                    .time-section.pm { 
-                        background-color: #fff2e6; 
-                    }
-                    .time-section.evening { 
-                        background-color: #f0f8ff; 
                     }
                     .subject { 
                         font-weight: bold; 
@@ -385,7 +647,6 @@ TimetableApp.prototype.exportToExcel = async function() {
                 <table>
                     <thead>
                         <tr>
-                            <th class="time-header">时段</th>
                             <th class="period-header">节次</th>
                             ${(() => {
                                 let headers = ['周一', '周二', '周三', '周四', '周五'];
@@ -396,25 +657,20 @@ TimetableApp.prototype.exportToExcel = async function() {
                         </tr>
                     </thead>
                     <tbody>`;
-            
-            // 上午课程
-            for (let i = 0; i < this.periods.morning.length; i++) {
-                const period = this.periods.morning[i];
+
+            const orderedPeriods = this.getOrderedPeriods();
+            const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
+            const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+
+            orderedPeriods.forEach(({ index, period, periodNum }) => {
                 excelContent += '<tr>';
-                
-                if (i === 0) {
-                    excelContent += `<td rowspan="${this.periods.morning.length}" class="time-section">上午</td>`;
-                }
-                
-                excelContent += `<td class="period-header">${period.name}${this.settings.showPeriodTime ? `<br><span class="period-time">${period.time}</span>` : ''}</td>`;
-                
-                // 添加每天的课程单元格
-                const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
+                excelContent += `<td class="period-header">第${periodNum}节${this.settings.showPeriodTime ? `<br><span class="period-time">${period.time}</span>` : ''}</td>`;
+
                 for (let day = 1; day <= dayCount; day++) {
-                    const key = `${day}-morning-${i}`;
-                    const version = this.getCellVersion(key, this.formatLocalDate(this.getWeekRange(this.currentDate).start));
+                    const key = this.buildCellKey(day, index);
+                    const version = this.getCellVersion(key, weekStartStr);
                     const subjectId = version ? version.subject : null;
-                    
+
                     if (subjectId) {
                         const subject = this.subjects.find(s => s.id === subjectId);
                         if (subject) {
@@ -430,86 +686,9 @@ TimetableApp.prototype.exportToExcel = async function() {
                         excelContent += '<td></td>';
                     }
                 }
-                
+
                 excelContent += '</tr>';
-            }
-            
-            // 下午课程
-            for (let i = 0; i < this.periods.afternoon.length; i++) {
-                const period = this.periods.afternoon[i];
-                excelContent += '<tr>';
-                
-                if (i === 0) {
-                    excelContent += `<td rowspan="${this.periods.afternoon.length}" class="time-section pm">下午</td>`;
-                }
-                
-                excelContent += `<td class="period-header">${period.name}${this.settings.showPeriodTime ? `<br><span class="period-time">${period.time}</span>` : ''}</td>`;
-                
-                // 添加每天的课程单元格
-                const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
-                for (let day = 1; day <= dayCount; day++) {
-                    const key = `${day}-afternoon-${i}`;
-                    const version = this.getCellVersion(key, this.formatLocalDate(this.getWeekRange(this.currentDate).start));
-                    const subjectId = version ? version.subject : null;
-                    
-                    if (subjectId) {
-                        const subject = this.subjects.find(s => s.id === subjectId);
-                        if (subject) {
-                            excelContent += `<td><span class="subject">${subject.name}</span>`;
-                            if (subject.teacher) {
-                                excelContent += `<br><span class="teacher">${subject.teacher}</span>`;
-                            }
-                            excelContent += `</td>`;
-                        } else {
-                            excelContent += '<td></td>';
-                        }
-                    } else {
-                        excelContent += '<td></td>';
-                    }
-                }
-                
-                excelContent += '</tr>';
-            }
-            
-            
-            // 晚上课程（如果启用）
-            if (this.settings.showEvening && this.periods.evening && this.periods.evening.length > 0) {
-                for (let i = 0; i < this.periods.evening.length; i++) {
-                    const period = this.periods.evening[i];
-                    excelContent += '<tr>';
-                    
-                    if (i === 0) {
-                        excelContent += `<td rowspan="${this.periods.evening.length}" class="time-section evening">晚上</td>`;
-                    }
-                    
-                    excelContent += `<td class="period-header">${period.name}${this.settings.showPeriodTime ? `<br><span class="period-time">${period.time}</span>` : ''}</td>`;
-                    
-                    // 添加每天的课程单元格
-                    const dayCount = 5 + (this.settings.showSaturday ? 1 : 0) + (this.settings.showSunday ? 1 : 0);
-                    for (let day = 1; day <= dayCount; day++) {
-                        const key = `${day}-evening-${i}`;
-                        const version = this.getCellVersion(key, this.formatLocalDate(this.getWeekRange(this.currentDate).start));
-                    const subjectId = version ? version.subject : null;
-                        
-                        if (subjectId) {
-                            const subject = this.subjects.find(s => s.id === subjectId);
-                            if (subject) {
-                                excelContent += `<td><span class="subject">${subject.name}</span>`;
-                                if (subject.teacher) {
-                                    excelContent += `<br><span class="teacher">${subject.teacher}</span>`;
-                                }
-                                excelContent += `</td>`;
-                            } else {
-                                excelContent += '<td></td>';
-                            }
-                        } else {
-                            excelContent += '<td></td>';
-                        }
-                    }
-                    
-                    excelContent += '</tr>';
-                }
-            }
+            });
             
             excelContent += '</tbody></table></body></html>';
 
