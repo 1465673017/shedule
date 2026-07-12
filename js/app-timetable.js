@@ -478,8 +478,48 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     cell.style.cursor = 'grab';
                     
                     const subjectBg = document.createElement('div');
-                    subjectBg.className = 'subject-bg';
-                    subjectBg.style.cssText = `position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${subject.color || '#666666'}; border-radius: 6px; z-index: 1; pointer-events: none;`;
+                    subjectBg.className = 'subject-bg subject-bg-light';
+                    subjectBg.style.setProperty('--subject-color', subject.color || '#666666');
+                    const leadStudent = students.length > 0 ? students[0] : null;
+                    const gradeAccentColor = leadStudent
+                        ? this.getStudentGradeColor(leadStudent)
+                        : (subject.color || '#666666');
+                    subjectBg.style.setProperty('--grade-accent-color', gradeAccentColor);
+                    
+                    const opacity = this.hexToRgbaOpacity(subject.color || '#666666', 0.12);
+                    subjectBg.style.backgroundColor = opacity;
+                    
+                    const borderOpacity = this.hexToRgbaOpacity(subject.color || '#666666', 0.25);
+                    subjectBg.style.border = `1px solid ${borderOpacity}`;
+                    
+                    const subjectName = document.createElement('div');
+                    subjectName.className = 'subject-name-light';
+                    const subjectNameText = document.createElement('span');
+                    subjectNameText.className = 'subject-name-text';
+                    subjectNameText.textContent = subject.name;
+                    subjectName.appendChild(subjectNameText);
+
+                    const gradeNames = [...new Set(
+                        students
+                            .map(student => student && student.grade)
+                            .filter(Boolean)
+                    )];
+
+                    if (gradeNames.length > 0) {
+                        const gradeTag = document.createElement('span');
+                        gradeTag.className = 'subject-grade-tag';
+                        gradeTag.textContent = gradeNames[0];
+                        subjectName.appendChild(gradeTag);
+                    }
+                    
+                    if (subject.teacher) {
+                        const teacherName = document.createElement('div');
+                        teacherName.className = 'teacher-name-light';
+                        teacherName.textContent = subject.teacher;
+                        subjectBg.appendChild(teacherName);
+                    }
+                    
+                    subjectBg.appendChild(subjectName);
                     cell.appendChild(subjectBg);
                 }
                 
@@ -490,55 +530,35 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     
                     const studentCount = students.length;
                     const isVertical = studentCount >= 3;
-                    const fontSize = isVertical ? 14 : 20;
                     
                     students.forEach(student => {
                         const studentCard = document.createElement('div');
+                        studentCard.className = `student-card-light${isVertical ? ' vertical' : ''}`;
                         studentCard.draggable = true;
                         studentCard.dataset.itemId = student.id;
                         studentCard.dataset.itemType = 'student';
                         studentCard.dataset.sourceDay = day;
                         studentCard.dataset.sourcePeriod = periodIndex;
+                        
                         const dynamicColor = this.getStudentGradeColor(student);
-                        const bgColor = dynamicColor ? 'rgba(255,255,255,0.7)' : 'transparent';
-                        const textColor = dynamicColor ? '#333' : '#333';
-                        const gradeColor = dynamicColor;
-                        const cardFlexDir = isVertical ? 'column' : 'row';
-                        studentCard.style.cssText = `flex: 1; background-color: ${bgColor}; border-radius: 4px; display: flex; flex-direction: ${cardFlexDir}; justify-content: center; align-items: stretch; position: relative; overflow: hidden; cursor: grab;`;
+                        const gradeColor = dynamicColor || '#666666';
 
                         const gradeColorBar = document.createElement('div');
-                        gradeColorBar.style.cssText = isVertical 
-                            ? `width: 100%; height: 4px; background-color: ${gradeColor}; flex-shrink: 0;`
-                            : `width: 4px; height: 100%; background-color: ${gradeColor}; flex-shrink: 0;`;
+                        gradeColorBar.className = `grade-color-bar ${isVertical ? 'vertical' : 'horizontal'}`;
+                        gradeColorBar.style.backgroundColor = gradeColor;
 
                         const studentName = document.createElement('div');
+                        studentName.className = `student-name${isVertical ? ' vertical' : ''}`;
                         studentName.textContent = student.name;
 
-                        if (isVertical) {
-                            const adjustedFontSize = student.isAudition ? 12 : fontSize;
-                            const topPadding = student.isAudition ? 6 : 2;
-                            studentName.style.cssText = `font-size: ${adjustedFontSize}px; color: ${textColor}; font-weight: bold; text-align: center; overflow: hidden; display: flex; flex-direction: column; justify-content: center; line-height: 1.2; padding: ${topPadding}px 1px 2px 1px; writing-mode: vertical-rl; text-orientation: mixed; flex: 1;`;
-                        } else {
-                            studentName.style.cssText = `font-size: ${fontSize}px; color: ${textColor}; font-weight: bold; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; display: flex; align-items: center; justify-content: center; flex: 1;`;
-                        }
-
                         const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'delete-cell-btn';
+                        deleteBtn.className = 'delete-cell-btn-light';
                         deleteBtn.title = '删除学生';
                         deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M4 7H20M10 11V17M14 11V17M5 7L6 19C6 19.5304 6.21071 20.0391 6.58579 20.4142C6.96086 20.7893 7.46957 21 8 21H16C16.5304 21 17.0391 20.7893 17.4142 20.4142C17.7893 20.0391 18 19.5304 18 19L19 7M9 7V4C9 3.73478 9.10536 3.48043 9.29289 3.29289C9.48043 3.10536 9.73478 3 10 3H14C14.2652 3 14.5196 3.10536 14.7071 3.29289C14.8946 3.48043 15 3.73478 15 4V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                        deleteBtn.style.cssText = `position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: #dc3545; color: white; border: none; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10;`;
 
                         deleteBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             this.removeItemFromCell(cell, 'student', student.id);
-                        });
-
-                        studentCard.addEventListener('mouseenter', () => {
-                            deleteBtn.style.display = 'flex';
-                        });
-
-                        studentCard.addEventListener('mouseleave', () => {
-                            deleteBtn.style.display = 'none';
                         });
 
                         studentCard.addEventListener('click', (e) => {
@@ -552,14 +572,14 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
 
                         if (student.is1v1) {
                             const badge = document.createElement('span');
-                            badge.className = 'one-v1-badge';
+                            badge.className = 'status-badge one-v1';
                             badge.textContent = '1v1';
                             studentCard.appendChild(badge);
                         }
 
                         if (student.isAudition) {
                             const badge = document.createElement('span');
-                            badge.className = 'audition-badge';
+                            badge.className = 'status-badge audition';
                             badge.textContent = '试';
                             studentCard.appendChild(badge);
                         }
@@ -575,7 +595,7 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     deleteBtn.className = 'delete-cell-btn';
                     deleteBtn.title = '删除科目';
                     deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 7H20M10 11V17M14 11V17M5 7L6 19C6 19.5304 6.21071 20.0391 6.58579 20.4142C6.96086 20.7893 7.46957 21 8 21H16C16.5304 21 17.0391 20.7893 17.4142 20.4142C17.7893 20.0391 18 19.5304 18 19L19 7M9 7V4C9 3.73478 9.10536 3.48043 9.29289 3.29289C9.48043 3.10536 9.73478 3 10 3H14C14.2652 3 14.5196 3.10536 14.7071 3.29289C14.8946 3.48043 15 3.73478 15 4V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                    deleteBtn.style.cssText = 'position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; background: rgba(255, 255, 255, 0.9); color: #dc3545; border: none; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10; transition: all 0.2s ease;';
+                    deleteBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; background: rgba(255, 255, 255, 0.96); color: #dc3545; border: none; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 12; transition: all 0.2s ease;';
                     cell.appendChild(deleteBtn);
                     
                     cell.addEventListener('mouseenter', () => {
@@ -598,76 +618,56 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     
                     const studentCount = students.length;
                     const isVertical = studentCount >= 3;
-                    const fontSize = isVertical ? 14 : 20;
                     
                     students.forEach(student => {
                         const studentCard = document.createElement('div');
+                        studentCard.className = `student-card-light${isVertical ? ' vertical' : ''}`;
                         studentCard.draggable = true;
                         studentCard.dataset.itemId = student.id;
                         studentCard.dataset.itemType = 'student';
                         studentCard.dataset.sourceDay = day;
                         studentCard.dataset.sourcePeriod = periodIndex;
+                        
                         const dynamicColor = this.getStudentGradeColor(student);
-                        const bgColor = dynamicColor || 'transparent';
-                        const textColor = dynamicColor ? 'white' : '#333';
-                        const gradeColor = dynamicColor;
-                        const cardFlexDir = isVertical ? 'column' : 'row';
-                        studentCard.style.cssText = `flex: 1; background-color: ${bgColor}; border-radius: 4px; display: flex; flex-direction: ${cardFlexDir}; justify-content: center; align-items: stretch; position: relative; overflow: hidden; cursor: grab;`;
+                        const gradeColor = dynamicColor || '#666666';
 
                         const gradeColorBar = document.createElement('div');
-                        gradeColorBar.style.cssText = isVertical 
-                            ? `width: 100%; height: 4px; background-color: ${gradeColor}; flex-shrink: 0;`
-                            : `width: 4px; height: 100%; background-color: ${gradeColor}; flex-shrink: 0;`;
+                        gradeColorBar.className = `grade-color-bar ${isVertical ? 'vertical' : 'horizontal'}`;
+                        gradeColorBar.style.backgroundColor = gradeColor;
 
                         const studentName = document.createElement('div');
+                        studentName.className = `student-name${isVertical ? ' vertical' : ''}`;
                         studentName.textContent = student.name;
 
-                        if (isVertical) {
-                            const adjustedFontSize = student.isAudition ? 12 : fontSize;
-                            const topPadding = student.isAudition ? 6 : 2;
-                            studentName.style.cssText = `font-size: ${adjustedFontSize}px; color: ${textColor}; font-weight: bold; text-align: center; overflow: hidden; display: flex; flex-direction: column; justify-content: center; line-height: 1.2; padding: ${topPadding}px 1px 2px 1px; writing-mode: vertical-rl; text-orientation: mixed; flex: 1;`;
-                        } else {
-                            studentName.style.cssText = `font-size: ${fontSize}px; color: ${textColor}; font-weight: bold; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; display: flex; align-items: center; justify-content: center; flex: 1;`;
-                        }
-
                         const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'delete-cell-btn';
+                        deleteBtn.className = 'delete-cell-btn-light';
                         deleteBtn.title = '删除学生';
                         deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M4 7H20M10 11V17M14 11V17M5 7L6 19C6 19.5304 6.21071 20.0391 6.58579 20.4142C6.96086 20.7893 7.46957 21 8 21H16C16.5304 21 17.0391 20.7893 17.4142 20.4142C17.7893 20.0391 18 19.5304 18 19L19 7M9 7V4C9 3.73478 9.10536 3.48043 9.29289 3.29289C9.48043 3.10536 9.73478 3 10 3H14C14.2652 3 14.5196 3.10536 14.7071 3.29289C14.8946 3.48043 15 3.73478 15 4V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-                        deleteBtn.style.cssText = `position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: rgba(255,255,255,0.9); color: #dc3545; border: none; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10;`;
 
                         deleteBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
                             this.removeItemFromCell(cell, 'student', student.id);
                         });
 
-                        studentCard.addEventListener('mouseenter', () => {
-                        deleteBtn.style.display = 'flex';
-                    });
+                        studentCard.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.openAttendanceModal(cell);
+                        });
 
-                    studentCard.addEventListener('mouseleave', () => {
-                        deleteBtn.style.display = 'none';
-                    });
-
-                    studentCard.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.openAttendanceModal(cell);
-                    });
-
-                    studentCard.appendChild(gradeColorBar);
-                    studentCard.appendChild(studentName);
+                        studentCard.appendChild(gradeColorBar);
+                        studentCard.appendChild(studentName);
                         studentCard.appendChild(deleteBtn);
 
                         if (student.is1v1) {
                             const badge = document.createElement('span');
-                            badge.className = 'one-v1-badge';
+                            badge.className = 'status-badge one-v1';
                             badge.textContent = '1v1';
                             studentCard.appendChild(badge);
                         }
 
                         if (student.isAudition) {
                             const badge = document.createElement('span');
-                            badge.className = 'audition-badge';
+                            badge.className = 'status-badge audition';
                             badge.textContent = '试';
                             studentCard.appendChild(badge);
                         }
@@ -762,4 +762,36 @@ TimetableApp.prototype.savePeriodTime = function(e) {
         this.periods[periodIndex].name = newName;
         this.syncRealtime({ subjects: false });
         this.closeTimeModal();
+    }
+
+TimetableApp.prototype.hexToRgbaOpacity = function(color, opacity) {
+        if (!color || typeof color !== 'string') {
+            return `rgba(102, 102, 102, ${opacity})`;
+        }
+
+        const value = color.trim();
+
+        if (/^#([0-9a-fA-F]{6})$/.test(value)) {
+            const r = parseInt(value.slice(1, 3), 16);
+            const g = parseInt(value.slice(3, 5), 16);
+            const b = parseInt(value.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        if (/^#([0-9a-fA-F]{3})$/.test(value)) {
+            const r = parseInt(value[1] + value[1], 16);
+            const g = parseInt(value[2] + value[2], 16);
+            const b = parseInt(value[3] + value[3], 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        const rgbMatch = value.match(/^rgb\(\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*\)$/i);
+        if (rgbMatch) {
+            const r = Math.min(255, parseInt(rgbMatch[1], 10));
+            const g = Math.min(255, parseInt(rgbMatch[2], 10));
+            const b = Math.min(255, parseInt(rgbMatch[3], 10));
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        return `rgba(102, 102, 102, ${opacity})`;
     }

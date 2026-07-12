@@ -296,27 +296,30 @@ let items = this.currentPool === 'subject' ? this.subjects : this.students;
             
             if (this.currentPool === 'subject') {
                 card.dataset.subjectId = item.id;
-                card.style.borderLeft = `4px solid ${item.color}`;
+                card.classList.add('subject-type');
+                card.style.setProperty('--card-color', item.color);
             } else {
                 card.dataset.studentId = item.id;
                 const dynamicColor = this.getStudentGradeColor(item);
-                card.style.borderLeft = `4px solid ${dynamicColor}`;
-                card.style.position = 'relative';
+                card.classList.add('student-type');
+                card.style.setProperty('--card-color', dynamicColor || '#666666');
             }
 
             const extraInfo = this.currentPool === 'subject' ? item.teacher : item.grade;
-            const extraHtml = extraInfo ? `<div class="teacher-name">${extraInfo}</div>` : '';
-            const nameStyle = !extraInfo ? 'style="line-height: 40px;"' : '';
-            const oneV1Badge = (this.currentPool === 'student' && item.is1v1) ? '<span class="one-v1-badge">1v1</span>' : '';
-            const auditionBadge = (this.currentPool === 'student' && item.isAudition) ? '<span class="audition-badge">试</span>' : '';
-            const completedBadge = (this.currentPool === 'student' && item.completed) ? '<span class="completed-badge">结</span>' : '';
+            const extraClass = this.currentPool === 'subject' ? 'teacher-name' : 'grade-label';
+            const extraHtml = extraInfo ? `<div class="${extraClass}">${extraInfo}</div>` : '';
+            const oneV1Badge = (this.currentPool === 'student' && item.is1v1) ? '<span class="status-badge one-v1">1v1</span>' : '';
+            const auditionBadge = (this.currentPool === 'student' && item.isAudition) ? '<span class="status-badge audition">试</span>' : '';
+            const completedBadge = (this.currentPool === 'student' && item.completed) ? '<span class="status-badge completed">结</span>' : '';
 
             card.innerHTML = `
-                ${oneV1Badge}
-                ${auditionBadge}
-                ${completedBadge}
+                <div class="status-badges">
+                    ${completedBadge}
+                    ${auditionBadge}
+                    ${oneV1Badge}
+                </div>
                 <div class="subject-info">
-                    <div class="subject-name" ${nameStyle}>${item.name}</div>
+                    <div class="subject-name">${item.name}</div>
                     ${extraHtml}
                 </div>
                 <div class="subject-actions">

@@ -335,6 +335,26 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
         this.students.forEach(student => {
 
+            const isSelected = selectedIds.includes(student.id);
+
+            if (student.completed && !isSelected) {
+
+                return;
+
+            }
+
+            if (student.isAudition && !isSelected) {
+
+                const assignedKeys = this.getAuditionStudentAssignedKeys(student.id, excludeKeys);
+
+                if (assignedKeys.length > 0) {
+
+                    return;
+
+                }
+
+            }
+
             if (isCoursePoolMode && student.isAudition && !selectedIds.includes(student.id)) {
 
                 return;
@@ -344,8 +364,6 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
             const chip = document.createElement('div');
 
             chip.className = 'student-chip';
-
-            const isSelected = selectedIds.includes(student.id);
 
             if (isSelected) {
 
@@ -1384,4 +1402,3 @@ TimetableApp.prototype.getContrastColor = function(hex) {
         return brightness > 150 ? '#1f2225' : '#ffffff';
 
     }
-

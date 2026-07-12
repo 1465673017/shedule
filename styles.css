@@ -105,17 +105,20 @@ body {
 .container::-webkit-scrollbar {
     width: 8px;
 }
+
 .container::-webkit-scrollbar-track {
     background: transparent;
     margin: 14px 0;
     border-radius: 4px;
 }
+
 .container::-webkit-scrollbar-thumb {
     background: rgba(15, 23, 42, 0.18);
     border-radius: 4px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .container::-webkit-scrollbar-thumb:hover {
     background: rgba(15, 23, 42, 0.28);
     border: 2px solid transparent;
@@ -228,17 +231,20 @@ body {
 .left-sidebar::-webkit-scrollbar {
     width: 6px;
 }
+
 .left-sidebar::-webkit-scrollbar-track {
     background: transparent;
     margin: 14px 0;
     border-radius: 3px;
 }
+
 .left-sidebar::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
     border-radius: 3px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .left-sidebar::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.22);
     border: 2px solid transparent;
@@ -307,17 +313,20 @@ body {
 .right-content::-webkit-scrollbar {
     width: 8px;
 }
+
 .right-content::-webkit-scrollbar-track {
     background: transparent;
     margin: 14px 0;
     border-radius: 4px;
 }
+
 .right-content::-webkit-scrollbar-thumb {
     background: rgba(15, 23, 42, 0.18);
     border-radius: 4px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .right-content::-webkit-scrollbar-thumb:hover {
     background: rgba(15, 23, 42, 0.28);
     border: 2px solid transparent;
@@ -449,17 +458,20 @@ body {
 .subjects::-webkit-scrollbar {
     width: 6px;
 }
+
 .subjects::-webkit-scrollbar-track {
     background: transparent;
     margin: 8px 0;
     border-radius: 3px;
 }
+
 .subjects::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
     border-radius: 3px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .subjects::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.22);
     border: 2px solid transparent;
@@ -521,6 +533,7 @@ body {
     display: flex;
     gap: 2px;
     margin-left: 8px;
+    margin-top: 18px;
     opacity: 0.4;
     transition: opacity 0.2s ease;
 }
@@ -593,17 +606,20 @@ body {
 .timetable-container::-webkit-scrollbar {
     width: 8px;
 }
+
 .timetable-container::-webkit-scrollbar-track {
     background: transparent;
     margin: 10px 0;
     border-radius: 4px;
 }
+
 .timetable-container::-webkit-scrollbar-thumb {
     background: rgba(15, 23, 42, 0.18);
     border-radius: 4px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .timetable-container::-webkit-scrollbar-thumb:hover {
     background: rgba(15, 23, 42, 0.28);
     border: 2px solid transparent;
@@ -880,6 +896,7 @@ body {
     width: 120px;
     height: 100px;
     position: relative;
+    overflow: hidden;
     transition: all 0.2s ease;
     background: rgba(0, 0, 0, 0.01);
     cursor: pointer;
@@ -1006,17 +1023,20 @@ body {
 .modal-content::-webkit-scrollbar {
     width: 8px;
 }
+
 .modal-content::-webkit-scrollbar-track {
     background: transparent;
     margin: 14px 0;
     border-radius: 4px;
 }
+
 .modal-content::-webkit-scrollbar-thumb {
     background: rgba(15, 23, 42, 0.18);
     border-radius: 4px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .modal-content::-webkit-scrollbar-thumb:hover {
     background: rgba(15, 23, 42, 0.28);
     border: 2px solid transparent;
@@ -1347,17 +1367,20 @@ body {
 .student-picker::-webkit-scrollbar {
     width: 6px;
 }
+
 .student-picker::-webkit-scrollbar-track {
     background: transparent;
     margin: 8px 0;
     border-radius: 3px;
 }
+
 .student-picker::-webkit-scrollbar-thumb {
     background: rgba(15, 23, 42, 0.18);
     border-radius: 3px;
     border: 2px solid transparent;
     background-clip: padding-box;
 }
+
 .student-picker::-webkit-scrollbar-thumb:hover {
     background: rgba(15, 23, 42, 0.28);
     border: 2px solid transparent;
@@ -1586,6 +1609,7 @@ body {
     height: 24px;
     font-size: 22px;
 }
+
 .stats-tabs {
     display: flex;
     gap: 0;
@@ -1593,6 +1617,7 @@ body {
     margin-bottom: 8px;
     padding: 0 2px;
 }
+
 .stats-tab {
     flex: 1;
     padding: 6px 6px;
@@ -1607,15 +1632,18 @@ body {
     transition: all 0.2s;
     white-space: nowrap;
 }
+
 .stats-tab:hover {
     color: #4a90d9;
     background: #f8fafe;
 }
+
 .stats-tab.active {
     color: #4a90d9;
     font-weight: 600;
     border-bottom-color: #4a90d9;
 }
+
 .stats-filter-row {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1775,6 +1803,7 @@ body {
     background: #fff;
     outline: none;
 }
+
 .stats-date-input:focus {
     border-color: #4a90d9;
 }
@@ -2400,18 +2429,22 @@ body {
     line-height: 1.4;
     transition: all 0.15s ease;
 }
+
 .recurrence-badge-chip.recurring {
     color: #fff;
     background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
 }
+
 .recurrence-badge-chip.stopped {
     color: #fff;
     background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
 }
+
 .recurrence-badge-chip.temporary {
     color: #fff;
     background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
 }
+
 .recurrence-badge-chip:hover {
     opacity: 0.85;
     transform: scale(1.05);
@@ -3490,10 +3523,12 @@ body {
     position: relative;
     white-space: nowrap;
 }
+
 .actual-duration-display:hover {
     background: #e0efff;
     border-color: #80b8ff;
 }
+
 .actual-duration-label {
     font-size: 11px;
     font-weight: 500;
@@ -3503,6 +3538,7 @@ body {
     display: inline-flex;
     align-items: center;
 }
+
 .actual-duration-value {
     font-size: 14px;
     font-weight: 700;
@@ -3574,7 +3610,8 @@ body {
     color: var(--text-3);
     transition: all 0.2s ease;
     border-bottom: 2px solid transparent;
-    margin-bottom: -1px; /* To overlap with the border-bottom of settings-tabs */
+    margin-bottom: -1px;
+    /* To overlap with the border-bottom of settings-tabs */
 }
 
 .settings-tab:hover {
@@ -3594,6 +3631,7 @@ body {
 .settings-tab-pane.active {
     display: block;
 }
+
 .actual-duration-edit-icon {
     font-size: 9px;
     color: #4a90d9;
@@ -3619,6 +3657,7 @@ body {
     padding: 0;
     overflow: hidden;
 }
+
 .duration-editor-header {
     font-size: 13px;
     font-weight: 600;
@@ -3627,12 +3666,15 @@ body {
     border-bottom: 1px solid #eee;
     background: #fafbfc;
 }
+
 .duration-editor-body {
     padding: 16px;
 }
+
 .duration-slider-group {
     margin-bottom: 14px;
 }
+
 .duration-slider-group label {
     display: block;
     font-size: 12px;
@@ -3640,11 +3682,13 @@ body {
     color: #666;
     margin-bottom: 6px;
 }
+
 .duration-slider-row {
     display: flex;
     align-items: center;
     gap: 12px;
 }
+
 .duration-range {
     flex: 1;
     -webkit-appearance: none;
@@ -3655,6 +3699,7 @@ body {
     outline: none;
     cursor: pointer;
 }
+
 .duration-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -3667,9 +3712,11 @@ body {
     cursor: pointer;
     transition: transform 0.15s;
 }
+
 .duration-range::-webkit-slider-thumb:hover {
     transform: scale(1.15);
 }
+
 .duration-range::-moz-range-thumb {
     width: 20px;
     height: 20px;
@@ -3679,6 +3726,7 @@ body {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     cursor: pointer;
 }
+
 .duration-slider-val {
     display: inline-block;
     min-width: 36px;
@@ -4455,7 +4503,7 @@ body.dark-theme-active .subject-bg {
 /* 暗色主题下学生卡片与其他主题保持一致，不添加额外样式 */
 
 /* 确保暗色主题下学生卡片文字有足够对比度 */
-body.dark-theme-active .cell-content > div div[style*="color: #333"] {
+body.dark-theme-active .cell-content>div div[style*="color: #333"] {
     color: #1e293b !important;
     text-shadow: 0 0 1px rgba(255, 255, 255, 0.3);
 }
@@ -4498,14 +4546,14 @@ body.dark-theme-active .date-display span {
         --text-2: #334155;
         --text-3: #64748b;
     }
-    
+
     /* 打印时恢复亮色样式 */
     body.dark-theme-active .timetable th,
     body.dark-theme-active .timetable td {
         background: #ffffff !important;
         color: #1e293b !important;
     }
-    
+
     body.dark-theme-active .cell-content,
     body.dark-theme-active .subject-bg {
         filter: none !important;
@@ -4956,6 +5004,390 @@ body.dark-theme-active .chart-legend-note {
     color: #2563eb;
 }
 
+/* ========== COLOR SYSTEM REDESIGN STYLES ========== */
+
+/* 科目池卡片 - 细色条样式 */
+.subject-card {
+    position: relative;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 12px 12px;
+    min-height: 72px;
+    cursor: grab;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    overflow: visible;
+}
+
+.subject-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 3px;
+    border-radius: 8px 0 0 8px;
+}
+
+.subject-card:hover {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(var(--primary-rgb), 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.subject-card.subject-type::before {
+    background-color: var(--card-color, #666666);
+}
+
+.subject-card.student-type::before {
+    background-color: var(--card-color, #666666);
+}
+
+/* 科目信息区域 */
+.subject-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 4px;
+}
+
+.subject-info .subject-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: rgba(0, 0, 0, 0.85);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subject-info .teacher-name {
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 0;
+    align-self: flex-start;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subject-info .grade-label {
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+    background: rgba(0, 0, 0, 0.04);
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 0;
+    align-self: flex-start;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 课表科目块 - 浅染色面板 */
+.subject-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 6px;
+    z-index: 1;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+}
+
+
+/* 课表学生块 - 统一浅卡片 */
+.student-card-light {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.student-card-light:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(var(--primary-rgb), 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.student-card-light.vertical {
+    flex-direction: column;
+}
+
+.student-card-light .grade-color-bar {
+    flex-shrink: 0;
+}
+
+.student-card-light .grade-color-bar.horizontal {
+    width: 4px;
+    height: 100%;
+}
+
+.student-card-light .grade-color-bar.vertical {
+    width: 100%;
+    height: 4px;
+}
+
+.student-card-light .student-name {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.85);
+    font-weight: 600;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.student-card-light .student-name.vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    line-height: 1.3;
+}
+
+/* 状态badge样式 */
+.status-badge {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    z-index: 2;
+}
+
+
+.student-card-light {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+    border-radius: 999px;
+    border: none;
+    display: inline-flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    transition: all 0.2s ease;
+    padding: 4px 24px 4px 10px;
+    min-height: 26px;
+    box-shadow: none;
+}
+
+.student-card-light:hover {
+    background: rgba(37, 99, 235, 0.18);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.student-card-light.vertical {
+    flex-direction: row;
+}
+
+.student-card-light .grade-color-bar {
+    display: none;
+}
+
+.student-card-light .student-name {
+    font-size: 12px;
+    color: inherit;
+    font-weight: 600;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0;
+    display: block;
+    line-height: 1.5;
+    flex: initial;
+}
+
+.student-card-light .student-name.vertical {
+    writing-mode: initial;
+    text-orientation: initial;
+    line-height: 1.5;
+}
+
+.status-badge {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    z-index: 10;
+}
+
+
+
+.delete-cell-btn-light {
+    position: absolute;
+    top: 50%;
+    right: 7px;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    background: rgba(37, 99, 235, 0.16);
+    color: currentColor;
+}
+
+.delete-cell-btn-light:hover {
+    background: rgba(220, 38, 38, 0.16);
+    color: #dc2626;
+    transform: translateY(-50%) scale(1.08);
+}
+
+body.dark-theme-active .student-card-light {
+    background: rgba(96, 165, 250, 0.18);
+    border-color: transparent;
+}
+
+body.dark-theme-active .student-card-light:hover {
+    background: rgba(96, 165, 250, 0.24);
+}
+
+body.dark-theme-active .student-card-light .student-name {
+    color: #dbeafe;
+}
+
+.subject-card .status-badges {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    gap: 3px;
+    z-index: 10;
+}
+
+.subject-card .status-badge {
+    position: static !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    padding: 1px 5px !important;
+    border-radius: 3px !important;
+    letter-spacing: 0.5px !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+}
+
+.subject-card .status-badge.one-v1 {
+    background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%) !important;
+}
+
+.subject-card .status-badge.audition {
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%) !important;
+}
+
+.subject-card .status-badge.completed {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+}
+
+/* 删除按钮 */
+.delete-cell-btn-light {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 14px;
+    height: 14px;
+    background: rgba(220, 38, 38, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.delete-cell-btn-light:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.student-card-light:hover .delete-cell-btn-light,
+.cell:hover .delete-cell-btn-light {
+    display: flex;
+}
+
+/* 暗色主题适配 */
+body.dark-theme-active .subject-card {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(148, 163, 184, 0.12);
+}
+
+body.dark-theme-active .subject-card:hover {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(129, 140, 248, 0.2);
+}
+
+body.dark-theme-active .subject-info .subject-name {
+    color: #e2e8f0;
+}
+
+body.dark-theme-active .subject-info .teacher-name,
+body.dark-theme-active .subject-info .grade-label {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.1);
+}
+
+body.dark-theme-active .student-card-light {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(148, 163, 184, 0.15);
+}
+
+body.dark-theme-active .student-card-light:hover {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(129, 140, 248, 0.2);
+}
+
+body.dark-theme-active .student-card-light .student-name {
+    color: #e2e8f0;
+}
+
 .stats-overview-note {
     margin-top: 6px;
     font-size: 14px;
@@ -5324,4 +5756,201 @@ body.dark-theme-active .text-stats-detail-title span:last-child {
         width: 100%;
         justify-content: space-between;
     }
+}
+
+/* Final timetable course card overrides */
+.subject-bg-light {
+    position: absolute !important;
+    top: 7px !important;
+    left: 0 !important;
+    right: 0 !important;
+    min-height: 84px !important;
+    padding: 10px 12px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(148, 163, 184, 0.24) !important;
+    border-left-width: 4px !important;
+    border-left-color: var(--grade-accent-color, rgba(148, 163, 184, 0.45)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 4px 10px rgba(15, 23, 42, 0.06) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    overflow: hidden !important;
+}
+
+.subject-bg-light::before {
+    left: 12px !important;
+    top: 14px !important;
+    bottom: auto !important;
+    width: 12px !important;
+    height: 12px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+.subject-name-light {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding-left: 10px !important;
+    padding-right: 54px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    text-align: left !important;
+    line-height: 1.5 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.teacher-name-light {
+    margin: 4px 0 0 20px !important;
+    text-align: left !important;
+    color: rgba(71, 85, 105, 0.85) !important;
+}
+
+.cell-content {
+    position: absolute !important;
+    top: 39px !important;
+    left: 10px !important;
+    bottom: 8px !important;
+    width: calc(100% - 20px) !important;
+    height: auto !important;
+    max-height: calc(100% - 47px) !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    align-content: flex-start !important;
+    gap: 4px !important;
+    overflow: hidden !important;
+    z-index: 3 !important;
+}
+
+.student-card-light,
+.student-card-light.vertical {
+    flex: 0 0 calc(50% - 3px) !important;
+    min-width: 0 !important;
+    max-width: calc(50% - 3px) !important;
+    min-height: 20px !important;
+    padding: 2px 7px !important;
+    border-radius: 999px !important;
+    border: none !important;
+    background: rgba(37, 99, 235, 0.12) !important;
+    color: #1d4ed8 !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+}
+
+.student-card-light .grade-color-bar {
+    display: none !important;
+}
+
+.student-card-light .student-name,
+.student-card-light .student-name.vertical {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: inherit !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0 !important;
+    display: block !important;
+    line-height: 1.2 !important;
+    writing-mode: initial !important;
+    text-orientation: initial !important;
+    width: 100% !important;
+}
+
+.status-badge {
+    position: static !important;
+    margin-left: 3px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    color: #1e40af !important;
+    letter-spacing: 0 !important;
+    padding: 0 4px !important;
+    font-size: 9px !important;
+}
+
+.delete-cell-btn-light {
+    top: 50% !important;
+    right: 7px !important;
+    transform: translateY(-50%) !important;
+    background: rgba(37, 99, 235, 0.16) !important;
+    color: currentColor !important;
+    opacity: 0 !important;
+    display: flex !important;
+}
+
+.delete-cell-btn-light:hover {
+    background: rgba(220, 38, 38, 0.16) !important;
+    color: #dc2626 !important;
+    transform: translateY(-50%) scale(1.08) !important;
+}
+
+.student-card-light:hover .delete-cell-btn-light,
+.cell:hover .delete-cell-btn-light {
+    opacity: 1 !important;
+}
+
+body.dark-theme-active .subject-bg-light {
+    background-color: rgba(30, 41, 59, 0.88) !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+body.dark-theme-active .subject-name-light {
+    color: #f1f5f9 !important;
+}
+
+body.dark-theme-active .teacher-name-light {
+    color: #94a3b8 !important;
+}
+
+body.dark-theme-active .student-card-light,
+body.dark-theme-active .student-card-light.vertical {
+    background: rgba(96, 165, 250, 0.18) !important;
+    color: #dbeafe !important;
+}
+
+.subject-name-text {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.subject-grade-tag {
+    position: absolute !important;
+    top: 50% !important;
+    right: 0 !important;
+    transform: translateY(-50%) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 44px !important;
+    padding: 1px 6px !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(226, 232, 240, 0.95) !important;
+    color: #334155 !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    z-index: 2 !important;
+}
+
+body.dark-theme-active .subject-grade-tag {
+    background: rgba(51, 65, 85, 0.9) !important;
+    color: #e2e8f0 !important;
 }

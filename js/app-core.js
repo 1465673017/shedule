@@ -128,7 +128,7 @@ class TimetableApp {
         this.draggedItem = null;
         
         this.currentDate = new Date();
-        this.currentStudentFilter = 'all';
+        this.currentStudentFilter = 'ongoing';
         
         this.init();
     }
@@ -727,7 +727,7 @@ class TimetableApp {
         this.timetable = {};
         this.erpData = window.createEmptyErpData ? window.createEmptyErpData() : null;
         this.currentPool = 'subject';
-        this.currentStudentFilter = 'all';
+        this.currentStudentFilter = 'ongoing';
         this.draggedItem = null;
         this.editingCell = null;
         this.selectedCell = null;
@@ -764,7 +764,7 @@ class TimetableApp {
         this.erpData = window.createEmptyErpData ? window.createEmptyErpData() : null;
         this.quickSettingsState = null;
         this.currentPool = 'subject';
-        this.currentStudentFilter = 'all';
+        this.currentStudentFilter = 'ongoing';
         this.currentDate = new Date();
         this.draggedItem = null;
         this.editingCell = null;
