@@ -177,6 +177,13 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function(startDate, endDate) 
                     periodIndex: this.getPeriodNumber(lesson.period),
                     time: lesson.time || '',
                     students: studentNames,
+                    studentDetails: (lesson.students || []).map(student => ({
+                        name: student && student.name ? student.name : '',
+                        status: student && student.status ? student.status : null,
+                        isAudition: !!(student && student.isAudition),
+                        grade: student && student.grade ? student.grade : ''
+                    })).filter(student => student.name),
+                    durationMinutes,
                     scheduledStudents: (lesson.studentCount || 0) + (lesson.leaveCount || 0) + (lesson.absentCount || 0),
                     presentCount: lesson.studentCount || 0,
                     leaveCount: lesson.leaveCount || 0,
@@ -195,6 +202,137 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function(startDate, endDate) 
             return a.periodIndex - b.periodIndex;
         });
     }
+
+TimetableApp.prototype.getLessonSheetExpandedRows = function(rows) {
+        const mapStatusLabel = (status) => {
+            if (status === 'leave') return '请假';
+            if (status === 'absent') return '缺勤';
+            return '出勤';
+        };
+        const mapTypeLabel = (typeLabel) => /^1v\d+$/.test(typeLabel || '') ? '1vN' : (typeLabel || '-');
+
+        return rows.flatMap(row => {
+            const details = Array.isArray(row.studentDetails) ? row.studentDetails : [];
+            if (details.length === 0) {
+                return [{
+                    dateKey: row.dateKey,
+                    subject: row.subject,
+                    time: row.time,
+                    studentName: '-',
+                    attendanceStatus: '-',
+                    typeLabel: mapTypeLabel(row.typeLabel),
+                    actualDuration: row.actualDuration
+                }];
+            }
+
+            return details.map(student => ({
+                dateKey: row.dateKey,
+                subject: row.subject,
+                time: row.time,
+                studentName: student.name,
+                attendanceStatus: mapStatusLabel(student.status),
+                typeLabel: mapTypeLabel(row.typeLabel),
+                actualDuration: (student.status === 'leave' || student.status === 'absent') ? '0h' : row.actualDuration
+            }));
+        });
+}
+
+TimetableApp.prototype.getLessonSheetSummaryMatrix = function(rows) {
+        const groups = [
+            { key: 'junior', label: '初中部1.0系数', coefficient: 1.0 },
+            { key: 'high1', label: '高一年级1.2系数', coefficient: 1.2 },
+            { key: 'high2', label: '高二年级1.3系数', coefficient: 1.3 },
+            { key: 'high3', label: '高三年级1.5系数', coefficient: 1.5 }
+        ];
+        const typeKeys = ['1对1', '1对2', '1对3', '1对4', '请假'];
+
+        const detectGroup = (gradeName) => {
+            const value = String(gradeName || '');
+            if (value.includes('高一')) return groups[1];
+            if (value.includes('高二')) return groups[2];
+            if (value.includes('高三')) return groups[3];
+            return groups[0];
+        };
+        const detectTypeKey = (typeLabel) => {
+            if (typeLabel === '1v1(0.8)') return '请假';
+            if (typeLabel === '1v1') return '1对1';
+            if (typeLabel === '1v2') return '1对2';
+            if (typeLabel === '1v3') return '1对3';
+            if (typeLabel === '1v4') return '1对4';
+            return '';
+        };
+        const ensureBucket = (target, dateKey) => {
+            if (!target[dateKey]) {
+                target[dateKey] = {};
+                groups.forEach(group => {
+                    target[dateKey][group.key] = {};
+                    typeKeys.forEach(typeKey => {
+                        target[dateKey][group.key][typeKey] = 0;
+                    });
+                });
+            }
+            return target[dateKey];
+        };
+        const formatNumber = (value) => {
+            if (!value) return '';
+            const rounded = Math.round(value * 100) / 100;
+            if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
+            return rounded.toFixed(2).replace(/\.?0+$/, '');
+        };
+
+        const byDate = {};
+        const totals = ensureBucket({ __total: null }, '__total');
+
+        rows.forEach(row => {
+            const details = Array.isArray(row.studentDetails) ? row.studentDetails : [];
+            const typeKey = detectTypeKey(row.typeLabel);
+            if (!typeKey) return;
+
+            const referenceStudent = details.find(student => student.status !== 'leave' && student.status !== 'absent')
+                || details[0];
+            const group = detectGroup(referenceStudent && referenceStudent.grade);
+            const minutes = Number(row.durationMinutes || 0);
+            const hours = minutes / 60;
+            if (!hours) return;
+
+            const weighted = hours * group.coefficient;
+            const dayBucket = ensureBucket(byDate, row.dateKey);
+            dayBucket[group.key][typeKey] += weighted;
+            totals[group.key][typeKey] += weighted;
+        });
+
+        const allDateKeys = rows.length > 0
+            ? (() => {
+                const firstDate = new Date(`${rows[0].dateKey}T00:00:00`);
+                if (Number.isNaN(firstDate.getTime())) return Object.keys(byDate).sort();
+                const monthStart = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+                const monthEnd = new Date(firstDate.getFullYear(), firstDate.getMonth() + 1, 0);
+                const keys = [];
+                for (let cursor = new Date(monthStart); cursor <= monthEnd; cursor.setDate(cursor.getDate() + 1)) {
+                    keys.push(this.formatLocalDate(cursor));
+                }
+                return keys;
+            })()
+            : Object.keys(byDate).sort();
+
+        const dayRows = allDateKeys.map(dateKey => {
+            ensureBucket(byDate, dateKey);
+            const date = new Date(`${dateKey}T00:00:00`);
+            const dateLabel = Number.isNaN(date.getTime()) ? dateKey : `${date.getDate()}日`;
+            return {
+                dateKey,
+                dateLabel,
+                values: groups.flatMap(group => typeKeys.map(typeKey => formatNumber(byDate[dateKey][group.key][typeKey])))
+            };
+        });
+
+        return {
+            groups,
+            typeKeys,
+            totalValues: groups.flatMap(group => typeKeys.map(typeKey => formatNumber(totals[group.key][typeKey]))),
+            dayRows
+        };
+}
 
 TimetableApp.prototype.getLessonPeriodLabel = function(periodIndex) {
         const periodInfo = this.getPeriod(periodIndex);
@@ -226,7 +364,7 @@ TimetableApp.prototype.exportLessonSheetToWord = async function() {
                     col.date { width: 78px; }
                     col.subject { width: 74px; }
                     col.time { width: 88px; }
-                    col.students { width: 118px; }
+                    col.students { width: 96px; }
                     col.count { width: 42px; }
                     col.type { width: 58px; }
                     col.duration { width: 68px; }
@@ -305,90 +443,182 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function() {
             }
 
             const title = `课时单-${range.startLabel}至${range.endLabel}`;
-            let excelContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="utf-8">
-                <title>${title}</title>
-                <!--[if gte mso 9]>
-                <xml>
-                    <x:ExcelWorkbook>
-                        <x:ExcelWorksheets>
-                            <x:ExcelWorksheet>
-                                <x:Name>${title}</x:Name>
-                                <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-                            </x:ExcelWorksheet>
-                        </x:ExcelWorksheets>
-                    </x:ExcelWorkbook>
-                </xml>
-                <![endif]-->
-                <style>
-                    body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 18px; }
-                    h1 { text-align: center; font-size: 22px; margin-bottom: 8px; }
-                    .sub-title { text-align: center; color: #666; margin-bottom: 16px; font-size: 13px; }
-                    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-                    col.date { width: 78px; }
-                    col.subject { width: 74px; }
-                    col.time { width: 88px; }
-                    col.students { width: 118px; }
-                    col.count { width: 42px; }
-                    col.type { width: 58px; }
-                    col.duration { width: 68px; }
-                    th, td { border: 1px solid #333; padding: 8px 6px; text-align: center; vertical-align: middle; font-size: 12px; }
-                    th { background: #f5f7fb; font-weight: bold; }
-                    .left { text-align: left; }
-                </style>
-            </head>
-            <body>
-                <h1>${title}</h1>
-                <div class="sub-title">课时统计报表</div>
-                <table>
-                    <colgroup>
-                        <col class="date">
-                        <col class="subject">
-                        <col class="time">
-                        <col class="students">
-                        <col class="count">
-                        <col class="count">
-                        <col class="count">
-                        <col class="count">
-                        <col class="count">
-                        <col class="type">
-                        <col class="duration">
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th>日期</th>
-                            <th>科目</th>
-                            <th>时间</th>
-                            <th>学生</th>
-                            <th>应到</th>
-                            <th>实到</th>
-                            <th>请假</th>
-                            <th>缺课</th>
-                            <th>试听</th>
-                            <th>类型</th>
-                            <th>实际时长</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+            const expandedRows = this.getLessonSheetExpandedRows(rows);
+            const summaryMatrix = this.getLessonSheetSummaryMatrix(rows);
+            const escapeXml = (value) => String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+            const makeCell = (value, styleId = 'Cell') => `<Cell ss:StyleID="${styleId}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+            const makeRow = (cells, cellStyles = []) => `<Row>${cells.map((value, index) => makeCell(value, cellStyles[index] || 'Cell')).join('')}</Row>`;
+            const makeMergedCell = (value, mergeAcross, styleId = 'Header') => `<Cell ss:StyleID="${styleId}" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
 
-            rows.forEach(row => {
-                excelContent += `<tr>
-                    <td>${row.dateKey}</td>
-                    <td>${row.subject}</td>
-                    <td>${row.time}</td>
-                    <td class="left">${row.students || '-'}</td>
-                    <td>${row.scheduledStudents}</td>
-                    <td>${row.presentCount}</td>
-                    <td>${row.leaveCount}</td>
-                    <td>${row.absentCount}</td>
-                    <td>${row.auditionCount}</td>
-                    <td>${row.typeLabel}</td>
-                    <td>${row.actualDuration}</td>
-                </tr>`;
-            });
+            const summaryHeaders = ['日期', '科目', '时间', '学生', '应到', '实到', '请假', '缺课', '试听', '类型', '实际时长'];
+            const detailHeaders = ['日期', '科目', '时间', '学生', '出勤状态', '类型', '实际时长'];
 
-            excelContent += `</tbody></table></body></html>`;
+            let excelContent = `<?xml version="1.0" encoding="UTF-8"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Title>${escapeXml(title)}</Title>
+ </DocumentProperties>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center"/>
+   <Borders/>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="Header">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Bold="1"/>
+   <Interior ss:Color="#F5F7FB" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="HeaderOrange">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Bold="1" ss:Color="#ED7D31"/>
+   <Interior ss:Color="#F5F7FB" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="SummaryGreen">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Bold="1"/>
+   <Interior ss:Color="#C6E0B4" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="SummaryBlue">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#5B9BD5" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Cell">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
+  </Style>
+  <Style ss:ID="CellLeft">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="课时统计汇总">
+  <Table ss:ExpandedColumnCount="${1 + (summaryMatrix.groups.length * summaryMatrix.typeKeys.length)}" ss:ExpandedRowCount="${summaryMatrix.dayRows.length + 3}" x:FullColumns="1" x:FullRows="1">
+   <Column ss:Width="54"/>
+   ${summaryMatrix.groups.flatMap(() => summaryMatrix.typeKeys.map(() => '<Column ss:Width="48"/>')).join('')}
+   <Row>
+    <Cell ss:StyleID="Header"><Data ss:Type="String"></Data></Cell>
+    ${summaryMatrix.groups.map(group => makeMergedCell(group.label, summaryMatrix.typeKeys.length - 1, 'Header')).join('')}
+   </Row>
+   ${makeRow(['', ...summaryMatrix.groups.flatMap(() => summaryMatrix.typeKeys)], ['Header', ...summaryMatrix.groups.flatMap(() => summaryMatrix.typeKeys.map(() => 'HeaderOrange'))])}
+   ${makeRow(['日期', ...summaryMatrix.totalValues], ['Header', ...summaryMatrix.totalValues.map(() => 'SummaryGreen')])}
+   ${summaryMatrix.dayRows.map(row => makeRow([row.dateLabel, ...row.values], ['SummaryBlue', ...row.values.map(() => 'Cell')])).join('')}
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <DisplayGridlines/>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="课时统计1">
+  <Table ss:ExpandedColumnCount="11" ss:ExpandedRowCount="${rows.length + 1}" x:FullColumns="1" x:FullRows="1">
+   <Column ss:Width="78"/>
+   <Column ss:Width="74"/>
+   <Column ss:Width="88"/>
+   <Column ss:Width="96"/>
+   <Column ss:Width="42"/>
+   <Column ss:Width="42"/>
+   <Column ss:Width="42"/>
+   <Column ss:Width="42"/>
+   <Column ss:Width="42"/>
+   <Column ss:Width="58"/>
+   <Column ss:Width="68"/>
+   ${makeRow(summaryHeaders, Array(summaryHeaders.length).fill('Header'))}
+   ${rows.map(row => makeRow([
+                row.dateKey,
+                row.subject,
+                row.time,
+                row.students || '-',
+                row.scheduledStudents,
+                row.presentCount,
+                row.leaveCount,
+                row.absentCount,
+                row.auditionCount,
+                row.typeLabel,
+                row.actualDuration
+            ], ['Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell'])).join('')}
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <DisplayGridlines/>
+  </WorksheetOptions>
+ </Worksheet>
+ <Worksheet ss:Name="课时统计2">
+  <Table ss:ExpandedColumnCount="7" ss:ExpandedRowCount="${expandedRows.length + 1}" x:FullColumns="1" x:FullRows="1">
+   <Column ss:Width="78"/>
+   <Column ss:Width="74"/>
+   <Column ss:Width="88"/>
+   <Column ss:Width="96"/>
+   <Column ss:Width="64"/>
+   <Column ss:Width="58"/>
+   <Column ss:Width="68"/>
+   ${makeRow(detailHeaders, Array(detailHeaders.length).fill('Header'))}
+   ${expandedRows.map(row => makeRow([
+                row.dateKey,
+                row.subject,
+                row.time,
+                row.studentName,
+                row.attendanceStatus,
+                row.typeLabel,
+                row.actualDuration
+            ], ['Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell'])).join('')}
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <DisplayGridlines/>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>`;
+
             await this._saveFile('\ufeff' + excelContent, 'utf-8', `${title}.xls`, 'application/vnd.ms-excel', 'xls');
         } catch (error) {
             console.error('导出 Excel 失败:', error);
