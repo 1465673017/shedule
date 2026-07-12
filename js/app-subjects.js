@@ -1,4 +1,4 @@
-﻿// app-subjects.js - Subject and student pool management
+// app-subjects.js - Subject and student pool management
 // Auto-split from script.js
 
 TimetableApp.prototype.openSubjectModal = function(subject = null) {

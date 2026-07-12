@@ -1,4 +1,4 @@
-﻿// app-timetable.js - Timetable rendering and cell operations
+// app-timetable.js - Timetable rendering and cell operations
 // Auto-split from script.js
 
 TimetableApp.prototype.openTimeModal = function(e) {
