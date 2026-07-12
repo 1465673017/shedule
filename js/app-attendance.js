@@ -554,17 +554,23 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
         if (!student || student.isAudition) return; // 试听学生不能结课
 
         const isCompleted = !student.completed;
+        const cellKey = this._attModalCellKey;
 
         if (isCompleted) {
             student.completed = true;
             student.accountStatus = 'completed';
-            const cellKey = this._attModalCellKey;
             if (cellKey) {
+                this.setStudentRecurrence(cellKey, studentId, 'stopped', this._attModalClassDate);
                 this.completeStudentAfterLesson(studentId, this._attModalClassDate, cellKey);
+                if (!this._attModalRecurrence) this._attModalRecurrence = {};
+                this._attModalRecurrence[studentId] = 'stopped';
             }
         } else {
             student.completed = false;
             student.accountStatus = 'normal';
+            if (this._attModalRecurrence && cellKey) {
+                this._attModalRecurrence[studentId] = this.getStudentRecurrenceType(cellKey, studentId);
+            }
         }
 
         if (this.erpData && Array.isArray(this.erpData.studentCourseRelations)) {

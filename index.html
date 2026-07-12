@@ -27,6 +27,7 @@
                     <div class="add-buttons">
                         <button id="addSubjectBtn" class="btn primary btn-sm">添加科目</button>
                         <button id="addStudentBtn" class="btn primary btn-sm">添加学生</button>
+                        <button id="importStudentsBtn" class="btn primary btn-sm" style="display: none;">批量导入</button>
                     </div>
                     <div id="studentFilterButtons" class="student-filter-buttons">
                         <button class="filter-btn" data-filter="all">全部</button>
@@ -270,6 +271,26 @@
                     <button type="submit" class="btn primary">保存</button>
                     <button type="button" id="deleteSubjectBtn" class="btn danger" style="display: none;">删除</button>
                     <button type="button" id="cancelBtn" class="btn secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="studentBatchModal" class="modal">
+        <div class="modal-content">
+            <h3>批量导入学生</h3>
+            <form id="studentBatchForm">
+                <div class="form-group">
+                    <label for="studentBatchGrade">统一年级</label>
+                    <select id="studentBatchGrade" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="studentBatchNames">学生姓名</label>
+                    <textarea id="studentBatchNames" required placeholder="请输入学生姓名，使用“、”分隔，例如：张三、李四、王五"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn primary">导入</button>
+                    <button type="button" id="cancelStudentBatchBtn" class="btn secondary">取消</button>
                 </div>
             </form>
         </div>

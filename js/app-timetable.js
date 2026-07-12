@@ -31,7 +31,6 @@ TimetableApp.prototype.saveTime = function(e) {
     }
 
 TimetableApp.prototype.getCell1v1Status = function(key) {
-        // 获取当前周该课位的版本，检查其学生列表
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
         const version = this.getCellVersion(key, weekStartStr);
         if (!version || !version.student || !Array.isArray(version.student) || version.student.length === 0) {
@@ -49,7 +48,6 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
         const key = this.buildCellKey(day, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
 
-        // 获取或创建当前周的版本
         let version = this.getCellVersion(key, weekStartStr);
         let currentSubject = version ? version.subject : null;
         let currentStudents = version ? (version.student || []).slice() : [];
@@ -57,7 +55,7 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
         if (item.type === 'subject') {
             currentSubject = item.id;
         } else {
-            if (currentStudents.includes(item.id)) return; // 已存在
+            if (currentStudents.includes(item.id)) return;
 
             if (currentStudents.length >= this.MAX_STUDENTS_PER_COURSE) {
                 alert(`每节课最多只能有 ${this.MAX_STUDENTS_PER_COURSE} 个学生`);
@@ -68,11 +66,11 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
             const { has1v1, studentCount } = this.getCell1v1Status(key);
 
             if (isDragged1v1 && studentCount > 0) {
-                alert('1v1学生只能单独上课，无法添加到已有学生的课程中');
+                alert('1v1学生只能单独上课，无法加入已有其他学生的课程');
                 return;
             }
             if (!isDragged1v1 && has1v1) {
-                alert('已有1v1学生的课程无法添加其他学生');
+                alert('已有1v1学生的课程无法再添加其他学生');
                 return;
             }
 
@@ -88,10 +86,8 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
 
         this.setCellVersion(key, weekStartStr, currentSubject, currentStudents);
 
-        // 试听学生自动设为临时模式（只出现在当前周）
         if (item.type === 'student') {
             this.ensureAuditionStudentsTemporary(key, [item.id]);
-            // 已结课学生自动设为临时模式（只出现在当前周）
             const draggedStudent = this.students.find(s => s.id === item.id);
             if (draggedStudent && draggedStudent.completed) {
                 this.setStudentRecurrence(key, item.id, 'temporary');
@@ -101,7 +97,6 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
         this.syncRealtime();
     }
 
-    // 从课程池拖入整个课程（科目 + 所有学生）
 TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
         const key = this.buildCellKey(day, period);
 
@@ -117,18 +112,18 @@ TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
         });
         
         if (hasCourse1v1 && studentIds.length > 1) {
-            alert('1v1学生只能单独上课，无法加入包含多个学生的课程');
+            alert('1v1学生只能单独上课，无法与其他学生同课');
             return;
         }
 
         const { has1v1, studentCount } = this.getCell1v1Status(key);
         
         if (hasCourse1v1 && studentCount > 0) {
-            alert('1v1学生只能单独上课，无法添加到已有学生的课程中');
+            alert('1v1学生只能单独上课，无法加入已有其他学生的课程');
             return;
         }
         if (!hasCourse1v1 && has1v1) {
-            alert('已有1v1学生的课程无法添加其他学生');
+            alert('已有1v1学生的课程无法再添加其他学生');
             return;
         }
 
@@ -144,10 +139,8 @@ TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
         this.setCellVersion(key, weekStartStr, courseItem.courseSubjectId, [...studentIds]);
 
-        // 试听学生自动设为临时模式（只出现在当前周）
         this.ensureAuditionStudentsTemporary(key, studentIds);
 
-        // 已结课学生拖入课表时自动设为临时模式
         for (const studentId of studentIds) {
             const s = this.students.find(st => st.id === studentId);
             if (s && s.completed) {
@@ -155,7 +148,6 @@ TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
             }
         }
 
-        // 如果拖入的是手动课程，从 manualCourses 中移除
         const sortedIds = [...studentIds].sort().join(',');
         this.manualCourses = this.manualCourses.filter(mc => {
             const mcSorted = [...(mc.studentIds || [])].sort().join(',');
@@ -222,11 +214,11 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         const { has1v1, studentCount } = this.getCell1v1Status(targetKey);
 
         if (isDragged1v1 && studentCount > 0) {
-            alert('1v1学生只能单独上课，无法添加到已有学生的课程中');
+            alert('1v1学生只能单独上课，无法加入已有其他学生的课程');
             return;
         }
         if (!isDragged1v1 && has1v1) {
-            alert('已有1v1学生的课程无法添加其他学生');
+            alert('已有1v1学生的课程无法再添加其他学生');
             return;
         }
 
@@ -240,7 +232,6 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         const sourceNextVersion = this.getCellVersion(sourceKey, nextWeekStr);
         const targetNextVersion = this.getCellVersion(targetKey, nextWeekStr);
 
-        // 只改当前这一周：源课位本周移除学生，下一周恢复原本未来状态
         const sourceStudents = (sourceVersion.student || []).filter(id => id !== studentId);
 
         this.setCellVersion(sourceKey, weekStartStr, sourceVersion.subject, sourceStudents);
@@ -284,11 +275,9 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
             this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
         }
 
-        // 试听学生自动设为临时模式（只出现在当前周）
         if (draggedStudent && draggedStudent.isAudition) {
             this.ensureAuditionStudentsTemporary(targetKey, [studentId]);
         }
-        // 已结课学生移动后保持临时模式（只出现在当前周）
         if (draggedStudent && draggedStudent.completed) {
             this.setStudentRecurrence(targetKey, studentId, 'temporary');
         }
@@ -308,24 +297,20 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
         const targetVersion = this.getCellVersion(targetKey, weekStartStr);
         const targetStudents = targetVersion ? (targetVersion.student || []).slice() : [];
 
-        // 检查源和目标的学生组合是否不同，不同则提示用户确认
         if (targetStudents.length > 0 && 
             [...targetStudents].sort().join(',') !== [...sourceStudents].sort().join(',')) {
-            if (!confirm('目标格已有不同的学生，合并后学生组合将改变，是否继续？')) {
+            if (!confirm('目标位置有不同的学生，合并会覆盖学生列表，是否继续？')) {
                 return;
             }
         }
 
-        // 合并源和目标的学生（去重），拖拽科目时连同学生一起移动
         const mergedStudents = [...new Set([...sourceStudents, ...targetStudents])];
 
-        // 检查合并后学生数是否超限
         if (mergedStudents.length > this.MAX_STUDENTS_PER_COURSE) {
             alert(`每节课最多只能有 ${this.MAX_STUDENTS_PER_COURSE} 个学生`);
             return;
         }
 
-        // 1v1 约束检查
         const hasSource1v1 = sourceStudents.some(id => {
             const s = this.students.find(st => st.id === id);
             return s && s.is1v1;
@@ -335,15 +320,14 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
             return s && s.is1v1;
         });
         if (hasSource1v1 && targetStudents.length > 0) {
-            alert('1v1学生只能单独上课，无法移到已有学生的课程中');
+            alert('1v1学生只能单独上课，无法移动到已有学生的课程');
             return;
         }
         if (hasTarget1v1 && sourceStudents.length > 0) {
-            alert('已有1v1学生的课程无法添加其他学生');
+            alert('已有1v1学生的课程无法再添加其他学生');
             return;
         }
 
-        // 试听学生约束检查（源学生从源课位移到目标课位）
         for (const studentId of sourceStudents) {
             const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [sourceKey, targetKey]);
             if (auditionAssigned.length > 0) {
@@ -356,7 +340,6 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
         const sourceNextVersion = this.getCellVersion(sourceKey, nextWeekStr);
         const targetNextVersion = this.getCellVersion(targetKey, nextWeekStr);
 
-        // 只改当前这一节：源课位本周隐藏，目标课位本周显示，下一周恢复双方原来的未来状态
         this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
         this.setCellVersion(targetKey, weekStartStr, subjectId, mergedStudents);
         const movedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
@@ -416,10 +399,10 @@ TimetableApp.prototype.renderTimetable = function() {
 
 
 
+
 TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum) {
         const row = document.createElement('tr');
         
-        // 节次/时间列
         const periodCell = document.createElement('td');
         periodCell.className = 'period-cell';
         periodCell.innerHTML = `
@@ -431,7 +414,6 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                         </div>
                     `;
         
-        // 添加课时名称和时间段点击事件
         periodCell.querySelector('.period-name').addEventListener('click', (e) => {
             this.openTimeModal(e, periodIndex);
         });
@@ -441,7 +423,6 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
         
         row.appendChild(periodCell);
         
-        // 周一到周日的格子
         const days = [1, 2, 3, 4, 5];
         if (this.settings.showSaturday) days.push(6);
         if (this.settings.showSunday) days.push(7);
@@ -461,12 +442,10 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             const version = this.getCellVersion(key, weekStartStr);
 
             if (version) {
-                // 直接从版本中获取学生和科目（无需额外过滤）
                 const students = (version.student || [])
                     .map(id => this.students.find(s => s.id === id)).filter(Boolean);
                 const subject = version.subject ? this.subjects.find(s => s.id === version.subject) : null;
 
-                // 仅当有可见科目或有可见学生时才标记为 occupied
                 if (subject || students.length > 0) {
                     cell.classList.add('occupied');
                 }
@@ -678,11 +657,9 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     cell.appendChild(studentContainer);
                 }
             } else {
-                // 所有设备默认显示+号
                 cell.classList.add('empty-cell');
                 cell.style.cssText = 'position: relative; cursor: pointer;';
                 
-                // 使用CSS伪元素显示+号，确保默认显示
                 const plusIndicator = document.createElement('div');
                 plusIndicator.className = 'plus-indicator';
                 plusIndicator.textContent = '+';
@@ -690,14 +667,12 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                 cell.appendChild(plusIndicator);
             }
             
-            // 添加双击删除课程/学生事件
             cell.addEventListener('dblclick', () => {
                 if (cell.classList.contains('occupied')) {
                     this.removeItemFromCell(cell);
                 }
             });
             
-            // 添加点击选择
             cell.addEventListener('click', () => {
                 this.editingCell = cell;
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
@@ -724,7 +699,6 @@ TimetableApp.prototype.openTimeModal = function(e, periodIndex) {
         const period = this.periods[periodIndex];
         nameInput.value = period.name;
         
-        // 解析现有时间
         const [startTime, endTime] = period.time.split('-');
         const [startH, startM] = startTime.split(':');
         const [endH, endM] = endTime.split(':');

@@ -157,8 +157,11 @@ class TimetableApp {
         bind('addStudentBtn', 'click', () => this.openStudentModal());
         bind('addCourseBtn', 'click', () => this.openManualCourseModal());
         bind('subjectForm', 'submit', (e) => this.saveSubject(e));
+        bind('studentBatchForm', 'submit', (e) => this.saveStudentBatch(e));
         bind('cancelBtn', 'click', () => this.closeSubjectModal());
+        bind('cancelStudentBatchBtn', 'click', () => this.closeStudentBatchModal());
         bind('deleteSubjectBtn', 'click', () => this.deleteSubject());
+        this.ensureStudentBatchImportButton();
         
         // 添加课程弹窗相关
         bind('addLessonForm', 'submit', (e) => this.saveLessonToCell(e));
@@ -265,6 +268,7 @@ class TimetableApp {
             }
             if (e.key === 'Escape') {
                 this.closeSubjectModal();
+                this.closeStudentBatchModal();
                 this.closeTimeModal();
                 this.closeTutorialModal();
                 this.closeAddLessonModal();
@@ -290,6 +294,7 @@ class TimetableApp {
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
             tutorialModal: () => this.closeTutorialModal(),
+            studentBatchModal: () => this.closeStudentBatchModal(),
             resetModal: () => this.closeResetModal(),
             exportModal: () => this.closeExportModal()
         };
@@ -342,6 +347,36 @@ class TimetableApp {
             }
         }
         return assignedKeys;
+    }
+
+    hasAuditionStudentEverScheduled(studentId, excludeKeys = []) {
+        const student = this.students.find(s => String(s.id) === String(studentId));
+        if (!student || !student.isAudition) {
+            return false;
+        }
+
+        if (this.erpData && Array.isArray(this.erpData.courseInstances)) {
+            return this.erpData.courseInstances.some(instance => {
+                if (!instance || !instance.cellKey || excludeKeys.includes(instance.cellKey)) {
+                    return false;
+                }
+                const weekStart = instance.weekStart || this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+                const version = this.getCellVersion(instance.cellKey, weekStart);
+                if (version && Array.isArray(version.student) && version.student.includes(String(studentId))) {
+                    return true;
+                }
+                return Array.isArray(instance.studentIds) && instance.studentIds.includes(String(studentId));
+            });
+        }
+
+        return Object.keys(this.timetable || {}).some(key => {
+            if (excludeKeys.includes(key)) return false;
+            const cell = this.timetable[key];
+            const versions = cell && cell.versions ? Object.values(cell.versions) : [];
+            return versions.some(version =>
+                version && Array.isArray(version.student) && version.student.includes(String(studentId))
+            );
+        });
     }
 
     // 确保试听学生以临时模式存在于课表中（只出现在当前周，不参与循环）
@@ -1128,6 +1163,11 @@ class TimetableApp {
         if (addButtons) {
             addButtons.style.display = 'flex';
         }
+        this.ensureStudentBatchImportButton();
+        const importStudentsBtn = document.getElementById('importStudentsBtn');
+        if (importStudentsBtn) {
+            importStudentsBtn.style.display = tab === 'student' ? 'inline-flex' : 'none';
+        }
 
         // 切换到学生池时显示筛选按钮，其他池隐藏
         const filterButtons = document.querySelector('.student-filter-buttons');
@@ -1136,6 +1176,17 @@ class TimetableApp {
         }
 
         this.renderSubjects();
+    }
+
+    ensureStudentBatchImportButton() {
+        const addButtons = document.querySelector('.add-buttons');
+        const btn = document.getElementById('importStudentsBtn');
+        if (!addButtons || !btn) return;
+        if (btn.dataset.bound === 'true') return;
+
+        btn.style.display = this.currentPool === 'student' ? 'inline-flex' : 'none';
+        btn.addEventListener('click', () => this.openStudentBatchModal());
+        btn.dataset.bound = 'true';
     }
 
     filterStudents(filter) {

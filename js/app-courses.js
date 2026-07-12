@@ -345,9 +345,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
             if (student.isAudition && !isSelected) {
 
-                const assignedKeys = this.getAuditionStudentAssignedKeys(student.id, excludeKeys);
-
-                if (assignedKeys.length > 0) {
+                if (this.hasAuditionStudentEverScheduled(student.id, excludeKeys)) {
 
                     return;
 
@@ -585,9 +583,7 @@ TimetableApp.prototype.refreshStudentPickerDisabledState = function() {
 
             if (student && student.isAudition && !isCoursePoolMode) {
 
-                const assignedKeys = this.getAuditionStudentAssignedKeys(student.id, excludeKeys);
-
-                if (assignedKeys.length > 0) {
+                if (this.hasAuditionStudentEverScheduled(student.id, excludeKeys)) {
 
                     shouldDisable = true;
 

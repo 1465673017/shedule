@@ -531,12 +531,6 @@
 
             if (instance) {
                 const effectiveWeekStart = type === 'stopped' ? addWeeks(weekStart, 1) : weekStart;
-                erp.repeatRules
-                    .filter(rule => rule.courseInstanceId === instance.id)
-                    .forEach(rule => {
-                        rule.status = type === 'stopped' ? 'paused' : 'active';
-                        rule.updatedAt = new Date().toISOString();
-                    });
                 clearStudentRecurrenceExceptions(app, instance.id, studentId, effectiveWeekStart);
                 if (type === 'stopped' || type === 'temporary') {
                     upsertExceptionRule(app, {

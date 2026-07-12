@@ -370,6 +370,8 @@ body {
     display: flex;
     justify-content: center;
     gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
     padding: 0 12px 14px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     margin-bottom: 12px;
@@ -378,7 +380,8 @@ body {
 .add-buttons .btn-sm {
     padding: 6px 10px;
     font-size: 11px;
-    min-width: auto;
+    min-width: 0;
+    flex: 1 1 0;
     white-space: nowrap;
 }
 
@@ -2301,6 +2304,34 @@ body {
     font-size: 14px;
 }
 
+.form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.form-group textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.form-help-text {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+
 /* 1v1 按钮样式 */
 .name-label-row {
     display: flex;
@@ -3985,7 +4016,9 @@ body.dark-theme-active .form-group label {
 body.dark-theme-active .form-group input[type="text"],
 body.dark-theme-active .form-group input[type="time"],
 body.dark-theme-active .form-group input[type="date"],
-body.dark-theme-active .form-group input[type="number"] {
+body.dark-theme-active .form-group input[type="number"],
+body.dark-theme-active .form-group select,
+body.dark-theme-active .form-group textarea {
     background: #334155;
     border-color: #475569;
     color: #e2e8f0;
@@ -5034,9 +5067,10 @@ body.dark-theme-active .chart-legend-note {
 }
 
 .subject-card:hover {
-    background: rgba(0, 0, 0, 0.02);
-    border-color: rgba(var(--primary-rgb), 0.15);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    background: rgba(248, 250, 252, 0.96);
+    border-color: rgba(var(--primary-rgb), 0.28);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    transform: translateY(-2px);
 }
 
 .subject-card.subject-type::before {
@@ -5312,6 +5346,12 @@ body.dark-theme-active .student-card-light .student-name {
     margin: 0 !important;
 }
 
+.subject-card button.status-badge {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
 .subject-card .status-badge.one-v1 {
     background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%) !important;
 }
@@ -5322,6 +5362,10 @@ body.dark-theme-active .student-card-light .student-name {
 
 .subject-card .status-badge.completed {
     background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+}
+
+.subject-card .status-badge.completed.completed-toggle:hover {
+    filter: brightness(1.08);
 }
 
 /* 删除按钮 */
@@ -5360,8 +5404,10 @@ body.dark-theme-active .subject-card {
 }
 
 body.dark-theme-active .subject-card:hover {
-    background: rgba(30, 41, 59, 0.9);
-    border-color: rgba(129, 140, 248, 0.2);
+    background: rgba(30, 41, 59, 0.96);
+    border-color: rgba(129, 140, 248, 0.32);
+    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.28);
+    transform: translateY(-2px);
 }
 
 body.dark-theme-active .subject-info .subject-name {
@@ -5779,6 +5825,8 @@ body.dark-theme-active .text-stats-detail-title span:last-child {
 }
 
 .subject-bg-light::before {
+    content: '';
+    position: absolute;
     left: 12px !important;
     top: 14px !important;
     bottom: auto !important;
@@ -5787,6 +5835,7 @@ body.dark-theme-active .text-stats-detail-title span:last-child {
     border-radius: 999px !important;
     border: 1px solid rgba(255, 255, 255, 0.92);
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+    background-color: var(--subject-color, #666666) !important;
 }
 
 .subject-name-light {
@@ -5794,7 +5843,7 @@ body.dark-theme-active .text-stats-detail-title span:last-child {
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding-left: 10px !important;
+    padding-left: 18px !important;
     padding-right: 54px !important;
     font-size: 14px !important;
     font-weight: 700 !important;
