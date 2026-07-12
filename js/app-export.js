@@ -208,7 +208,7 @@ TimetableApp.prototype.exportLessonSheetToWord = async function() {
 
             const rows = this.getLessonSheetRowsByRange(range.startDate, range.endDate);
             if (rows.length === 0) {
-                alert('所选日期范围内暂无已完成的课程可导出为课时单');
+                alert('所选日期范围内没有课时数据');
                 return;
             }
 
@@ -223,6 +223,13 @@ TimetableApp.prototype.exportLessonSheetToWord = async function() {
                     .main-title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 8px; }
                     .sub-title { text-align: center; font-size: 13px; color: #666; margin-bottom: 18px; }
                     table { border-collapse: collapse; width: 100%; table-layout: fixed; border: 1px solid #333; }
+                    col.date { width: 78px; }
+                    col.subject { width: 74px; }
+                    col.time { width: 88px; }
+                    col.students { width: 118px; }
+                    col.count { width: 42px; }
+                    col.type { width: 58px; }
+                    col.duration { width: 68px; }
                     th, td { border: 1px solid #333; padding: 8px 6px; text-align: center; vertical-align: middle; font-size: 12px; word-break: break-word; }
                     th { background: #f5f7fb; font-weight: bold; }
                     .left { text-align: left; }
@@ -230,23 +237,34 @@ TimetableApp.prototype.exportLessonSheetToWord = async function() {
             </head>
             <body>
                 <div class="main-title">${title}</div>
-                <div class="sub-title">仅包含所选范围内已完成课程</div>
+                <div class="sub-title">课时统计报表</div>
                 <table>
+                    <colgroup>
+                        <col class="date">
+                        <col class="subject">
+                        <col class="time">
+                        <col class="students">
+                        <col class="count">
+                        <col class="count">
+                        <col class="count">
+                        <col class="count">
+                        <col class="count">
+                        <col class="type">
+                        <col class="duration">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>日期</th>
-                            <th>星期</th>
                             <th>科目</th>
-                            <th>课时</th>
                             <th>时间</th>
                             <th>学生</th>
                             <th>应到</th>
-                            <th>到课</th>
+                            <th>实到</th>
                             <th>请假</th>
-                            <th>缺勤</th>
+                            <th>缺课</th>
                             <th>试听</th>
-                            <th>课型</th>
-                            <th>实上时长</th>
+                            <th>类型</th>
+                            <th>实际时长</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -254,9 +272,7 @@ TimetableApp.prototype.exportLessonSheetToWord = async function() {
             rows.forEach(row => {
                 wordContent += `<tr>
                     <td>${row.dateKey}</td>
-                    <td>${row.dayLabel}</td>
                     <td>${row.subject}</td>
-                    <td>${row.periodLabel}</td>
                     <td>${row.time}</td>
                     <td class="left">${row.students || '-'}</td>
                     <td>${row.scheduledStudents}</td>
@@ -272,8 +288,8 @@ TimetableApp.prototype.exportLessonSheetToWord = async function() {
             wordContent += `</tbody></table></body></html>`;
             await this._saveFile('\ufeff' + wordContent, 'utf-8', `${title}.doc`, 'application/msword', 'doc');
         } catch (error) {
-            console.error('导出课时单 Word 出错:', error);
-            alert('导出课时单 Word 出错: ' + (error && error.message ? error.message : error));
+            console.error('导出 Word 失败:', error);
+            alert('导出 Word 失败: ' + (error && error.message ? error.message : error));
         }
     }
 
@@ -284,7 +300,7 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function() {
 
             const rows = this.getLessonSheetRowsByRange(range.startDate, range.endDate);
             if (rows.length === 0) {
-                alert('所选日期范围内暂无已完成的课程可导出为课时单');
+                alert('所选日期范围内没有课时数据');
                 return;
             }
 
@@ -310,6 +326,13 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function() {
                     h1 { text-align: center; font-size: 22px; margin-bottom: 8px; }
                     .sub-title { text-align: center; color: #666; margin-bottom: 16px; font-size: 13px; }
                     table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+                    col.date { width: 78px; }
+                    col.subject { width: 74px; }
+                    col.time { width: 88px; }
+                    col.students { width: 118px; }
+                    col.count { width: 42px; }
+                    col.type { width: 58px; }
+                    col.duration { width: 68px; }
                     th, td { border: 1px solid #333; padding: 8px 6px; text-align: center; vertical-align: middle; font-size: 12px; }
                     th { background: #f5f7fb; font-weight: bold; }
                     .left { text-align: left; }
@@ -317,23 +340,34 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function() {
             </head>
             <body>
                 <h1>${title}</h1>
-                <div class="sub-title">仅包含所选范围内已完成课程</div>
+                <div class="sub-title">课时统计报表</div>
                 <table>
+                    <colgroup>
+                        <col class="date">
+                        <col class="subject">
+                        <col class="time">
+                        <col class="students">
+                        <col class="count">
+                        <col class="count">
+                        <col class="count">
+                        <col class="count">
+                        <col class="count">
+                        <col class="type">
+                        <col class="duration">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>日期</th>
-                            <th>星期</th>
                             <th>科目</th>
-                            <th>课时</th>
                             <th>时间</th>
                             <th>学生</th>
                             <th>应到</th>
-                            <th>到课</th>
+                            <th>实到</th>
                             <th>请假</th>
-                            <th>缺勤</th>
+                            <th>缺课</th>
                             <th>试听</th>
-                            <th>课型</th>
-                            <th>实上时长</th>
+                            <th>类型</th>
+                            <th>实际时长</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -341,9 +375,7 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function() {
             rows.forEach(row => {
                 excelContent += `<tr>
                     <td>${row.dateKey}</td>
-                    <td>${row.dayLabel}</td>
                     <td>${row.subject}</td>
-                    <td>${row.periodLabel}</td>
                     <td>${row.time}</td>
                     <td class="left">${row.students || '-'}</td>
                     <td>${row.scheduledStudents}</td>
@@ -359,8 +391,8 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function() {
             excelContent += `</tbody></table></body></html>`;
             await this._saveFile('\ufeff' + excelContent, 'utf-8', `${title}.xls`, 'application/vnd.ms-excel', 'xls');
         } catch (error) {
-            console.error('导出课时单 Excel 出错:', error);
-            alert('导出课时单 Excel 出错: ' + (error && error.message ? error.message : error));
+            console.error('导出 Excel 失败:', error);
+            alert('导出 Excel 失败: ' + (error && error.message ? error.message : error));
         }
     }
 
@@ -552,6 +584,7 @@ TimetableApp.prototype.saveAsImage = function() {
 
             table.querySelectorAll('td, th').forEach(cell => {
                 const isHeader = cell.tagName.toLowerCase() === 'th' || cell.classList.contains('period-header');
+                const isPeriodHeader = cell.classList.contains('period-header');
                 cell.style.cssText = `
                     border: 1px solid #333;
                     padding: 12px 8px;
@@ -561,7 +594,7 @@ TimetableApp.prototype.saveAsImage = function() {
                     min-height: 60px;
                     font-family: "Microsoft YaHei", Arial, sans-serif;
                     font-size: 14px;
-                    ${isHeader ? 'background-color: #f8f9fa; font-weight: bold;' : ''}
+                    ${isHeader ? `background-color: ${isPeriodHeader ? '#ffffff' : '#f8f9fa'}; font-weight: bold;` : ''}
                 `;
             });
 
@@ -681,9 +714,11 @@ TimetableApp.prototype.exportToWord = async function() {
                 table { border-collapse: collapse; width: 100%; margin: 0 auto; table-layout: fixed; border: 2px solid #333; }
                 th, td { border: 1px solid #333; padding: 12px 8px; text-align: center; font-size: 14px; vertical-align: middle; min-height: 60px; }
                 th { background-color: #f8f9fa; font-weight: bold; }
-                .period-header { background-color: #f0f0f0; font-weight: bold; width: 100px; font-size: 14px; }
-                .subject { font-weight: bold; color: #333; font-size: 14px; }
-                .teacher { font-size: 12px; color: #666; margin-top: 4px; display: block; }
+                .period-header { background-color: #fff; font-weight: bold; width: 100px; font-size: 14px; }
+                .cell-lines { text-align: left; line-height: 1.6; }
+                .subject { font-weight: bold; color: #333; font-size: 14px; margin-bottom: 4px; }
+                .student-line { font-size: 12px; color: #333; }
+                .teacher { font-size: 12px; color: #666; margin-top: 4px; }
                 .period-time { font-size: 12px; color: #666; }
             </style>
         </head>
@@ -715,17 +750,42 @@ TimetableApp.prototype.exportToWord = async function() {
                 const key = this.buildCellKey(day, index);
                 const version = this.getCellVersion(key, weekStartStr);
                 const subjectId = version ? version.subject : null;
+                const studentIds = version ? (version.student || []) : [];
+                const students = studentIds
+                    .map(id => this.students.find(s => s.id === id))
+                    .filter(Boolean);
 
                 if (subjectId) {
                     const subject = this.subjects.find(s => s.id === subjectId);
                     if (subject) {
+                        const studentNames = students.map(student => student.name);
+                        const studentChunks = [];
+                        for (let i = 0; i < studentNames.length; i += 2) {
+                            studentChunks.push(studentNames.slice(i, i + 2).join('、'));
+                        }
+                        const studentLines = studentChunks.map((line, idx) =>
+                            `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
+                        ).join('');
                         wordContent += `<td>
-                            <div class="subject">${subject.name}</div>
-                            <div class="teacher">${subject.teacher || ''}</div>
+                            <div class="cell-lines">
+                                <div class="subject">课程名：${subject.name}</div>
+                                ${studentLines}
+                                ${subject.teacher ? `<div class="teacher">教师：${subject.teacher}</div>` : ''}
+                            </div>
                         </td>`;
                     } else {
                         wordContent += `<td></td>`;
                     }
+                } else if (students.length > 0) {
+                    const studentNames = students.map(student => student.name);
+                    const studentChunks = [];
+                    for (let i = 0; i < studentNames.length; i += 2) {
+                        studentChunks.push(studentNames.slice(i, i + 2).join('、'));
+                    }
+                    const studentLines = studentChunks.map((line, idx) =>
+                        `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
+                    ).join('');
+                    wordContent += `<td><div class="cell-lines">${studentLines}</div></td>`;
                 } else {
                     wordContent += `<td></td>`;
                 }
@@ -795,22 +855,33 @@ TimetableApp.prototype.exportToExcel = async function() {
                         font-weight: bold; 
                     }
                     .period-header { 
-                        background-color: #f0f0f0; 
+                        background-color: #fff; 
                         font-weight: bold; 
                         width: 100px; 
                         font-size: 14px;
+                    }
+                    .cell-lines {
+                        text-align: left;
+                        line-height: 1.6;
                     }
                     .subject { 
                         font-weight: bold; 
                         color: #333; 
                         font-size: 14px;
                         font-family: "Microsoft YaHei", Arial, sans-serif;
+                        margin-bottom: 4px;
+                    }
+                    .student-line {
+                        font-size: 12px;
+                        color: #333;
+                        font-family: "Microsoft YaHei", Arial, sans-serif;
                     }
                     .teacher { 
-                            font-size: 12px; 
-                            color: #666; 
-                            font-family: "Microsoft YaHei", Arial, sans-serif;
-                        }
+                        font-size: 12px; 
+                        color: #666; 
+                        font-family: "Microsoft YaHei", Arial, sans-serif;
+                        margin-top: 4px;
+                    }
                     .period-time { 
                         font-size: 12px; 
                         color: #666; 
@@ -846,18 +917,42 @@ TimetableApp.prototype.exportToExcel = async function() {
                     const key = this.buildCellKey(day, index);
                     const version = this.getCellVersion(key, weekStartStr);
                     const subjectId = version ? version.subject : null;
+                    const studentIds = version ? (version.student || []) : [];
+                    const students = studentIds
+                        .map(id => this.students.find(s => s.id === id))
+                        .filter(Boolean);
 
                     if (subjectId) {
                         const subject = this.subjects.find(s => s.id === subjectId);
                         if (subject) {
-                            excelContent += `<td><span class="subject">${subject.name}</span>`;
-                            if (subject.teacher) {
-                                excelContent += `<br><span class="teacher">${subject.teacher}</span>`;
+                            const studentNames = students.map(student => student.name);
+                            const studentChunks = [];
+                            for (let i = 0; i < studentNames.length; i += 2) {
+                                studentChunks.push(studentNames.slice(i, i + 2).join('、'));
                             }
-                            excelContent += `</td>`;
+                            const studentLines = studentChunks.map((line, idx) =>
+                                `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
+                            ).join('');
+                            excelContent += `<td><div class="cell-lines">`;
+                            excelContent += `<div class="subject">课程名：${subject.name}</div>`;
+                            excelContent += studentLines;
+                            if (subject.teacher) {
+                                excelContent += `<div class="teacher">教师：${subject.teacher}</div>`;
+                            }
+                            excelContent += `</div></td>`;
                         } else {
                             excelContent += '<td></td>';
                         }
+                    } else if (students.length > 0) {
+                        const studentNames = students.map(student => student.name);
+                        const studentChunks = [];
+                        for (let i = 0; i < studentNames.length; i += 2) {
+                            studentChunks.push(studentNames.slice(i, i + 2).join('、'));
+                        }
+                        const studentLines = studentChunks.map((line, idx) =>
+                            `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
+                        ).join('');
+                        excelContent += `<td><div class="cell-lines">${studentLines}</div></td>`;
                     } else {
                         excelContent += '<td></td>';
                     }
