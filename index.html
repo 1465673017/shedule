@@ -408,7 +408,7 @@
             <div id="statsContent">
                 <div class="stats-overview-head">
                     <div class="stats-overview-copy">
-                        <div class="stats-overview-eyebrow">本次摘要</div>
+                        <div class="stats-overview-eyebrow">统计总览</div>
                         <div class="stats-overview-note" id="statsOverviewNote">正在整理这个时间范围的统计结果。</div>
                     </div>
                 </div>
@@ -466,7 +466,10 @@
     <div id="textStatsModal" class="modal">
         <div class="modal-content text-stats-modal-content">
             <div class="modal-header">
-                <h3 id="textStatsTitle">课时统计</h3>
+                <div class="text-stats-title-group">
+                    <h3 id="textStatsTitle">课时统计</h3>
+                    <p class="text-stats-subtitle" id="textStatsSubtitle">按当前范围整理课程、课时和到课情况。</p>
+                </div>
                 <button class="modal-close" onclick="app.closeTextStatsModal()">×</button>
             </div>
             <div class="stats-tabs" id="textStatsTabs">
@@ -482,9 +485,20 @@
                     <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" onclick="app.changeTextStatsRange(1)">下一项</button>
                 </div>
             </div>
-            <div class="stats-grid stats-grid-compact" id="textStatsCards"></div>
-            <div class="text-stats-detail-title">课程明细</div>
-            <div class="stats-by-grade" id="textStatsByGrade"></div>
+            <div class="text-stats-summary-panel">
+                <div class="text-stats-summary-head">
+                    <span class="text-stats-summary-kicker">统计概览</span>
+                    <span class="text-stats-summary-note" id="textStatsSummaryNote">正在整理这个范围内的课程。</span>
+                </div>
+                <div class="stats-grid stats-grid-compact" id="textStatsCards"></div>
+            </div>
+            <div class="text-stats-detail-panel">
+                <div class="text-stats-detail-title">
+                    <span>课程明细</span>
+                    <span id="textStatsDetailCount">0 条</span>
+                </div>
+                <div class="stats-by-grade" id="textStatsByGrade"></div>
+            </div>
         </div>
     </div>
 

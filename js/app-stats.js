@@ -26,7 +26,9 @@ TimetableApp.prototype.switchTextStatsTab = function (tab, options) {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
 
-    if (!opts.preserveDate || !this._textStatsAnchorDate) {
+    // Keep the originally selected date when switching between day/week/month/year tabs.
+    // Only fall back to today if we truly do not have an anchor yet.
+    if (!this._textStatsAnchorDate) {
         this._textStatsAnchorDate = new Date();
         this._textStatsAnchorDate.setHours(0, 0, 0, 0);
     }
@@ -302,14 +304,8 @@ TimetableApp.prototype.getTextStatsRangeLabel = function (range) {
     }
 }
 
-TimetableApp.prototype.getTextStatsTitle = function (range) {
-    const tabLabelMap = {
-        day: '日统计',
-        week: '周统计',
-        month: '月统计',
-        year: '年统计'
-    };
-    return `课时统计 · ${tabLabelMap[this._textStatsTab] || '统计'} · ${this.getTextStatsRangeLabel(range)}`;
+TimetableApp.prototype.getTextStatsTitle = function () {
+    return '课时统计';
 }
 
 TimetableApp.prototype.updateTextStatsNavButtons = function () {
@@ -333,16 +329,28 @@ TimetableApp.prototype.renderTextStatsModal = function () {
 
     const title = document.getElementById('textStatsTitle');
     const rangeLabel = document.getElementById('textStatsRangeLabel');
+    const subtitle = document.getElementById('textStatsSubtitle');
+    const summaryNote = document.getElementById('textStatsSummaryNote');
+    const detailCount = document.getElementById('textStatsDetailCount');
     if (title) title.textContent = this.getTextStatsTitle(range);
     if (rangeLabel) rangeLabel.textContent = this.getTextStatsRangeLabel(range);
+    if (subtitle) subtitle.textContent = isDayView ? '查看当天已完成课程的课时与到课情况。' : '按当前范围汇总课程、课时、试听和到课情况。';
     this.updateTextStatsNavButtons();
 
-    this.renderStatsCards(lessons, {
+    const summary = this.renderStatsCards(lessons, {
         targetId: 'textStatsCards',
         showClassDays: !isDayView,
         compact: true,
         emptyText: '当前范围内暂无有效课时'
     });
+    if (summaryNote) {
+        summaryNote.textContent = summary.empty
+            ? '当前范围暂无可统计课程。'
+            : `${summary.lessonCount} 门课程 · ${summary.totalHours}h · 到课 ${summary.totalPresentStudents}/${summary.totalScheduledStudents}`;
+    }
+    if (detailCount) {
+        detailCount.textContent = `${summary.empty ? 0 : summary.lessonCount} 条`;
+    }
     this.renderStatsByGrade(lessons, {
         targetId: 'textStatsByGrade',
         showDates: true,
@@ -512,7 +520,8 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
         const dateStr = formatLocalDate(current);
         const lessons = this.collectLessonsForDate(current);
         lessons.forEach(lesson => {
-            const aggKey = lesson.key;
+            const typeKey = this.getLessonTypeKeyForStats(lesson);
+            const aggKey = `${lesson.key}::${typeKey || 'untyped'}`;
             if (!aggregated[aggKey]) {
                 aggregated[aggKey] = {
                     subject: lesson.subject,
@@ -524,6 +533,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     presentNonAuditionCount: 0,
                     auditionStudentCount: 0,
                     perSessionStudents: lesson.studentCount + lesson.leaveCount + lesson.absentCount,
+                    statsTypeKey: typeKey,
                     period: lesson.period,
                     key: lesson.key,
                     courseInstanceId: lesson.courseInstanceId || null,
@@ -547,7 +557,6 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     }
                 });
             }
-            const typeKey = this.getLessonTypeKeyForStats(lesson);
             if (typeKey) {
                 aggregated[aggKey].sessionTypeCounts[typeKey] = (aggregated[aggKey].sessionTypeCounts[typeKey] || 0) + 1;
                 aggregated[aggKey].typeStats[typeKey] = (aggregated[aggKey].typeStats[typeKey] || 0) + this.getLessonDurationMinutesForStats(lesson);
@@ -1936,7 +1945,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     });
 
     if (validLessons.length === 0) {
-        container.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px">' + (config.emptyText || '当前范围内暂无有效课时') + '</div>';
+        container.innerHTML = '<div class="text-muted stats-empty-state">' + (config.emptyText || '当前范围内暂无有效课时') + '</div>';
         return { empty: true };
     }
 
@@ -2065,7 +2074,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     });
 
     if (validLessons.length === 0) {
-        container.innerHTML = '<div class="text-muted" style="text-align:center;padding:20px">' + (config.emptyText || '当前范围内暂无有效课时') + '</div>';
+        container.innerHTML = '<div class="text-muted stats-empty-state">' + (config.emptyText || '当前范围内暂无有效课时') + '</div>';
         return { empty: true };
     }
 
