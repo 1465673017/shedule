@@ -249,40 +249,79 @@
         });
     }
 
+    function findNextExplicitVersionWeek(app, cellKey, fromWeekStart) {
+        const erp = ensureErpData(app);
+        let nextWeek = null;
+        erp.courseInstances.forEach(instance => {
+            if (instance.cellKey !== cellKey) return;
+            if (!instance.weekStart || instance.weekStart <= fromWeekStart) return;
+            if (!nextWeek || instance.weekStart < nextWeek) {
+                nextWeek = instance.weekStart;
+            }
+        });
+        return nextWeek;
+    }
+
+    function getExplicitVersionAtWeek(app, cellKey, weekStart) {
+        const erp = ensureErpData(app);
+        const instance = erp.courseInstances.find(item =>
+            item.cellKey === cellKey && item.weekStart === weekStart
+        );
+        if (!instance) return null;
+        return {
+            weekStart: instance.weekStart,
+            subject: instance.subjectId || null,
+            student: normalizeIds(instance.studentIds),
+            _cutoff: instance.isDeleted || undefined,
+            cellKey: instance.cellKey,
+            courseInstanceId: instance.id,
+            courseTemplateId: instance.courseTemplateId || null,
+            actualMinutesByDate: instance.actualMinutesByDate ? { ...instance.actualMinutesByDate } : undefined
+        };
+    }
+
     function ensureRecurringStudentFuture(app, cellKey, studentId, weekStart) {
         if (!cellKey || !studentId || !weekStart) return;
 
+        const normalizedStudentId = String(studentId);
         const currentVersion = window.ScheduleErpService.getCellVersion(app, cellKey, weekStart);
-        if (!currentVersion || !normalizeIds(currentVersion.student).includes(String(studentId))) return;
+        if (!currentVersion || !normalizeIds(currentVersion.student).includes(normalizedStudentId)) return;
 
-        const nextWeekStart = addWeeks(weekStart, 1);
-        const nextVersion = window.ScheduleErpService.getCellVersion(app, cellKey, nextWeekStart);
-        if (nextVersion && nextVersion.courseInstanceId === currentVersion.courseInstanceId) {
-            return;
-        }
-        if (nextVersion && nextVersion.subject && currentVersion.subject && nextVersion.subject !== currentVersion.subject) {
-            return;
-        }
+        const stopWeekExclusive = findNextExplicitVersionWeek(app, cellKey, weekStart);
+        if (!stopWeekExclusive) return;
+        let cursorWeek = addWeeks(weekStart, 1);
 
-        const existingNextStudents = nextVersion ? normalizeIds(nextVersion.student) : [];
-        const nextStudents = [...new Set([...existingNextStudents, String(studentId)])];
-        const nextSubject = nextVersion && nextVersion.subject ? nextVersion.subject : (currentVersion.subject || null);
-
-        window.ScheduleErpService.setCellVersion(app, cellKey, nextWeekStart, nextSubject, nextStudents);
-
-        if (nextVersion && existingNextStudents.length > 0) {
-            const updatedNextVersion = window.ScheduleErpService.getCellVersion(app, cellKey, nextWeekStart);
-            if (updatedNextVersion) {
-                copyStudentBranchState(
-                    app,
-                    nextVersion.courseInstanceId,
-                    updatedNextVersion.courseInstanceId,
-                    existingNextStudents,
-                    nextWeekStart,
-                    updatedNextVersion.cellKey
-                );
-                buildTimetableProjection(app);
+        while (cursorWeek < stopWeekExclusive) {
+            const explicitVersion = getExplicitVersionAtWeek(app, cellKey, cursorWeek);
+            const existingStudents = explicitVersion ? normalizeIds(explicitVersion.student) : [];
+            if (existingStudents.includes(normalizedStudentId)) {
+                cursorWeek = addWeeks(cursorWeek, 1);
+                continue;
             }
+
+            const nextStudents = [...new Set([...existingStudents, normalizedStudentId])];
+            const nextSubject = explicitVersion && explicitVersion.subject
+                ? explicitVersion.subject
+                : (currentVersion.subject || null);
+
+            window.ScheduleErpService.setCellVersion(app, cellKey, cursorWeek, nextSubject, nextStudents);
+
+            if (explicitVersion && existingStudents.length > 0) {
+                const updatedVersion = window.ScheduleErpService.getCellVersion(app, cellKey, cursorWeek);
+                if (updatedVersion) {
+                    copyStudentBranchState(
+                        app,
+                        explicitVersion.courseInstanceId,
+                        updatedVersion.courseInstanceId,
+                        existingStudents,
+                        cursorWeek,
+                        updatedVersion.cellKey
+                    );
+                    buildTimetableProjection(app);
+                }
+            }
+
+            cursorWeek = addWeeks(cursorWeek, 1);
         }
     }
 

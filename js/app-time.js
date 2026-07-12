@@ -5,6 +5,13 @@ TimetableApp.prototype.openTimeManagementModal = function() {
         this.openSettingsModal('time');
     }
 
+TimetableApp.prototype.updateTimeAdvancedSaveVisibility = function() {
+        const advanced = document.getElementById('advancedSettings');
+        const actions = document.getElementById('timeAdvancedSaveActions');
+        if (!advanced || !actions) return;
+        actions.style.display = advanced.classList.contains('expanded') ? 'flex' : 'none';
+    }
+
 TimetableApp.prototype.updateShowPeriodTimeToggle = function() {
         const toggle = document.getElementById('showPeriodTimeToggle');
         if (toggle) {
@@ -219,6 +226,7 @@ TimetableApp.prototype.toggleAdvancedSettings = function() {
         const advanced = document.getElementById('advancedSettings');
         toggle.classList.toggle('expanded');
         advanced.classList.toggle('expanded');
+        this.updateTimeAdvancedSaveVisibility();
     }
 
 TimetableApp.prototype.applyQuickSettings = function() {
@@ -277,6 +285,8 @@ TimetableApp.prototype.applyQuickSettings = function() {
         };
 
         this.renderPeriods();
+        this.saveData();
+        this.applySettings();
     }
 
 TimetableApp.prototype.formatTime = function(minutes) {

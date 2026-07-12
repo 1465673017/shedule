@@ -82,6 +82,10 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
             }
 
             currentStudents.push(item.id);
+
+            if (!currentSubject) {
+                currentSubject = this.ensureUncategorizedSubject().id;
+            }
         }
 
         this.setCellVersion(key, weekStartStr, currentSubject, currentStudents);
@@ -228,6 +232,9 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         }
 
         targetStudents.push(studentId);
+        if (!targetSubject) {
+            targetSubject = this.ensureUncategorizedSubject().id;
+        }
 
         const sourceNextVersion = this.getCellVersion(sourceKey, nextWeekStr);
         const targetNextVersion = this.getCellVersion(targetKey, nextWeekStr);
@@ -382,6 +389,81 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
         this.syncRealtime();
     }
 
+TimetableApp.prototype.copyCourseFromCell = function(cell) {
+        if (!cell || !cell.classList.contains('occupied')) return;
+
+        const day = cell.dataset.day;
+        const period = cell.dataset.period;
+        const key = this.buildCellKey(day, period);
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const version = this.getCellVersion(key, weekStartStr);
+        if (!version) return;
+
+        const studentIds = Array.isArray(version.student) ? version.student.map(id => String(id)) : [];
+        if (!version.subject && studentIds.length === 0) return;
+
+        this.copiedCourse = {
+            subjectId: version.subject || null,
+            studentIds
+        };
+        this.renderTimetable();
+    }
+
+TimetableApp.prototype.pasteCopiedCourseToCell = function(cell) {
+        if (!cell || !this.copiedCourse || cell.classList.contains('occupied')) return false;
+
+        const day = cell.dataset.day;
+        const period = cell.dataset.period;
+        const key = this.buildCellKey(day, period);
+        const studentIds = Array.isArray(this.copiedCourse.studentIds)
+            ? this.copiedCourse.studentIds.map(id => String(id))
+            : [];
+
+        if (studentIds.length > this.MAX_STUDENTS_PER_COURSE) {
+            alert(`每节课最多只能有 ${this.MAX_STUDENTS_PER_COURSE} 个学生`);
+            return false;
+        }
+
+        const hasCourse1v1 = studentIds.some(id => {
+            const s = this.students.find(st => st.id === id);
+            return s && s.is1v1;
+        });
+
+        if (hasCourse1v1 && studentIds.length > 1) {
+            alert('1v1学生只能单独上课，无法与其他学生同课');
+            return false;
+        }
+
+        for (const studentId of studentIds) {
+            const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [key]);
+            if (auditionAssigned.length > 0) {
+                const student = this.students.find(s => s.id === studentId);
+                alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
+                return false;
+            }
+        }
+
+        let subjectId = this.copiedCourse.subjectId || null;
+        if (!subjectId && studentIds.length > 0) {
+            subjectId = this.ensureUncategorizedSubject().id;
+        }
+
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        this.setCellVersion(key, weekStartStr, subjectId, studentIds);
+        this.ensureAuditionStudentsTemporary(key, studentIds);
+
+        for (const studentId of studentIds) {
+            const student = this.students.find(st => st.id === studentId);
+            if (student && student.completed) {
+                this.setStudentRecurrence(key, studentId, 'temporary');
+            }
+        }
+
+        this.copiedCourse = null;
+        this.syncRealtime();
+        return true;
+    }
+
 TimetableApp.prototype.renderTimetable = function() {
         const tbody = document.getElementById('timetableBody');
         tbody.innerHTML = '';
@@ -430,6 +512,7 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
         for (let day of days) {
             const cell = document.createElement('td');
             cell.className = 'cell';
+            cell.style.position = 'relative';
             if (day >= 6) {
                 cell.classList.add('weekend-col');
             }
@@ -449,6 +532,24 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                 if (subject || students.length > 0) {
                     cell.classList.add('occupied');
                 }
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-course-btn';
+                copyBtn.title = '复制这节课';
+                copyBtn.textContent = '复制';
+                copyBtn.style.cssText = 'position: absolute; right: 8px; bottom: 8px; min-width: 40px; height: 22px; padding: 0 8px; border: none; border-radius: 999px; background: rgba(255, 255, 255, 0.96); color: #2563eb; font-size: 12px; font-weight: 600; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 14; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.16);';
+                copyBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.copyCourseFromCell(cell);
+                });
+                cell.appendChild(copyBtn);
+
+                cell.addEventListener('mouseenter', () => {
+                    copyBtn.style.display = 'inline-flex';
+                });
+                cell.addEventListener('mouseleave', () => {
+                    copyBtn.style.display = 'none';
+                });
 
                 if (subject) {
                     cell.draggable = true;
@@ -665,6 +766,23 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                 plusIndicator.textContent = '+';
                 plusIndicator.style.cssText = 'font-size: 24px; color: #ccc; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;';
                 cell.appendChild(plusIndicator);
+
+                if (this.copiedCourse) {
+                    const pasteIndicator = document.createElement('div');
+                    pasteIndicator.className = 'paste-indicator';
+                    pasteIndicator.textContent = '粘贴';
+                    pasteIndicator.style.cssText = 'position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: #2563eb; background: rgba(239, 246, 255, 0.95); z-index: 3;';
+                    cell.appendChild(pasteIndicator);
+
+                    cell.addEventListener('mouseenter', () => {
+                        plusIndicator.style.display = 'none';
+                        pasteIndicator.style.display = 'flex';
+                    });
+                    cell.addEventListener('mouseleave', () => {
+                        pasteIndicator.style.display = 'none';
+                        plusIndicator.style.display = 'flex';
+                    });
+                }
             }
             
             cell.addEventListener('dblclick', () => {
@@ -674,6 +792,11 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             });
             
             cell.addEventListener('click', () => {
+                if (cell.classList.contains('empty-cell') && this.copiedCourse) {
+                    if (this.pasteCopiedCourseToCell(cell)) {
+                        return;
+                    }
+                }
                 this.editingCell = cell;
                 document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
                 cell.classList.add('selected');

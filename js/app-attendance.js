@@ -480,12 +480,23 @@ TimetableApp.prototype.setStudentRecurrenceUI = function(cellKey, studentId, typ
 TimetableApp.prototype.isStudentOngoing = function(studentId) {
         const student = this.students.find(s => s.id === studentId);
         if (student && student.completed) return false;
+        if (student && student.isAudition) return false;
+
+        const instances = this.erpData && Array.isArray(this.erpData.courseInstances)
+            ? this.erpData.courseInstances
+            : [];
+
+        const hasScheduledCourse = instances.some(instance => {
+            if (!instance || !instance.cellKey || !instance.weekStart || instance.isDeleted) return false;
+            const version = this.getCellVersion(instance.cellKey, instance.weekStart);
+            return !!(version && Array.isArray(version.student) && version.student.includes(String(studentId)));
+        });
+
+        if (hasScheduledCourse) return true;
+
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
         const relations = this.erpData && Array.isArray(this.erpData.studentCourseRelations)
             ? this.erpData.studentCourseRelations
-            : [];
-        const instances = this.erpData && Array.isArray(this.erpData.courseInstances)
-            ? this.erpData.courseInstances
             : [];
 
         return relations.some(rel => {

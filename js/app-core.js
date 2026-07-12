@@ -125,6 +125,7 @@ class TimetableApp {
         this.editingPeriod = null;
         this.isTemporaryCourseEdit = false;
         this._temporaryCourseSourceVersion = null;
+        this.copiedCourse = null;
         this.draggedItem = null;
         
         this.currentDate = new Date();
@@ -397,6 +398,20 @@ class TimetableApp {
         // 计算亮度
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         return brightness > 150 ? '#1f2225' : '#ffffff';
+    }
+
+    ensureUncategorizedSubject() {
+        let subject = this.subjects.find(s => s && s.name === '未分类');
+        if (subject) return subject;
+
+        subject = {
+            id: Date.now().toString(),
+            name: '未分类',
+            teacher: '',
+            color: '#E5E7EB'
+        };
+        this.subjects.push(subject);
+        return subject;
     }
 
     saveData() {

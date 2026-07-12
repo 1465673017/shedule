@@ -35,6 +35,7 @@ TimetableApp.prototype.switchSettingsTab = function(tabName) {
             this.renderPeriods();
             this.initQuickSettings();
             this.updateShowPeriodTimeToggle();
+            this.updateTimeAdvancedSaveVisibility();
         }
     }
 
