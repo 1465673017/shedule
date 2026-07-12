@@ -22,7 +22,7 @@ TimetableApp.prototype.ensureTemporarySwapButton = function() {
 
             btn.className = 'btn secondary btn-sm temporary-swap-btn';
 
-            btn.textContent = '\u4e34\u65f6\u6362\u8bfe';
+            btn.textContent = '临时换课';
 
             btn.addEventListener('click', () => this.startTemporaryCourseEdit());
 
@@ -44,7 +44,7 @@ TimetableApp.prototype.updateTemporarySwapButton = function(show, active = false
 
         btn.classList.toggle('active', !!active);
 
-        btn.textContent = active ? '\u4e34\u65f6\u6362\u8bfe\u4e2d' : '\u4e34\u65f6\u6362\u8bfe';
+        btn.textContent = active ? '临时换课中' : '临时换课';
 
     }
 
@@ -141,7 +141,7 @@ TimetableApp.prototype.openAddLessonModal = function(cell) {
 
         const version = this.getCellVersion(key, weekStartStr);
 
-        title.textContent = version ? '\u7f16\u8f91\u8bfe\u7a0b' : '\u6dfb\u52a0\u8bfe\u7a0b';
+        title.textContent = version ? '编辑课程' : '添加课程';
 
         const selectedSubjectId = version && version.subject ? version.subject : '';
 
@@ -175,7 +175,7 @@ TimetableApp.prototype.openCourseEditModal = function(course) {
 
         const title = document.getElementById('addLessonTitle');
 
-        title.textContent = '\u7f16\u8f91\u8bfe\u7a0b';
+        title.textContent = '编辑课程';
 
         this.renderSubjectPicker(course.subjectId);
 
@@ -215,7 +215,7 @@ TimetableApp.prototype.openManualCourseModal = function() {
 
         const title = document.getElementById('addLessonTitle');
 
-        title.textContent = '\u6dfb\u52a0\u8bfe\u7a0b';
+        title.textContent = '添加课程';
 
         this.renderSubjectPicker('');
 
@@ -235,7 +235,7 @@ TimetableApp.prototype.renderSubjectPicker = function(selectedId = '') {
 
         if (this.subjects.length === 0) {
 
-            picker.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">鏆傛棤绉戠洰锛岃鍏堟坊鍔犵鐩?/div>';
+            picker.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">暂无科目，请先添加科目</div>';
 
             return;
 
@@ -305,7 +305,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
         if (this.students.length === 0) {
 
-            picker.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">鏆傛棤瀛︾敓锛岃鍏堟坊鍔犲鐢?/div>';
+            picker.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">暂无学生，请先添加学生</div>';
 
             countTag.textContent = '';
 
@@ -313,7 +313,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
         }
 
-        // 璇剧▼姹犳ā寮忥紙鎵嬪姩娣诲姞鎴栫紪杈戣绋嬫睜涓殑璇剧▼锛変笅锛岃瘯鍚鐢熶笉鍙€夈€?
+        // 课程池模式下（手动添加或编辑课程表中的课程），试听学生不可选。
 
         const isCoursePoolMode = this.isAddingManualCourse || !!this.editingCourse;
 
@@ -365,7 +365,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
             }
 
-            // 璇剧▼姹犳ā寮忎笅锛屾墍鏈夎瘯鍚鐢熶笉鍙€夛紙璇曞惉瀛︾敓鍙兘閫氳繃鎷栨嫿鍜岃琛ㄥ崟鍏冩牸鐩存帴娣诲姞锛?
+            // 课程池模式下，所有试听学生不可选（试听学生只能通过拖拽和课表单元格直接添加）。
 
         if (isCoursePoolMode && student.isAudition && !isSelected) {
 
@@ -393,9 +393,9 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
             const oneV1Badge = student.is1v1 ? '<span class="one-v1-badge">1v1</span>' : '';
 
-            const auditionBadge = student.isAudition ? '<span class="audition-badge">\u8bd5</span>' : '';
+            const auditionBadge = student.isAudition ? '<span class="audition-badge">试</span>' : '';
 
-            const assignedBadge = isAssignedElsewhere ? '<span class="assigned-badge">宸叉帓璇?/span>' : '';
+            const assignedBadge = isAssignedElsewhere ? '<span class="assigned-badge">已排课</span>' : '';
 
             chip.innerHTML = `
 
@@ -453,7 +453,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
                     if (isClicking1v1 && selectedCount > 0) {
 
-                        alert('1v1瀛︾敓鍙兘鍗曠嫭涓婅锛屾棤娉曚笌鍏朵粬瀛︾敓鍚屾椂閫夋嫨');
+                        alert('1v1学生只能单独上课，无法与其他学生同时选择');
 
                         return;
 
@@ -503,7 +503,7 @@ TimetableApp.prototype.refreshStudentPickerDisabledState = function() {
 
         const selectedIds = Array.from(selectedChips).map(c => c.dataset.studentId);
 
-        // 璇剧▼姹犳ā寮忥紙鎵嬪姩娣诲姞鎴栫紪杈戣绋嬫睜涓殑璇剧▼锛変笅锛岃瘯鍚鐢熶笉鍙€夈€?
+        // 课程池模式下（手动添加或编辑课程表中的课程），试听学生不可选。
 
         const isCoursePoolMode = this.isAddingManualCourse || !!this.editingCourse;
 
@@ -555,7 +555,7 @@ TimetableApp.prototype.refreshStudentPickerDisabledState = function() {
 
             }
 
-            // 璇剧▼姹犳ā寮忎笅锛屾墍鏈夎瘯鍚鐢熶笉鍙€夛紙璇曞惉瀛︾敓鍙兘閫氳繃鎷栨嫿鍜岃琛ㄥ崟鍏冩牸鐩存帴娣诲姞锛?
+            // 课程池模式下，所有试听学生不可选（试听学生只能通过拖拽和课表单元格直接添加）。
 
             if (isCoursePoolMode && student && student.isAudition) {
 
@@ -615,7 +615,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
         e.preventDefault();
 
-        // 濡傛灉鏄绋嬫睜缂栬緫妯″紡
+        // 如果是课程表编辑模式
 
         if (this.editingCourse) {
 
@@ -625,7 +625,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
         }
 
-        // 濡傛灉鏄墜鍔ㄦ坊鍔犺绋嬫ā寮?
+        // 如果是手动添加课程模式
 
         if (this.isAddingManualCourse) {
 
@@ -649,7 +649,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
         if (!selectedSubjectChip) {
 
-            alert('璇烽€夋嫨绉戠洰');
+            alert('请选择科目');
 
             return;
 
@@ -683,7 +683,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
         if (has1v1Student && selectedStudentIds.length > 1) {
 
-            alert('1v1瀛︾敓鍙兘鍗曠嫭涓婅');
+            alert('1v1学生只能单独上课');
 
             return;
 
@@ -716,7 +716,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
             selectedStudentIds.length > 0 ? selectedStudentIds.map(id => id.toString()) : []);
 
-        // 璇曞惉瀛︾敓鑷姩璁句负涓存椂妯″紡锛堝彧鍑虹幇鍦ㄥ綋鍓嶅懆锛?
+        // 试听学生自动设为临时模式（只出现在当前周）
 
         this.ensureAuditionStudentsTemporary(key, selectedStudentIds);
 
@@ -726,7 +726,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
     }
 
-    // 淇濆瓨鎵嬪姩娣诲姞鐨勮绋嬪埌 manualCourses 鏁扮粍
+    // 保存手动添加的课程到 manualCourses 数组
 
 TimetableApp.prototype.saveTemporaryCourseEdit = function() {
 
@@ -851,7 +851,7 @@ TimetableApp.prototype.saveManualCourse = function() {
 
         if (!selectedSubjectChip) {
 
-            alert('璇烽€夋嫨绉戠洰');
+            alert('请选择科目');
 
             return;
 
@@ -885,13 +885,13 @@ TimetableApp.prototype.saveManualCourse = function() {
 
         if (has1v1Student && selectedStudentIds.length > 1) {
 
-            alert('1v1瀛︾敓鍙兘鍗曠嫭涓婅');
+            alert('1v1学生只能单独上课');
 
             return;
 
         }
 
-        // 鎵嬪姩璇剧▼妯″紡涓嬶紝杩囨护鎺夎瘯鍚鐢?
+        // 手动课程模式下，过滤掉试听学生
 
         const auditionStudents = selectedStudentIds.filter(id => {
 
@@ -907,7 +907,7 @@ TimetableApp.prototype.saveManualCourse = function() {
 
                 const s = this.students.find(st => st.id === id);
 
-                return s ? s.name : '鏈煡';
+                return s ? s.name : '未知';
 
             }).join(', ');
 
@@ -917,7 +917,7 @@ TimetableApp.prototype.saveManualCourse = function() {
 
         }
 
-        // 妫€鏌ユ槸鍚︿笌宸叉湁璇剧▼閲嶅
+        // 检查是否与已有课程重复
 
         const sortedNew = [...selectedStudentIds].sort().join(',');
 
@@ -927,7 +927,7 @@ TimetableApp.prototype.saveManualCourse = function() {
 
             if (existing.subjectId === subjectId && sortedExisting === sortedNew) {
 
-                alert('璇ヨ绋嬪凡瀛樺湪锛屾棤闇€閲嶅娣诲姞');
+                alert('该课程已存在，无需重复添加');
 
                 return;
 
@@ -935,7 +935,7 @@ TimetableApp.prototype.saveManualCourse = function() {
 
         }
 
-        // 妫€鏌ユ槸鍚︿笌宸叉帓璇剧▼閲嶅
+        // 检查是否与已排课程重复
 
         const courses = this.computeCoursePool();
 
@@ -945,7 +945,7 @@ TimetableApp.prototype.saveManualCourse = function() {
 
             if (c.subjectId === subjectId && sortedExisting === sortedNew) {
 
-                alert('璇ヨ绋嬪凡瀛樺湪璇捐〃涓紝鏃犻渶閲嶅娣诲姞');
+                alert('该课程已存在于课表中，无需重复添加');
 
                 return;
 
@@ -975,7 +975,7 @@ TimetableApp.prototype.saveCourseEdit = function() {
 
         const selectedSubjectChip = document.querySelector('#lessonSubjectPicker .subject-chip.selected');
 
-        if (!selectedSubjectChip) { alert('璇烽€夋嫨绉戠洰'); return; }
+        if (!selectedSubjectChip) { alert('请选择科目'); return; }
 
         const newSubjectId = selectedSubjectChip.dataset.subjectId;
 
@@ -991,7 +991,7 @@ TimetableApp.prototype.saveCourseEdit = function() {
 
         });
 
-        if (has1v1Student && newStudentIds.length > 1) { alert('1v1瀛︾敓鍙兘鍗曠嫭涓婅'); return; }
+        if (has1v1Student && newStudentIds.length > 1) { alert('1v1学生只能单独上课'); return; }
 
         const oldCourse = this.editingCourse;
 
@@ -1011,7 +1011,7 @@ TimetableApp.prototype.saveCourseEdit = function() {
 
             });
 
-            if (auditionStudents.length > 0) { alert('璇曞惉瀛︾敓涓嶈兘娣诲姞鍒拌绋嬫睜'); return; }
+            if (auditionStudents.length > 0) { alert('试听学生不能加入课程池'); return; }
 
             for (const mc of this.manualCourses) {
 
@@ -1149,7 +1149,7 @@ TimetableApp.prototype.computeCoursePool = function() {
 
                 subjectId,
 
-                subjectName: subject ? subject.name : '鏈煡绉戠洰',
+                subjectName: subject ? subject.name : '未知科目',
 
                 subjectColor: subject ? subject.color : '#888',
 
@@ -1187,7 +1187,7 @@ TimetableApp.prototype.computeCoursePool = function() {
 
                 subjectId: mc.subjectId,
 
-                subjectName: subject ? subject.name : '鏈煡绉戠洰',
+                subjectName: subject ? subject.name : '未知科目',
 
                 subjectColor: subject ? subject.color : '#888',
 
@@ -1219,7 +1219,7 @@ TimetableApp.prototype.renderCoursePool = function(pool) {
 
         if (courses.length === 0) {
 
-            pool.innerHTML = '<div class="course-card-empty">璇剧▼姹犳殏鏃犺绋?br><small>浠庤琛ㄧЩ鍑虹殑璇剧▼浼氳嚜鍔ㄦ樉绀哄湪杩欓噷</small></div>';
+            pool.innerHTML = '<div class="course-card-empty">课程池暂无课程<br><small>从课表删除的课程会自动显示在这里</small></div>';
 
             return;
 
@@ -1261,9 +1261,9 @@ TimetableApp.prototype.renderCoursePool = function(pool) {
 
             const countHtml = course.isManual
 
-                ? '<span class="course-card-count" style="background:rgba(255,152,0,0.2);color:#ff9800;">鏈帓璇?/span>'
+                ? '<span class="course-card-count" style="background:rgba(255,152,0,0.2);color:#ff9800;">未排课</span>'
 
-                : `<span class="course-card-count">宸叉帓${course.count}娆?/span>`;
+                : `<span class="course-card-count">已排${course.count}次</span>`;
 
             card.innerHTML = `
 
@@ -1283,9 +1283,9 @@ TimetableApp.prototype.renderCoursePool = function(pool) {
 
                 <div class="subject-actions" style="margin-top:4px;justify-content:flex-end;">
 
-                    <button class="btn-icon edit-btn" title="缂栬緫璇剧▼" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+                    <button class="btn-icon edit-btn" title="编辑课程" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
 
-                    <button class="btn-icon delete-btn" title="浠庤绋嬫睜鍒犻櫎" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+                    <button class="btn-icon delete-btn" title="从课程池删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
 
                 </div>
 

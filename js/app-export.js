@@ -567,13 +567,13 @@ TimetableApp.prototype.exportToWord = async function() {
         }
     }
 
-    // Excel瀵煎嚭鍔熻兘 - 绉诲姩绔疨C绔粺涓€鏁堟灉
+    // Excel导出功能 - 移动端PC端统一效果
 TimetableApp.prototype.exportToExcel = async function() {
         try {
             const titleEl = document.getElementById('tableTitle') || document.getElementById('timetableTitle');
             const title = (titleEl && titleEl.value) || '课程表';
             
-            // 鍒涘缓鍏煎Excel鐨凥TML鏍煎紡
+            // 创建兼容Excel的HTML格式
             let excelContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <meta charset="utf-8">

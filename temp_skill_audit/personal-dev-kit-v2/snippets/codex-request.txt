@@ -1,0 +1,4 @@
+Read AGENTS.md first.
+Use the smallest suitable design.
+Before coding, list affected files, acceptance criteria, and tests.
+After coding, run relevant checks and summarize risks.
