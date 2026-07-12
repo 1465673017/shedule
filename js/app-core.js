@@ -197,6 +197,7 @@ class TimetableApp {
         bind('resetBtn', 'click', () => this.openResetModal());
         bind('exportBtn', 'click', () => this.openExportModal());
         bind('settingsBtn', 'click', () => this.openSettingsModal());
+        window.addEventListener('resize', () => this.syncTimetableLayout());
         
         // 设置弹窗相关
         bind('gradeForm', 'submit', (e) => this.saveGrade(e));

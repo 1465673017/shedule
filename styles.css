@@ -605,6 +605,14 @@ body {
     scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
 }
 
+.timetable-wrapper {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
 /* 课程表容器滚动条 */
 .timetable-container::-webkit-scrollbar {
     width: 8px;

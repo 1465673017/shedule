@@ -477,6 +477,44 @@ TimetableApp.prototype.renderTimetable = function() {
         });
 
         this.highlightTodayColumn();
+        this.syncTimetableLayout();
+}
+
+TimetableApp.prototype.getVisibleTimetableDayCount = function() {
+        let dayCount = 5;
+        if (this.settings.showSaturday) dayCount += 1;
+        if (this.settings.showSunday) dayCount += 1;
+        return dayCount;
+}
+
+TimetableApp.prototype.getTimetableLayoutMetrics = function() {
+        const periodColumnWidth = 120;
+        const dayColumnWidth = 120;
+        const containerPadding = 48;
+        const visibleDayCount = this.getVisibleTimetableDayCount();
+        const tableMinWidth = periodColumnWidth + (visibleDayCount * dayColumnWidth);
+
+        return {
+            visibleDayCount,
+            periodColumnWidth,
+            dayColumnWidth,
+            tableMinWidth,
+            containerMinWidth: tableMinWidth + containerPadding
+        };
+}
+
+TimetableApp.prototype.syncTimetableLayout = function() {
+        const container = document.querySelector('.timetable-container');
+        const wrapper = document.querySelector('.timetable-wrapper');
+        const table = document.getElementById('timetable');
+        if (!container || !wrapper || !table) return;
+
+        const metrics = this.getTimetableLayoutMetrics();
+        wrapper.style.overflowX = 'auto';
+        wrapper.style.width = '100%';
+        wrapper.style.minWidth = '0';
+        table.style.minWidth = `${metrics.tableMinWidth}px`;
+        table.style.width = '100%';
 }
 
 

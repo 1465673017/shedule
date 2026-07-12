@@ -479,6 +479,182 @@ TimetableApp.prototype.saveAsImage = function() {
         }
     }
 
+TimetableApp.prototype.saveAsImage = function() {
+        try {
+            const titleInput = document.getElementById('tableTitle') || document.getElementById('timetableTitle');
+            const titleText = (titleInput && titleInput.value) || '课表';
+            const metrics = this.getTimetableLayoutMetrics ? this.getTimetableLayoutMetrics() : {
+                visibleDayCount: 7,
+                tableMinWidth: 960,
+                containerMinWidth: 1008
+            };
+            const sourceWrapper = document.querySelector('.timetable-wrapper');
+            const sourceTable = document.getElementById('timetable');
+            const exportWidth = Math.max(
+                metrics.containerMinWidth,
+                sourceWrapper ? Math.ceil(sourceWrapper.scrollWidth) : 0,
+                sourceTable ? Math.ceil(sourceTable.scrollWidth + 48) : 0
+            );
+
+            const cleanContainer = document.createElement('div');
+            cleanContainer.style.cssText = `
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+                width: ${exportWidth}px;
+                box-sizing: border-box;
+                padding: 30px;
+                background: white;
+                font-family: "Microsoft YaHei", Arial, sans-serif;
+            `;
+
+            const originalTable = document.querySelector('.timetable-container');
+            if (!originalTable) {
+                alert('未找到课程表容器，无法导出图片');
+                return;
+            }
+
+            const tableClone = originalTable.cloneNode(true);
+
+            tableClone.querySelectorAll('.section-controls').forEach(control => control.remove());
+            tableClone.querySelectorAll('.date-navigator').forEach(navigator => navigator.remove());
+            tableClone.querySelectorAll('h1, h2, h3, .title, .timetable-title-section, .table-title-input').forEach(title => title.remove());
+            tableClone.querySelectorAll('.today-col').forEach(cell => cell.classList.remove('today-col'));
+            tableClone.querySelectorAll('.today-header').forEach(cell => cell.classList.remove('today-header'));
+
+            const clonedWrapper = tableClone.querySelector('.timetable-wrapper');
+            if (clonedWrapper) {
+                clonedWrapper.style.overflow = 'visible';
+                clonedWrapper.style.width = '100%';
+                clonedWrapper.style.minWidth = '0';
+            }
+
+            const titleDiv = document.createElement('div');
+            titleDiv.style.cssText = 'text-align: center; margin-bottom: 20px; padding: 0;';
+
+            const mainTitle = document.createElement('h1');
+            mainTitle.textContent = titleText;
+            mainTitle.style.cssText = 'margin: 0; font-size: 28px; font-weight: bold; color: #333; font-family: "Microsoft YaHei", Arial, sans-serif;';
+
+            titleDiv.appendChild(mainTitle);
+            cleanContainer.appendChild(titleDiv);
+            cleanContainer.appendChild(tableClone);
+
+            const table = tableClone.querySelector('.timetable') || tableClone;
+            table.style.cssText = `
+                border-collapse: collapse;
+                width: 100%;
+                min-width: ${metrics.tableMinWidth}px;
+                table-layout: fixed;
+                border: 2px solid #333;
+                font-size: 14px;
+            `;
+
+            table.querySelectorAll('td, th').forEach(cell => {
+                const isHeader = cell.tagName.toLowerCase() === 'th' || cell.classList.contains('period-header');
+                cell.style.cssText = `
+                    border: 1px solid #333;
+                    padding: 12px 8px;
+                    text-align: center;
+                    vertical-align: middle;
+                    min-width: 80px;
+                    min-height: 60px;
+                    font-family: "Microsoft YaHei", Arial, sans-serif;
+                    font-size: 14px;
+                    ${isHeader ? 'background-color: #f8f9fa; font-weight: bold;' : ''}
+                `;
+            });
+
+            table.querySelectorAll('.cell').forEach(cell => {
+                cell.style.overflow = 'visible';
+                cell.style.background = '#ffffff';
+            });
+
+            table.querySelectorAll('.subject-bg-light').forEach(card => {
+                card.style.overflow = 'visible';
+                card.style.boxShadow = 'none';
+                card.style.paddingTop = '14px';
+                card.style.minHeight = '88px';
+            });
+
+            table.querySelectorAll('.subject-name-light').forEach(name => {
+                name.style.overflow = 'visible';
+                name.style.textOverflow = 'clip';
+                name.style.display = 'flex';
+                name.style.alignItems = 'flex-start';
+                name.style.justifyContent = 'space-between';
+                name.style.gap = '8px';
+                name.style.paddingRight = '0';
+                name.style.minHeight = '28px';
+                name.style.lineHeight = '1.4';
+            });
+
+            table.querySelectorAll('.subject-name-text').forEach(text => {
+                text.style.flex = '1 1 auto';
+                text.style.minWidth = '0';
+                text.style.maxWidth = 'none';
+                text.style.overflow = 'hidden';
+                text.style.textOverflow = 'ellipsis';
+                text.style.whiteSpace = 'nowrap';
+            });
+
+            table.querySelectorAll('.subject-grade-tag').forEach(tag => {
+                tag.style.position = 'static';
+                tag.style.top = 'auto';
+                tag.style.right = 'auto';
+                tag.style.transform = 'none';
+                tag.style.flex = '0 0 auto';
+                tag.style.minWidth = '52px';
+                tag.style.lineHeight = '1.4';
+                tag.style.padding = '3px 8px';
+                tag.style.marginTop = '1px';
+                tag.style.zIndex = '4';
+            });
+
+            table.querySelectorAll('tr').forEach(row => {
+                const rowCells = row.querySelectorAll('td, th');
+                let cellIndex = 0;
+                rowCells.forEach(cell => {
+                    if (cellIndex >= 1) {
+                        const dayIndex = cellIndex - 1;
+                        if (dayIndex === 5 && !this.settings.showSaturday) cell.style.display = 'none';
+                        if (dayIndex === 6 && !this.settings.showSunday) cell.style.display = 'none';
+                    }
+                    cellIndex++;
+                });
+            });
+
+            document.body.appendChild(cleanContainer);
+
+            if (typeof html2canvas === 'undefined') {
+                alert('图片导出组件未加载，请检查网络连接后刷新页面重试');
+                document.body.removeChild(cleanContainer);
+                return;
+            }
+
+            html2canvas(cleanContainer, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                width: exportWidth,
+                height: cleanContainer.scrollHeight,
+                windowWidth: exportWidth
+            }).then(async canvas => {
+                document.body.removeChild(cleanContainer);
+                const base64Data = canvas.toDataURL('image/png', 1.0).replace(/^data:image\/png;base64,/, '');
+                await this._saveFile(base64Data, 'base64', `${titleText}.png`, 'image/png', 'png');
+            }).catch(error => {
+                console.error('生成图片失败:', error);
+                alert('生成图片失败，请重试');
+                document.body.removeChild(cleanContainer);
+            });
+        } catch (error) {
+            console.error('保存图片出错:', error);
+            alert('保存图片出错: ' + (error && error.message ? error.message : error));
+        }
+    }
+
 TimetableApp.prototype.exportToWord = async function() {
         try {
             const titleEl = document.getElementById('tableTitle') || document.getElementById('timetableTitle');
@@ -698,7 +874,3 @@ TimetableApp.prototype.exportToExcel = async function() {
             alert('导出 Excel 出错: ' + (error && error.message ? error.message : error));
         }
     }
-
-
-
-
