@@ -6,34 +6,30 @@ function createDefaultSubjects() {
         { id: '1', name: '语文', teacher: '', color: '#FFE4E1' },
         { id: '2', name: '数学', teacher: '', color: '#E3F2FD' },
         { id: '3', name: '英语', teacher: '', color: '#FCE4EC' },
-        { id: '4', name: '美术', teacher: '', color: '#FFF3E0' },
-        { id: '5', name: '健康与体育', teacher: '', color: '#E8EAF6' },
-        { id: '6', name: '道德与法治', teacher: '', color: '#FEF9E7' },
-        { id: '7', name: '音乐', teacher: '', color: '#FFECB3' },
-        { id: '8', name: '劳动', teacher: '', color: '#F5F5F5' },
-        { id: '9', name: '班队会', teacher: '', color: '#F3E5F5' },
-        { id: '10', name: '值日', teacher: '', color: '#FFE0B2' },
-        { id: '11', name: '历史', teacher: '', color: '#FFCDBA' },
-        { id: '12', name: '地理', teacher: '', color: '#D1C4E9' },
-        { id: '13', name: '政治', teacher: '', color: '#FFEBEE' },
-        { id: '14', name: '物理', teacher: '', color: '#EFEBE9' },
-        { id: '15', name: '化学', teacher: '', color: '#B3E5FC' },
-        { id: '16', name: '生物', teacher: '', color: '#F8BBD9' }
+        { id: '4', name: '物理', teacher: '', color: '#EFEBE9' },
+        { id: '5', name: '化学', teacher: '', color: '#B3E5FC' },
+        { id: '6', name: '生物', teacher: '', color: '#F8BBD9' },
+        { id: '7', name: '历史', teacher: '', color: '#FFCDBA' },
+        { id: '8', name: '道法', teacher: '', color: '#FEF9E7' },
+        { id: '9', name: '跨学科', teacher: '', color: '#D1C4E9' },
+        { id: '10', name: '未分类', teacher: '', color: '#E5E7EB' }
     ];
 }
 
 function createDefaultPeriods() {
     return [
-        { name: '第1节', time: '08:00-08:40' },
-        { name: '第2节', time: '08:50-09:30' },
-        { name: '第3节', time: '10:00-10:40' },
-        { name: '第4节', time: '10:50-11:30' },
-        { name: '第5节', time: '14:00-14:40' },
-        { name: '第6节', time: '14:50-15:30' },
-        { name: '第7节', time: '15:40-16:20' },
-        { name: '第8节', time: '19:00-19:40' },
-        { name: '第9节', time: '19:50-20:30' }
+        { name: '第1节', time: '08:00-10:00' },
+        { name: '第2节', time: '10:10-12:10' },
+        { name: '第3节', time: '13:00-15:00' },
+        { name: '第4节', time: '15:10-17:10' },
+        { name: '第5节', time: '17:30-19:30' },
+        { name: '第6节', time: '19:40-21:40' }
     ];
+}
+
+function createDefaultQuickSettings() {
+    return { totalPeriods: 6, firstStart: '08:00', periodDuration: 120, breakDuration: 10,
+        lunchPosition: 2, lunchDuration: 50, dinnerPosition: 4, dinnerDuration: 20 };
 }
 
 function createDefaultSettings() {
@@ -74,24 +70,7 @@ function createDefaultGrades() {
 class TimetableApp {
     constructor() {
         this.MAX_STUDENTS_PER_COURSE = 4;
-        this.subjects = [
-            { id: '1', name: '语文', teacher: '', color: '#FFE4E1' },
-            { id: '2', name: '数学', teacher: '', color: '#E3F2FD' },
-            { id: '3', name: '英语', teacher: '', color: '#FCE4EC' },
-            { id: '4', name: '美术', teacher: '', color: '#FFF3E0' },
-            { id: '5', name: '健康与体育', teacher: '', color: '#E8EAF6' },
-            { id: '6', name: '道德与法制', teacher: '', color: '#FEF9E7' },
-            { id: '7', name: '音乐', teacher: '', color: '#FFECB3' },
-            { id: '8', name: '劳动', teacher: '', color: '#F5F5F5' },
-            { id: '9', name: '班队会', teacher: '', color: '#F3E5F5' },
-            { id: '10', name: '值日', teacher: '', color: '#FFE0B2' },
-            { id: '11', name: '历史', teacher: '', color: '#FFCDBA' },
-            { id: '12', name: '地理', teacher: '', color: '#D1C4E9' },
-            { id: '13', name: '政治', teacher: '', color: '#FFEBEE' },
-            { id: '14', name: '物理', teacher: '', color: '#EFEBE9' },
-            { id: '15', name: '化学', teacher: '', color: '#B3E5FC' },
-            { id: '16', name: '生物', teacher: '', color: '#F8BBD9' }
-        ];
+        this.subjects = createDefaultSubjects();
         this.students = [];
         this.manualCourses = [];   // 手动添加的课程（未排入课表的）
         this.currentPool = 'subject';
@@ -119,7 +98,7 @@ class TimetableApp {
             { id: 'g12', name: '高三', color: '#D1C4E9' }
         ];
         this.editingGrade = null;
-        this.quickSettingsState = null;
+        this.quickSettingsState = createDefaultQuickSettings();
         this.editingSubject = null;
         this.editingCell = null;
         this.editingPeriod = null;
@@ -443,7 +422,7 @@ class TimetableApp {
             this.erpData = parsed.erpData || null;
             this._legacyPeriodsForMigration = parsed.periods && !Array.isArray(parsed.periods) ? parsed.periods : null;
             this.periods = parsed.periods || this.periods;
-            this.quickSettingsState = parsed.quickSettingsState || null;
+            this.quickSettingsState = parsed.quickSettingsState || createDefaultQuickSettings();
 
             if (parsed.subjects && Array.isArray(parsed.subjects) && parsed.subjects.length > 0) {
                 this.subjects = parsed.subjects;
@@ -452,24 +431,7 @@ class TimetableApp {
         }
 
         if (!hasValidSubjects) {
-            this.subjects = [
-                { id: '1', name: 'Chinese', teacher: '', color: '#FFE4E1' },
-                { id: '2', name: 'Math', teacher: '', color: '#E3F2FD' },
-                { id: '3', name: 'English', teacher: '', color: '#FCE4EC' },
-                { id: '4', name: 'Art', teacher: '', color: '#FFF3E0' },
-                { id: '5', name: 'PE', teacher: '', color: '#E8EAF6' },
-                { id: '6', name: 'Morality', teacher: '', color: '#FEF9E7' },
-                { id: '7', name: 'Music', teacher: '', color: '#FFECB3' },
-                { id: '8', name: 'Labor', teacher: '', color: '#F5F5F5' },
-                { id: '9', name: 'Class Meeting', teacher: '', color: '#F3E5F5' },
-                { id: '10', name: 'Duty', teacher: '', color: '#FFE0B2' },
-                { id: '11', name: 'History', teacher: '', color: '#FFCDBA' },
-                { id: '12', name: 'Geography', teacher: '', color: '#D1C4E9' },
-                { id: '13', name: 'Politics', teacher: '', color: '#FFEBEE' },
-                { id: '14', name: 'Physics', teacher: '', color: '#EFEBE9' },
-                { id: '15', name: 'Chemistry', teacher: '', color: '#B3E5FC' },
-                { id: '16', name: 'Biology', teacher: '', color: '#F8BBD9' }
-            ];
+            this.subjects = createDefaultSubjects();
         }
 
         this.periods = this.normalizePeriods(this.periods);
@@ -813,7 +775,7 @@ class TimetableApp {
         this.settings = createDefaultSettings();
         this.grades = createDefaultGrades();
         this.erpData = window.createEmptyErpData ? window.createEmptyErpData() : null;
-        this.quickSettingsState = null;
+        this.quickSettingsState = createDefaultQuickSettings();
         this.currentPool = 'subject';
         this.currentStudentFilter = 'ongoing';
         this.currentDate = new Date();
