@@ -10,6 +10,29 @@
 
     const normalizeIds = (ids) => Array.isArray(ids) ? ids.map(id => String(id)) : [];
 
+    function normalizeSubjectId(app, subjectId, studentIds) {
+        if (subjectId !== null && subjectId !== undefined && subjectId !== '') {
+            return String(subjectId);
+        }
+
+        const normalizedStudents = normalizeIds(studentIds);
+        if (normalizedStudents.length === 0) return null;
+
+        if (app && typeof app.ensureUncategorizedSubject === 'function') {
+            const subject = app.ensureUncategorizedSubject();
+            if (subject && subject.id !== undefined && subject.id !== null) {
+                return String(subject.id);
+            }
+        }
+
+        const fallback = app && Array.isArray(app.subjects)
+            ? app.subjects.find(s => s && s.name === '未分类')
+            : null;
+        return fallback && fallback.id !== undefined && fallback.id !== null
+            ? String(fallback.id)
+            : null;
+    }
+
     const sortVersions = (versions) => versions.sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
     function createEmptyErpData() {
@@ -38,14 +61,15 @@
 
     function makeTemplate(app, subjectId, studentIds, source) {
         const erp = ensureErpData(app);
+        const normalizedSubjectId = normalizeSubjectId(app, subjectId, studentIds);
         const sorted = normalizeIds(studentIds).sort().join(',');
-        const key = `${subjectId || ''}::${sorted}`;
+        const key = `${normalizedSubjectId || ''}::${sorted}`;
         let template = erp.courseTemplates.find(t => t.templateKey === key);
         if (!template) {
             template = {
                 id: makeId('tpl'),
                 templateKey: key,
-                subjectId: subjectId || null,
+                subjectId: normalizedSubjectId,
                 defaultStudentIds: normalizeIds(studentIds),
                 source: source || 'schedule',
                 createdAt: new Date().toISOString(),
@@ -53,7 +77,7 @@
             };
             erp.courseTemplates.push(template);
         } else {
-            template.subjectId = subjectId || null;
+            template.subjectId = normalizedSubjectId;
             template.defaultStudentIds = normalizeIds(studentIds);
             template.archived = false;
             template.updatedAt = new Date().toISOString();
@@ -515,8 +539,9 @@
         setCellVersion(app, key, weekStartStr, subjectId, studentIds, options = {}) {
             const erp = ensureErpData(app);
             const normalizedStudents = normalizeIds(studentIds);
-            const hasContent = subjectId !== null && subjectId !== undefined || normalizedStudents.length > 0;
-            const template = makeTemplate(app, subjectId || null, normalizedStudents, options.source || 'schedule');
+            const normalizedSubjectId = normalizeSubjectId(app, subjectId, normalizedStudents);
+            const hasContent = normalizedSubjectId !== null || normalizedStudents.length > 0;
+            const template = makeTemplate(app, normalizedSubjectId, normalizedStudents, options.source || 'schedule');
             const existing = erp.courseInstances.find(instance =>
                 instance.cellKey === key && instance.weekStart === weekStartStr
             );
@@ -528,7 +553,7 @@
                     courseTemplateId: template.id,
                     cellKey: key,
                     weekStart: weekStartStr,
-                    subjectId: subjectId || null,
+                    subjectId: normalizedSubjectId,
                     studentIds: normalizedStudents,
                     status: options.cutoff ? 'deleted' : 'recurring',
                     isDeleted: !!options.cutoff,
@@ -641,7 +666,17 @@
             this.archiveTemplatesBySubject(app, subjectId);
             erp.courseInstances.forEach(instance => {
                 if (instance.subjectId !== subjectId) return;
-                instance.subjectId = null;
+                const relationStudentIds = erp.studentCourseRelations
+                    .filter(rel => rel.courseInstanceId === instance.id)
+                    .map(rel => rel.studentId);
+                const nextStudentIds = relationStudentIds.length > 0
+                    ? relationStudentIds
+                    : normalizeIds(instance.studentIds);
+                const nextSubjectId = normalizeSubjectId(app, null, nextStudentIds);
+                const template = makeTemplate(app, nextSubjectId, nextStudentIds, instance.source || 'schedule');
+                instance.subjectId = nextSubjectId;
+                instance.courseTemplateId = template.id;
+                instance.studentIds = nextStudentIds;
                 instance.updatedAt = new Date().toISOString();
                 upsertExceptionRule(app, {
                     courseInstanceId: instance.id,

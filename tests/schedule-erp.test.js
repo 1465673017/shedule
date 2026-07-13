@@ -39,6 +39,17 @@ function makeApp() {
             const m = String(date.getMonth() + 1).padStart(2, '0');
             const d = String(date.getDate()).padStart(2, '0');
             return `${y}-${m}-${d}`;
+        },
+        getPeriod(periodIndex) {
+            return this.periods.afternoon[periodIndex] || null;
+        },
+        ensureUncategorizedSubject() {
+            let subject = this.subjects.find(s => s && s.name === '未分类');
+            if (!subject) {
+                subject = { id: 'uncategorized', name: '未分类', color: '#94a3b8' };
+                this.subjects.push(subject);
+            }
+            return subject;
         }
     };
 }
@@ -175,7 +186,11 @@ const app5 = makeApp();
 ScheduleErpService.setCellVersion(app5, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
 ScheduleErpService.removeSubjectFromSchedule(app5, 'math');
 const subjectlessVersion = ScheduleErpService.getCellVersion(app5, '3-afternoon-0', '2026-07-06');
-assert.strictEqual(subjectlessVersion.subject, null, 'removing a subject should clear it from projected courses');
+assert.strictEqual(
+    subjectlessVersion.subject,
+    'uncategorized',
+    'removing a subject should move scheduled students to the uncategorized subject'
+);
 assert.deepStrictEqual(
     studentIds(subjectlessVersion),
     ['s1'],

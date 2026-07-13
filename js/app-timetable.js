@@ -190,6 +190,10 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
             newStudents = [];
         }
 
+        if (!newSubject && newStudents.length > 0) {
+            newSubject = this.ensureUncategorizedSubject().id;
+        }
+
         const isEmpty = !newSubject && newStudents.length === 0;
         this.setCellVersion(key, weekStartStr, newSubject, newStudents, { cutoff: isEmpty });
 
@@ -565,7 +569,9 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             if (version) {
                 const students = (version.student || [])
                     .map(id => this.students.find(s => s.id === id)).filter(Boolean);
-                const subject = version.subject ? this.subjects.find(s => s.id === version.subject) : null;
+                const subject = version.subject
+                    ? this.subjects.find(s => s.id === version.subject)
+                    : (students.length > 0 ? this.ensureUncategorizedSubject() : null);
 
                 if (subject || students.length > 0) {
                     cell.classList.add('occupied');
@@ -729,72 +735,6 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     });
                 }
                 
-                if (students.length > 0 && !subject) {
-                    const studentContainer = document.createElement('div');
-                    studentContainer.className = 'cell-content';
-                    studentContainer.style.cssText = 'position: absolute; top: 8px; left: 6px; width: calc(100% - 12px) !important; height: calc(100% - 14px) !important; display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 6px; box-sizing: border-box; z-index: 2;';
-                    
-                    const studentCount = students.length;
-                    const isVertical = studentCount >= 3;
-                    
-                    students.forEach(student => {
-                        const studentCard = document.createElement('div');
-                        studentCard.className = `student-card-light${isVertical ? ' vertical' : ''}`;
-                        studentCard.draggable = true;
-                        studentCard.dataset.itemId = student.id;
-                        studentCard.dataset.itemType = 'student';
-                        studentCard.dataset.sourceDay = day;
-                        studentCard.dataset.sourcePeriod = periodIndex;
-                        
-                        const dynamicColor = this.getStudentGradeColor(student);
-                        const gradeColor = dynamicColor || '#666666';
-
-                        const gradeColorBar = document.createElement('div');
-                        gradeColorBar.className = `grade-color-bar ${isVertical ? 'vertical' : 'horizontal'}`;
-                        gradeColorBar.style.backgroundColor = gradeColor;
-
-                        const studentName = document.createElement('div');
-                        studentName.className = `student-name${isVertical ? ' vertical' : ''}`;
-                        studentName.textContent = student.name;
-
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'delete-cell-btn-light';
-                        deleteBtn.title = '删除学生';
-                        deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M4 7H20M10 11V17M14 11V17M5 7L6 19C6 19.5304 6.21071 20.0391 6.58579 20.4142C6.96086 20.7893 7.46957 21 8 21H16C16.5304 21 17.0391 20.7893 17.4142 20.4142C17.7893 20.0391 18 19.5304 18 19L19 7M9 7V4C9 3.73478 9.10536 3.48043 9.29289 3.29289C9.48043 3.10536 9.73478 3 10 3H14C14.2652 3 14.5196 3.10536 14.7071 3.29289C14.8946 3.48043 15 3.73478 15 4V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-                        deleteBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.removeItemFromCell(cell, 'student', student.id);
-                        });
-
-                        studentCard.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            this.openAttendanceModal(cell);
-                        });
-
-                        studentCard.appendChild(gradeColorBar);
-                        studentCard.appendChild(studentName);
-                        studentCard.appendChild(deleteBtn);
-
-                        if (student.is1v1) {
-                            const badge = document.createElement('span');
-                            badge.className = 'status-badge one-v1';
-                            badge.textContent = '1v1';
-                            studentCard.appendChild(badge);
-                        }
-
-                        if (student.isAudition) {
-                            const badge = document.createElement('span');
-                            badge.className = 'status-badge audition';
-                            badge.textContent = '试';
-                            studentCard.appendChild(badge);
-                        }
-
-                        studentContainer.appendChild(studentCard);
-                    });
-                    
-                    cell.appendChild(studentContainer);
-                }
             } else {
                 cell.classList.add('empty-cell');
                 cell.style.cssText = 'position: relative; cursor: pointer;';

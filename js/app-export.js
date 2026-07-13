@@ -983,11 +983,14 @@ TimetableApp.prototype.exportToWord = async function () {
             for (let day = 1; day <= dayCount; day++) {
                 const key = this.buildCellKey(day, index);
                 const version = this.getCellVersion(key, weekStartStr);
-                const subjectId = version ? version.subject : null;
+                let subjectId = version ? version.subject : null;
                 const studentIds = version ? (version.student || []) : [];
                 const students = studentIds
                     .map(id => this.students.find(s => s.id === id))
                     .filter(Boolean);
+                if (!subjectId && students.length > 0) {
+                    subjectId = this.ensureUncategorizedSubject().id;
+                }
 
                 if (subjectId) {
                     const subject = this.subjects.find(s => s.id === subjectId);
@@ -1010,16 +1013,6 @@ TimetableApp.prototype.exportToWord = async function () {
                     } else {
                         wordContent += `<td></td>`;
                     }
-                } else if (students.length > 0) {
-                    const studentNames = students.map(student => student.name);
-                    const studentChunks = [];
-                    for (let i = 0; i < studentNames.length; i += 2) {
-                        studentChunks.push(studentNames.slice(i, i + 2).join('、'));
-                    }
-                    const studentLines = studentChunks.map((line, idx) =>
-                        `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
-                    ).join('');
-                    wordContent += `<td><div class="cell-lines">${studentLines}</div></td>`;
                 } else {
                     wordContent += `<td></td>`;
                 }
@@ -1150,11 +1143,14 @@ TimetableApp.prototype.exportToExcel = async function () {
             for (let day = 1; day <= dayCount; day++) {
                 const key = this.buildCellKey(day, index);
                 const version = this.getCellVersion(key, weekStartStr);
-                const subjectId = version ? version.subject : null;
+                let subjectId = version ? version.subject : null;
                 const studentIds = version ? (version.student || []) : [];
                 const students = studentIds
                     .map(id => this.students.find(s => s.id === id))
                     .filter(Boolean);
+                if (!subjectId && students.length > 0) {
+                    subjectId = this.ensureUncategorizedSubject().id;
+                }
 
                 if (subjectId) {
                     const subject = this.subjects.find(s => s.id === subjectId);
@@ -1177,16 +1173,6 @@ TimetableApp.prototype.exportToExcel = async function () {
                     } else {
                         excelContent += '<td></td>';
                     }
-                } else if (students.length > 0) {
-                    const studentNames = students.map(student => student.name);
-                    const studentChunks = [];
-                    for (let i = 0; i < studentNames.length; i += 2) {
-                        studentChunks.push(studentNames.slice(i, i + 2).join('、'));
-                    }
-                    const studentLines = studentChunks.map((line, idx) =>
-                        `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
-                    ).join('');
-                    excelContent += `<td><div class="cell-lines">${studentLines}</div></td>`;
                 } else {
                     excelContent += '<td></td>';
                 }

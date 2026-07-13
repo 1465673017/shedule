@@ -263,7 +263,7 @@ TimetableApp.prototype.renderAttendanceStudentList = function(students, key) {
                                 onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'recurring', this)">循环</button>
                         <button class="recurrence-btn ${recType === 'stopped' ? 'active stopped' : ''} ${auditionDisabled} ${completedDisabled}"
                                 data-sid="${student.id}"
-                                onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'stopped', this)">停止循环</button>
+                                onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'stopped', this)">中止</button>
                         <button class="recurrence-btn ${recType === 'temporary' ? 'active temporary' : ''} ${completedDisabled}"
                                 data-sid="${student.id}"
                                 onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'temporary', this)">临时</button>
@@ -402,7 +402,7 @@ TimetableApp.prototype.getStudentAttendance = function(studentId, startDate = nu
         return result;
     }
 
-    // ========== 学生课程重复类型（循环/停止循环/临时）——基于版本操作 ==========
+    // ========== 学生课程重复类型（循环/中止循环/临时）——基于版本操作 ==========
 
 TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
         if (this.erpData && Array.isArray(this.erpData.studentCourseRelations)) {
@@ -419,7 +419,7 @@ TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
         }
 
         // 通过版本传播判断：找到当前有效版本和下一个版本。
-        // 如果下一个版本科目不同或不包含该学生，则停止循环。
+        // 如果下一个版本科目不同或不包含该学生，则中止循环。
         const weekRange = this.getWeekRange(this.currentDate);
         const currentWeekStr = this.formatLocalDate(weekRange.start);
         const curVersion = this.getCellVersion(cellKey, currentWeekStr);
