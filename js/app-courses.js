@@ -263,7 +263,7 @@ TimetableApp.prototype.renderSubjectPicker = function(selectedId = '') {
                 '跨学科': '◎', '未分类': '▦', '地理': '◎', '政治': '▥'
             };
             const icon = subjectIcons[subject.name] || subject.name.slice(0, 1);
-            chip.innerHTML = `<span class="subject-chip-icon" style="--chip-color:${subject.color}">${icon}</span><span class="sc-name">${subject.name}</span>`;
+            chip.innerHTML = `<span class="sc-name">${subject.name}</span>`;
 
             chip.addEventListener('click', () => {
 

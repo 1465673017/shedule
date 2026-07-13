@@ -10,16 +10,23 @@ TimetableApp.prototype.openTextStatsModal = function (date) {
     this._textStatsTab = this._textStatsTab || 'day';
     this._textStatsAnchorDate = new Date(date || new Date());
     this._textStatsAnchorDate.setHours(0, 0, 0, 0);
+    const summaryHead = document.querySelector('.text-stats-summary-head');
+    const headerTools = document.querySelector('.text-stats-header-tools');
+    if (summaryHead && headerTools && headerTools.parentElement !== summaryHead) {
+        summaryHead.appendChild(headerTools);
+    }
     document.getElementById('textStatsModal').style.display = 'block';
     this.switchTextStatsTab(this._textStatsTab, { preserveDate: true });
 }
 
 TimetableApp.prototype.closeTextStatsModal = function () {
     document.getElementById('textStatsModal').style.display = 'none';
+    this._expandedTextStatsLessonKey = null;
 }
 
 TimetableApp.prototype.switchTextStatsTab = function (tab, options) {
     const opts = options || {};
+    if (!opts.preserveDate) this._expandedTextStatsLessonKey = null;
     this._textStatsTab = tab;
 
     document.querySelectorAll('#textStatsTabs .stats-tab').forEach(btn => {
@@ -37,6 +44,7 @@ TimetableApp.prototype.switchTextStatsTab = function (tab, options) {
 }
 
 TimetableApp.prototype.changeTextStatsRange = function (delta) {
+    this._expandedTextStatsLessonKey = null;
     if (!this._textStatsAnchorDate) {
         this._textStatsAnchorDate = new Date();
         this._textStatsAnchorDate.setHours(0, 0, 0, 0);
@@ -67,6 +75,7 @@ TimetableApp.prototype.setTextStatsDate = function (value) {
     const nextDate = this.parseStatsInputDate(value);
     if (!nextDate || Number.isNaN(nextDate.getTime())) return;
     nextDate.setHours(0, 0, 0, 0);
+    this._expandedTextStatsLessonKey = null;
     this._textStatsAnchorDate = nextDate;
     this.renderTextStatsModal();
 }
@@ -759,10 +768,11 @@ TimetableApp.prototype.renderStatsByGrade = function (lessons, options) {
         row.className = 'grade-row';
         row.style.cursor = 'pointer';
         row.title = '点击展开/收起出勤记录';
-        row.dataset.expanded = 'false';
+        let expanded = this._expandedTextStatsLessonKey === lesson.key;
+        row.dataset.expanded = expanded ? 'true' : 'false';
         row.innerHTML = `
                 <div class="gr-name">
-                    ${this.getStatsRowNameHtml(lesson, false)}
+                    ${this.getStatsRowNameHtml(lesson, expanded)}
                 </div>
                 <div class="gr-hours" title="${durationTitle}${dateTitle ? ' · ' + dateTitle : ''}">
                     ${lesson.time} · ${durationDisplay}
@@ -773,14 +783,17 @@ TimetableApp.prototype.renderStatsByGrade = function (lessons, options) {
         // 学生出勤详情面板（初始隐藏）
         const detailPanel = document.createElement('div');
         detailPanel.className = 'grade-detail';
-        detailPanel.style.display = 'none';
+        detailPanel.style.display = expanded ? 'block' : 'none';
         container.appendChild(row);
         container.appendChild(detailPanel);
 
-        let expanded = false;
+        if (expanded) {
+            this.renderLessonAttendanceDetail(detailPanel, lesson);
+        }
         row.addEventListener('click', () => {
             expanded = !expanded;
             row.dataset.expanded = expanded ? 'true' : 'false';
+            this._expandedTextStatsLessonKey = expanded ? lesson.key : null;
             const icon = row.querySelector('.grade-expand-icon');
             if (expanded) {
                 icon.textContent = '▼';
@@ -871,6 +884,7 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
 
             this.setAttendanceStatus(btnKey, sid, newStatus);
             this.syncLessonAttendanceSummary(lesson);
+            this._expandedTextStatsLessonKey = lesson.key;
 
             // 刷新当前行标题、1vN 文案和色块
             const row = panel.previousElementSibling;
@@ -2033,8 +2047,47 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     });
 
     if (validLessons.length === 0) {
-        container.innerHTML = '<div class="text-muted stats-empty-state">' + (config.emptyText || '当前范围内暂无有效课时') + '</div>';
-        return { empty: true };
+        if (config.legacy) {
+            var emptyCards = [];
+            emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">到课 / 排课人次</div></div>');
+            emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">累计课时</div></div>');
+            if (showClassDays) {
+                emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">上课天数</div></div>');
+            }
+            emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">试听人次</div></div>');
+            ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'].forEach(function (type) {
+                emptyCards.push('<div class="stats-card stats-card-type"><div class="st-num">-</div><div class="st-label">' + type + ' 课时</div></div>');
+            });
+            container.innerHTML = emptyCards.join('');
+            return {
+                empty: true,
+                lessonCount: 0,
+                totalPresentStudents: 0,
+                totalScheduledStudents: 0,
+                totalHours: '0.00',
+                totalAuditionCount: 0,
+                classDays: 0,
+                topType: '',
+                typeEntries: []
+            };
+        }
+        container.innerHTML = [
+            '<div class="stats-card stats-card-hours"><div class="stats-card-copy"><div class="st-label">总课时（小时）</div><div class="st-num">-</div></div></div>',
+            '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">总课程（节）</div><div class="st-num">-</div></div></div>',
+            '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">参与人数（人次）</div><div class="st-num">-</div></div></div>',
+            '<div class="stats-card stats-card-average"><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">-</div></div></div>'
+        ].join('');
+        return {
+            empty: true,
+            lessonCount: 0,
+            totalPresentStudents: 0,
+            totalScheduledStudents: 0,
+            totalHours: '0.00',
+            totalAuditionCount: 0,
+            classDays: 0,
+            topType: '',
+            typeEntries: []
+        };
     }
 
     var totalPresentStudents = 0;
@@ -2130,7 +2183,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     });
     fixedTypeOrder.forEach(function (type) {
         var minutes = typeStatsMap[type] || 0;
-        cards.push('<div class="stats-card"><div class="st-num">' + (minutes / 60).toFixed(2) + 'h</div><div class="st-label">' + type + ' 课时</div></div>');
+        cards.push('<div class="stats-card stats-card-type"><div class="st-num">' + (minutes / 60).toFixed(2) + 'h</div><div class="st-label">' + type + ' 课时</div></div>');
     });
 
     container.innerHTML = cards.join('');
@@ -2162,8 +2215,47 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     });
 
     if (validLessons.length === 0) {
-        container.innerHTML = '<div class="text-muted stats-empty-state">' + (config.emptyText || '当前范围内暂无有效课时') + '</div>';
-        return { empty: true };
+        if (config.legacy) {
+            var emptyCards = [];
+            emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">到课 / 排课人次</div></div>');
+            emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">累计课时</div></div>');
+            if (showClassDays) {
+                emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">上课天数</div></div>');
+            }
+            emptyCards.push('<div class="stats-card"><div class="st-num">-</div><div class="st-label">试听人次</div></div>');
+            ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'].forEach(function (type) {
+                emptyCards.push('<div class="stats-card stats-card-type"><div class="st-num">-</div><div class="st-label">' + type + ' 课时</div></div>');
+            });
+            container.innerHTML = emptyCards.join('');
+            return {
+                empty: true,
+                lessonCount: 0,
+                totalPresentStudents: 0,
+                totalScheduledStudents: 0,
+                totalHours: '0.00',
+                totalAuditionCount: 0,
+                classDays: 0,
+                topType: '',
+                typeEntries: []
+            };
+        }
+        container.innerHTML = [
+            '<div class="stats-card stats-card-hours"><div class="stats-card-copy"><div class="st-label">总课时（小时）</div><div class="st-num">-</div></div></div>',
+            '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">总课程（节）</div><div class="st-num">-</div></div></div>',
+            '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">参与人数（人次）</div><div class="st-num">-</div></div></div>',
+            '<div class="stats-card stats-card-average"><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">-</div></div></div>'
+        ].join('');
+        return {
+            empty: true,
+            lessonCount: 0,
+            totalPresentStudents: 0,
+            totalScheduledStudents: 0,
+            totalHours: '0.00',
+            totalAuditionCount: 0,
+            classDays: 0,
+            topType: '',
+            typeEntries: []
+        };
     }
 
     var totalPresentStudents = 0;
@@ -2228,15 +2320,16 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     if (config.legacy) {
         var legacyCards = [];
         legacyCards.push('<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">到课 / 排课人次</div></div>');
-        legacyCards.push('<div class="stats-card"><div class="st-num">' + totalHours + 'h</div><div class="st-label">累计课时</div></div>');
+        legacyCards.push('<div class="stats-card"><div class="st-num">' + (totalMinutes > 0 ? totalHours + 'h' : '-') + '</div><div class="st-label">累计课时</div></div>');
         if (showClassDays) {
-            legacyCards.push('<div class="stats-card"><div class="st-num">' + classDays + '</div><div class="st-label">上课天数</div></div>');
+            legacyCards.push('<div class="stats-card"><div class="st-num">' + (classDays > 0 ? classDays : '-') + '</div><div class="st-label">上课天数</div></div>');
         }
-        legacyCards.push('<div class="stats-card"><div class="st-num">' + totalAuditionCount + '</div><div class="st-label">试听人次</div></div>');
+        legacyCards.push('<div class="stats-card"><div class="st-num">' + (totalAuditionCount > 0 ? totalAuditionCount : '-') + '</div><div class="st-label">试听人次</div></div>');
         var legacyTypeMap = {};
         typeEntries.forEach(function (entry) { legacyTypeMap[entry.type] = entry.minutes; });
         ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'].forEach(function (type) {
-            legacyCards.push('<div class="stats-card"><div class="st-num">' + ((legacyTypeMap[type] || 0) / 60).toFixed(2) + 'h</div><div class="st-label">' + type + ' 课时</div></div>');
+            var typeMinutes = legacyTypeMap[type] || 0;
+            legacyCards.push('<div class="stats-card stats-card-type"><div class="st-num">' + (typeMinutes > 0 ? (typeMinutes / 60).toFixed(2) + 'h' : '-') + '</div><div class="st-label">' + type + ' 课时</div></div>');
         });
         container.innerHTML = legacyCards.join('');
         return {
@@ -2254,7 +2347,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
 
     var previousMetrics = { hours: 0, lessons: 0, people: 0, average: 0 };
     var hasComparisonRange = !!(config.startDate && config.endDate);
-    var comparisonLabel = '较上一周期';
+    var comparisonLabel = '较上1周期';
     if (hasComparisonRange) {
         var granularity = this._chartGranularity || 'day';
         var previousStart;
@@ -2262,22 +2355,22 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         if (granularity === 'year') {
             previousStart = new Date(config.startDate.getFullYear() - 1, 0, 1);
             previousEnd = new Date(config.startDate.getFullYear() - 1, 11, 31);
-            comparisonLabel = '较上年';
+            comparisonLabel = '较上1年';
         } else if (granularity === 'month') {
             previousStart = new Date(config.startDate.getFullYear(), config.startDate.getMonth() - 1, 1);
             previousEnd = new Date(config.startDate.getFullYear(), config.startDate.getMonth(), 0);
-            comparisonLabel = '较上月';
+            comparisonLabel = '较上1月';
         } else if (granularity === 'week') {
             previousStart = new Date(config.startDate);
             previousStart.setDate(previousStart.getDate() - 7);
             previousEnd = new Date(config.endDate);
             previousEnd.setDate(previousEnd.getDate() - 7);
-            comparisonLabel = '较上周';
+            comparisonLabel = '较上1周';
         } else {
             previousStart = new Date(config.startDate);
             previousStart.setDate(previousStart.getDate() - 1);
             previousEnd = new Date(previousStart);
-            comparisonLabel = '较昨天';
+            comparisonLabel = '较上1日';
         }
         var previousLessons = this.aggregateLessons(previousStart, previousEnd);
         var previousDates = new Set();
