@@ -257,7 +257,13 @@ TimetableApp.prototype.renderSubjectPicker = function(selectedId = '') {
 
             chip.dataset.subjectId = subject.id;
 
-            chip.innerHTML = `<span class="sc-name">${subject.name}</span>`;
+            const subjectIcons = {
+                '语文': '▤', '数学': '▦', '英语': 'A', '物理': '∪', '化学': '△',
+                '生物': '♧', '历史': '⌂', '道德': '▥', '道德与法制': '▥',
+                '跨学科': '◎', '未分类': '▦', '地理': '◎', '政治': '▥'
+            };
+            const icon = subjectIcons[subject.name] || subject.name.slice(0, 1);
+            chip.innerHTML = `<span class="subject-chip-icon" style="--chip-color:${subject.color}">${icon}</span><span class="sc-name">${subject.name}</span>`;
 
             chip.addEventListener('click', () => {
 
@@ -302,6 +308,8 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
         const countTag = document.getElementById('lessonStudentCount');
 
         picker.innerHTML = '';
+        const searchInput = document.getElementById('lessonStudentSearch');
+        if (searchInput) searchInput.value = '';
 
         if (this.students.length === 0) {
 
@@ -406,6 +414,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
             }
 
             chip.dataset.studentId = student.id;
+            chip.dataset.searchText = `${student.name} ${student.grade || ''}`.toLowerCase();
 
             const oneV1Badge = student.is1v1 ? '<span class="one-v1-badge">1v1</span>' : '';
 
@@ -507,7 +516,19 @@ TimetableApp.prototype.updateLessonStudentCount = function() {
 
         const selected = document.querySelectorAll('#lessonStudentPicker .student-chip.selected');
 
-        countTag.textContent = `(${selected.length})`;
+        countTag.textContent = `已选择 ${selected.length} 人`;
+
+    }
+
+TimetableApp.prototype.filterLessonStudents = function(keyword = '') {
+
+        const normalized = keyword.trim().toLowerCase();
+
+        document.querySelectorAll('#lessonStudentPicker .student-chip').forEach(chip => {
+
+            chip.style.display = !normalized || (chip.dataset.searchText || '').includes(normalized) ? '' : 'none';
+
+        });
 
     }
 

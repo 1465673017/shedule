@@ -222,7 +222,22 @@ class TimetableApp {
         // 日期导航相关
         bind('prevWeekBtn', 'click', () => this.changeWeek(-1));
         bind('nextWeekBtn', 'click', () => this.changeWeek(1));
+        bind('todayBtn', 'click', () => {
+            this.currentDate = new Date();
+            this.updateWeekRange();
+            this.renderTimetable();
+        });
         bind('datePicker', 'change', (e) => this.handleDateChange(e));
+        const calendarIcon = document.querySelector('.calendar-icon');
+        if (calendarIcon) {
+            calendarIcon.addEventListener('click', (e) => {
+                e.preventDefault();
+                const picker = document.getElementById('datePicker');
+                if (picker && typeof picker.showPicker === 'function') picker.showPicker();
+                else if (picker) picker.focus();
+            });
+        }
+        bind('lessonStudentSearch', 'input', (e) => this.filterLessonStudents(e.target.value));
         
 
         
@@ -237,6 +252,10 @@ class TimetableApp {
             if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
                 document.getElementById('customColor').value = e.target.value;
             }
+        });
+        bind('subjectName', 'input', (e) => {
+            const count = document.getElementById('subjectNameCount');
+            if (count) count.textContent = `${e.target.value.length} / 20`;
         });
         
         // 拖拽相关
@@ -853,6 +872,11 @@ class TimetableApp {
         document.getElementById('currentWeekRange').style.cursor = 'pointer';
         document.getElementById('currentWeekRange').title = '点击查看课时统计';
         document.getElementById('currentWeekRange').onclick = () => this.openStatsModal(this.currentDate);
+
+        const firstDay = new Date(startDate.getFullYear(), 0, 1);
+        const weekNumber = Math.ceil((((startDate - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
+        const weekNumberLabel = document.getElementById('weekNumber');
+        if (weekNumberLabel) weekNumberLabel.textContent = `第 ${weekNumber} 周`;
         
         const datePicker = document.getElementById('datePicker');
         const currentDateStr = this.currentDate.toISOString().split('T')[0];

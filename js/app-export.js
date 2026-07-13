@@ -845,37 +845,39 @@ TimetableApp.prototype.saveAsImage = function () {
         });
 
         table.querySelectorAll('.subject-name-light').forEach(name => {
-            name.style.overflow = 'visible';
-            name.style.textOverflow = 'clip';
-            name.style.display = 'flex';
-            name.style.alignItems = 'flex-start';
-            name.style.justifyContent = 'space-between';
-            name.style.gap = '8px';
-            name.style.paddingRight = '0';
-            name.style.minHeight = '28px';
-            name.style.lineHeight = '1.4';
+            name.style.setProperty('overflow', 'visible', 'important');
+            name.style.setProperty('text-overflow', 'clip', 'important');
+            name.style.setProperty('display', 'flex', 'important');
+            name.style.setProperty('align-items', 'center', 'important');
+            name.style.setProperty('justify-content', 'space-between', 'important');
+            name.style.setProperty('gap', '8px', 'important');
+            name.style.setProperty('padding-right', '0', 'important');
+            name.style.setProperty('min-height', '28px', 'important');
+            name.style.setProperty('line-height', '1.4', 'important');
         });
 
         table.querySelectorAll('.subject-name-text').forEach(text => {
-            text.style.flex = '1 1 auto';
-            text.style.minWidth = '0';
-            text.style.maxWidth = 'none';
-            text.style.overflow = 'hidden';
-            text.style.textOverflow = 'ellipsis';
-            text.style.whiteSpace = 'nowrap';
+            text.style.setProperty('display', 'block', 'important');
+            text.style.setProperty('width', 'auto', 'important');
+            text.style.setProperty('flex', '1 1 auto', 'important');
+            text.style.setProperty('min-width', '0', 'important');
+            text.style.setProperty('max-width', 'none', 'important');
+            text.style.setProperty('overflow', 'hidden', 'important');
+            text.style.setProperty('text-overflow', 'ellipsis', 'important');
+            text.style.setProperty('white-space', 'nowrap', 'important');
         });
 
         table.querySelectorAll('.subject-grade-tag').forEach(tag => {
-            tag.style.position = 'static';
-            tag.style.top = 'auto';
-            tag.style.right = 'auto';
-            tag.style.transform = 'none';
-            tag.style.flex = '0 0 auto';
-            tag.style.minWidth = '52px';
-            tag.style.lineHeight = '1.4';
-            tag.style.padding = '3px 8px';
-            tag.style.marginTop = '1px';
-            tag.style.zIndex = '4';
+            tag.style.setProperty('position', 'static', 'important');
+            tag.style.setProperty('top', 'auto', 'important');
+            tag.style.setProperty('right', 'auto', 'important');
+            tag.style.setProperty('transform', 'none', 'important');
+            tag.style.setProperty('flex', '0 0 auto', 'important');
+            tag.style.setProperty('min-width', '52px', 'important');
+            tag.style.setProperty('line-height', '1.4', 'important');
+            tag.style.setProperty('padding', '3px 8px', 'important');
+            tag.style.setProperty('margin-top', '0', 'important');
+            tag.style.setProperty('z-index', '4', 'important');
         });
 
         table.querySelectorAll('tr').forEach(row => {

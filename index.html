@@ -7,17 +7,17 @@
     <link rel="stylesheet" href="./styles.css">
 </head>
 
-<body>
+<body class="reference-main-ui">
     <!-- 主要内容区域 -->
     <div class="container">
         <main class="main-content">
             <!-- 左侧栏：菜单按钮、课时控制和科目池 -->
             <div class="left-sidebar">
                 <div class="sidebar-actions">
-                    <button id="exportBtn" class="btn primary">导出</button>
+                    <button id="exportBtn" class="btn primary">导出数据</button>
                     <button id="resetBtn" class="btn secondary">重置课表</button>
                     <button id="tutorialBtn" class="btn tertiary">查看教程</button>
-                    <button id="settingsBtn" class="btn tertiary">设置</button>
+                    <button id="settingsBtn" class="btn tertiary">基础设置</button>
                 </div>
                 <div class="subject-pool">
                     <div class="pool-tabs">
@@ -188,12 +188,18 @@
 
                 <div class="timetable-container">
                     <div class="date-navigator">
-                        <button id="prevWeekBtn">‹ 上一周</button>
-                        <div class="date-display">
-                            <span id="currentWeekRange">加载中...</span>
-                            <input type="date" id="datePicker" class="date-picker">
+                        <div class="week-summary">
+                            <button id="prevWeekBtn" aria-label="上一周">‹</button>
+                            <div class="week-copy">
+                                <strong id="weekNumber">本周</strong>
+                                <button id="nextWeekBtn" aria-label="下一周">›</button>
+                                <span id="currentWeekRange">加载中...</span>
+                            </div>
                         </div>
-                        <button id="nextWeekBtn">下一周 ›</button>
+                        <div class="date-display">
+                            <label class="date-picker-shell" for="datePicker"><span class="calendar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><input type="date" id="datePicker" class="date-picker"></label>
+                            <button type="button" id="todayBtn" class="today-btn">今天</button>
+                        </div>
                     </div>
                     <div class="timetable-wrapper">
                         <table class="timetable" id="timetable">
@@ -232,7 +238,10 @@
                     <div class="modal-section">
                         <div class="form-group">
                             <label id="nameLabel">科目名称</label>
-                            <input type="text" id="subjectName" required="" autocomplete="off">
+                            <div class="entity-name-input-wrap">
+                                <input type="text" id="subjectName" required="" autocomplete="off" maxlength="20" placeholder="请输入科目名称（如：语文）">
+                                <span id="subjectNameCount" class="entity-name-count">0 / 20</span>
+                            </div>
                         </div>
                     </div>
                     <div id="oneV1Toggle" class="modal-section student-type-section one-v1-toggle" style="display: none;">
@@ -249,8 +258,8 @@
                     </div>
                     <div class="modal-section">
                         <div class="form-group">
-                            <label id="teacherLabel">老师姓名</label>
-                            <input type="text" id="teacherName" placeholder="可选">
+                            <label id="teacherLabel">老师姓名 <span class="optional-label">（可选）</span></label>
+                            <input type="text" id="teacherName" placeholder="请填写老师姓名（可选）">
                             <div id="gradeSelector" class="grade-selector" style="display: none;"></div>
                         </div>
                     </div>
@@ -278,10 +287,11 @@
                             <div class="color-option" data-color="#FFCDD2" style="background: #FFCDD2" title="浅珊瑚"></div>
                         </div>
                         <div class="custom-color">
-                            <label>自定义HEX</label>
+                            <label>自定义颜色</label>
                             <input type="color" id="customColor" value="#FF6B6B">
                             <input type="text" id="customColorText" placeholder="#FF6B6B" maxlength="7">
                         </div>
+                        <p class="entity-color-hint"><span aria-hidden="true">ⓘ</span> 选择颜色后将在课程卡片和相关界面中显示</p>
                         </div>
                     </div>
                 </div>
@@ -392,7 +402,12 @@
                             <label>选择学生</label>
                             <span id="lessonStudentCount" class="student-count-tag"></span>
                         </div>
+                        <div class="lesson-student-search-wrap">
+                            <span aria-hidden="true">⌕</span>
+                            <input type="search" id="lessonStudentSearch" placeholder="搜索学生姓名" autocomplete="off">
+                        </div>
                         <div class="student-picker" id="lessonStudentPicker"></div>
+                        <p class="lesson-picker-hint"><span aria-hidden="true">ⓘ</span> 点击学生姓名即可选择或取消</p>
                     </div>
                 </div>
                 <div class="form-actions">

@@ -4,6 +4,9 @@
 TimetableApp.prototype.openSubjectModal = function (subject = null) {
     this.editingSubject = subject;
     const modal = document.getElementById('subjectModal');
+    const modalPanel = modal.querySelector('.entity-editor-modal');
+    modalPanel?.classList.add('subject-mode');
+    modalPanel?.classList.remove('student-mode');
     const title = document.getElementById('modalTitle');
     const subtitle = document.getElementById('entityModalSubtitle');
     const nameLabel = document.getElementById('nameLabel');
@@ -17,8 +20,9 @@ TimetableApp.prototype.openSubjectModal = function (subject = null) {
     title.textContent = subject ? '编辑科目' : '添加科目';
     if (subtitle) subtitle.textContent = '设置科目名称、老师和课程卡片的显示颜色';
     nameLabel.textContent = '科目名称';
-    teacherLabel.textContent = '老师姓名';
-    teacherInput.placeholder = '可选';
+    teacherLabel.innerHTML = '老师姓名 <span class="optional-label">（可选）</span>';
+    nameInput.placeholder = '请输入科目名称（如：语文）';
+    teacherInput.placeholder = '请填写老师姓名（可选）';
 
     // 隐藏1v1开关
     oneV1Toggle.style.display = 'none';
@@ -38,6 +42,9 @@ TimetableApp.prototype.openSubjectModal = function (subject = null) {
         this.selectColorByValue('#FF6B6B');
         deleteBtn.style.display = 'none';
     }
+
+    const nameCount = document.getElementById('subjectNameCount');
+    if (nameCount) nameCount.textContent = `${nameInput.value.length} / 20`;
 
     modal.style.display = 'block';
 }
@@ -144,6 +151,9 @@ TimetableApp.prototype.deleteSubjectFromPool = function (subjectId) {
 TimetableApp.prototype.openStudentModal = function (student = null) {
     this.editingSubject = student;
     const modal = document.getElementById('subjectModal');
+    const modalPanel = modal.querySelector('.entity-editor-modal');
+    modalPanel?.classList.add('student-mode');
+    modalPanel?.classList.remove('subject-mode');
     const title = document.getElementById('modalTitle');
     const subtitle = document.getElementById('entityModalSubtitle');
     const nameLabel = document.getElementById('nameLabel');
@@ -160,6 +170,7 @@ TimetableApp.prototype.openStudentModal = function (student = null) {
     if (subtitle) subtitle.textContent = '填写学生信息，并按需要设置学生类型';
     nameLabel.textContent = '学生姓名';
     teacherLabel.textContent = '学生年级';
+    nameInput.placeholder = '请输入学生姓名';
 
     oneV1Toggle.style.display = 'flex';
     oneV1Btn.classList.remove('active');
@@ -201,6 +212,9 @@ TimetableApp.prototype.openStudentModal = function (student = null) {
         nameInput.value = '';
         deleteBtn.style.display = 'none';
     }
+
+    const nameCount = document.getElementById('subjectNameCount');
+    if (nameCount) nameCount.textContent = `${nameInput.value.length} / 20`;
 
     document.getElementById('colorFormGroup').style.display = 'none';
     modal.style.display = 'block';
