@@ -357,6 +357,7 @@ TimetableApp.prototype.renderTextStatsModal = function () {
         targetId: 'textStatsCards',
         showClassDays: !isDayView,
         compact: true,
+        legacy: true,
         emptyText: '当前范围内暂无有效课时'
     });
     if (summaryNote) {
@@ -587,6 +588,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
 }
 
 TimetableApp.prototype.showDayStats = function (date) {
+    this._textStatsTab = 'day';
     this.openTextStatsModal(date);
 }
 
@@ -1611,7 +1613,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
     var self = this;
 
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var catColors = ['#2a78d6', '#c97b63', '#eda100', '#12907a', '#6b4ce6'];
+    var catColors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
     var typeLabels = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
 
     // Build datasets for each type that has data
@@ -1712,7 +1714,7 @@ TimetableApp.prototype.renderDurationLineChart = function (ctx, data) {
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
 
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var catColors = ['#2a78d6', '#c97b63', '#eda100', '#12907a', '#6b4ce6'];
+    var catColors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
     var pointSizes = this.getLinePointSizes(data.labels.length);
 
     // Build datasets for each type that has data
@@ -1845,7 +1847,7 @@ TimetableApp.prototype.getStatsGranularityLabel = function (granularity) {
 TimetableApp.prototype.updateStatsHeader = function (title, subtitle) {
     var titleEl = document.getElementById('statsTitle');
     var subtitleEl = document.getElementById('statsSubtitle');
-    if (titleEl) titleEl.textContent = '课时统计';
+    if (titleEl) titleEl.textContent = '课时统计总览';
     if (subtitleEl) subtitleEl.style.display = 'none';
 };
 
@@ -2153,28 +2155,95 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         return (typeDisplayOrder[a.type] || 99) - (typeDisplayOrder[b.type] || 99);
     });
 
-    var cards = [];
-    var displayHours = totalMinutes > 0 ? totalHours + 'h' : (useDashForEmpty ? '-' : totalHours + 'h');
-    var displayClassDays = classDays > 0 ? String(classDays) : (useDashForEmpty ? '-' : '0');
-    var displayAuditionCount = totalAuditionCount > 0 ? String(totalAuditionCount) : (useDashForEmpty ? '-' : '0');
-    cards.push('<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">到课 / 排课人次</div></div>');
-    cards.push('<div class="stats-card"><div class="st-num">' + displayHours + '</div><div class="st-label">累计课时</div></div>');
-    if (showClassDays) {
-        cards.push('<div class="stats-card"><div class="st-num">' + displayClassDays + '</div><div class="st-label">上课天数</div></div>');
+    if (config.legacy) {
+        var legacyCards = [];
+        legacyCards.push('<div class="stats-card"><div class="st-num">' + totalPresentStudents + '/' + totalScheduledStudents + '</div><div class="st-label">到课 / 排课人次</div></div>');
+        legacyCards.push('<div class="stats-card"><div class="st-num">' + totalHours + 'h</div><div class="st-label">累计课时</div></div>');
+        if (showClassDays) {
+            legacyCards.push('<div class="stats-card"><div class="st-num">' + classDays + '</div><div class="st-label">上课天数</div></div>');
+        }
+        legacyCards.push('<div class="stats-card"><div class="st-num">' + totalAuditionCount + '</div><div class="st-label">试听人次</div></div>');
+        var legacyTypeMap = {};
+        typeEntries.forEach(function (entry) { legacyTypeMap[entry.type] = entry.minutes; });
+        ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'].forEach(function (type) {
+            legacyCards.push('<div class="stats-card"><div class="st-num">' + ((legacyTypeMap[type] || 0) / 60).toFixed(2) + 'h</div><div class="st-label">' + type + ' 课时</div></div>');
+        });
+        container.innerHTML = legacyCards.join('');
+        return {
+            empty: false,
+            lessonCount: validLessons.length,
+            totalPresentStudents: totalPresentStudents,
+            totalScheduledStudents: totalScheduledStudents,
+            totalHours: totalHours,
+            totalAuditionCount: totalAuditionCount,
+            classDays: classDays,
+            topType: topType,
+            typeEntries: typeEntries
+        };
     }
-    cards.push('<div class="stats-card"><div class="st-num">' + displayAuditionCount + '</div><div class="st-label">试听人次</div></div>');
 
-    var fixedTypeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var typeStatsMap = {};
-    typeEntries.forEach(function (entry) {
-        typeStatsMap[entry.type] = entry.minutes;
-    });
-    fixedTypeOrder.forEach(function (type) {
-        var minutes = typeStatsMap[type] || 0;
-        var display = minutes > 0 ? (minutes / 60).toFixed(2) + 'h' : (useDashForEmpty ? '-' : '0.00h');
-        cards.push('<div class="stats-card"><div class="st-num">' + display + '</div><div class="st-label">' + type + ' 课时</div></div>');
-    });
+    var previousMetrics = { hours: 0, lessons: 0, people: 0, average: 0 };
+    var hasComparisonRange = !!(config.startDate && config.endDate);
+    var comparisonLabel = '较上一周期';
+    if (hasComparisonRange) {
+        var granularity = this._chartGranularity || 'day';
+        var previousStart;
+        var previousEnd;
+        if (granularity === 'year') {
+            previousStart = new Date(config.startDate.getFullYear() - 1, 0, 1);
+            previousEnd = new Date(config.startDate.getFullYear() - 1, 11, 31);
+            comparisonLabel = '较上年';
+        } else if (granularity === 'month') {
+            previousStart = new Date(config.startDate.getFullYear(), config.startDate.getMonth() - 1, 1);
+            previousEnd = new Date(config.startDate.getFullYear(), config.startDate.getMonth(), 0);
+            comparisonLabel = '较上月';
+        } else if (granularity === 'week') {
+            previousStart = new Date(config.startDate);
+            previousStart.setDate(previousStart.getDate() - 7);
+            previousEnd = new Date(config.endDate);
+            previousEnd.setDate(previousEnd.getDate() - 7);
+            comparisonLabel = '较上周';
+        } else {
+            previousStart = new Date(config.startDate);
+            previousStart.setDate(previousStart.getDate() - 1);
+            previousEnd = new Date(previousStart);
+            comparisonLabel = '较昨天';
+        }
+        var previousLessons = this.aggregateLessons(previousStart, previousEnd);
+        var previousDates = new Set();
+        var self = this;
+        previousLessons.forEach(function (lesson) {
+            var scheduled = (lesson.studentCount || 0) + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+            if (scheduled <= 0) return;
+            previousMetrics.lessons += 1;
+            previousMetrics.people += scheduled;
+            if (lesson.typeStats && Object.keys(lesson.typeStats).length) {
+                Object.keys(lesson.typeStats).forEach(function (type) {
+                    previousMetrics.hours += (lesson.typeStats[type] || 0) / 60;
+                });
+            } else if ((lesson.presentNonAuditionCount || 0) > 0) {
+                previousMetrics.hours += self.getLessonDurationMinutesForStats(lesson) * (lesson.lessonCount || 1) / 60;
+            }
+            (lesson.dates || []).forEach(function (dateKey) { previousDates.add(dateKey); });
+        });
+        previousMetrics.average = previousDates.size ? previousMetrics.hours / previousDates.size : 0;
+    }
 
+    var comparisonHtml = function (current, previous) {
+        if (!hasComparisonRange) return '<span class="stats-card-trend trend-flat">—</span><span>当前统计周期</span>';
+        if (previous <= 0 && current <= 0) return '<span class="stats-card-trend trend-flat">— 0.0%</span><span>' + comparisonLabel + '</span>';
+        var percent = previous > 0 ? (current - previous) / previous * 100 : 100;
+        var trendClass = percent > 0 ? 'trend-up' : (percent < 0 ? 'trend-down' : 'trend-flat');
+        var arrow = percent > 0 ? '↑' : (percent < 0 ? '↓' : '—');
+        return '<span class="stats-card-trend ' + trendClass + '">' + arrow + ' ' + Math.abs(percent).toFixed(1) + '%</span><span>' + comparisonLabel + '</span>';
+    };
+
+    var cards = [];
+    cards.push('<div class="stats-card stats-card-hours"><div class="stats-card-icon">◷</div><div class="stats-card-copy"><div class="st-label">总课时（小时）</div><div class="st-num">' + (totalMinutes > 0 ? totalHours : '0.00') + '</div><div class="st-foot">' + comparisonHtml(totalMinutes / 60, previousMetrics.hours) + '</div></div></div>');
+    cards.push('<div class="stats-card stats-card-lessons"><div class="stats-card-icon">✓</div><div class="stats-card-copy"><div class="st-label">总课程（节）</div><div class="st-num">' + validLessons.length + '</div><div class="st-foot">' + comparisonHtml(validLessons.length, previousMetrics.lessons) + '</div></div></div>');
+    cards.push('<div class="stats-card stats-card-people"><div class="stats-card-icon">♟</div><div class="stats-card-copy"><div class="st-label">参与人数（人次）</div><div class="st-num">' + totalScheduledStudents + '</div><div class="st-foot">' + comparisonHtml(totalScheduledStudents, previousMetrics.people) + '</div></div></div>');
+    var dailyAverageHours = classDays > 0 ? (totalMinutes / 60 / classDays).toFixed(2) : '0.00';
+    cards.push('<div class="stats-card stats-card-average"><div class="stats-card-icon">▥</div><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">' + dailyAverageHours + '</div><div class="st-foot">' + comparisonHtml(Number(dailyAverageHours), previousMetrics.average) + '</div></div></div>');
     container.innerHTML = cards.join('');
 
     return {
@@ -2434,6 +2503,8 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
 
     chartSection.style.display = '';
     var seriesData = this.collectChartSeriesData(startDate, endDate);
+    var updated = document.getElementById('statsDataUpdated');
+    if (updated) updated.textContent = '数据更新于 ' + new Date().toLocaleString('zh-CN', { hour12: false });
     var cat = this._currentChartCategory;
     var copy = this.getChartPanelCopy(cat, seriesData.granularity, null);
     this.setChartPanelText('barChartTitle', 'barChartSubtitle', copy.barTitle, copy.barSubtitle);
@@ -2465,6 +2536,65 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     }
     this._chartNoteTarget = null;
     this.renderLinkedCharts(cat, seriesData, null, { updateLine: true });
+
+    var comparisonCanvas = document.getElementById('statsComparisonChart');
+    if (comparisonCanvas) {
+        this._chartNoteTarget = 'comparisonChartLegendNote';
+        this._chartInstances.comparison = this.renderTypeComparisonChart(comparisonCanvas.getContext('2d'), seriesData, cat);
+        this._chartNoteTarget = null;
+    }
+};
+
+TimetableApp.prototype.renderTypeComparisonChart = function (ctx, data, category) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var studentMode = category === 'student';
+    var labels = studentMode ? ['到课', '试听', '请假', '缺勤'] : ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var colors = studentMode ? ['#1677ff', '#20b486', '#ff9418', '#7651c9'] : ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
+    var values = studentMode ? [
+        data.presentNonAuditionData.reduce(function (a, b) { return a + b; }, 0),
+        data.auditionData.reduce(function (a, b) { return a + b; }, 0),
+        data.leaveData.reduce(function (a, b) { return a + b; }, 0),
+        data.absentData.reduce(function (a, b) { return a + b; }, 0)
+    ] : labels.map(function (type) { return (data.typeMinutes[type] || 0) / 60; });
+    var total = values.reduce(function (sum, value) { return sum + value; }, 0);
+    var hasData = total > 0;
+
+    var chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: studentMode ? '人次' : '课时（小时）',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 6,
+                borderSkipped: false,
+                barThickness: 13
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { right: 34 } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: isDark ? 'rgba(148,163,184,.12)' : 'rgba(148,163,184,.16)' }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } },
+                y: { grid: { display: false }, ticks: { color: isDark ? '#e2e8f0' : '#334155', font: { weight: 600 } } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: function (item) {
+                    var value = item.raw || 0;
+                    var percent = total ? (value / total * 100).toFixed(1) : '0.0';
+                    return (studentMode ? value + '人次' : value.toFixed(2) + 'h') + ' · ' + percent + '%';
+                } } }
+            }
+        }
+    });
+    var title = document.getElementById('comparisonChartTitle');
+    if (title) title.textContent = studentMode ? '出勤状态对比（人次）' : '各班型课时对比（小时）';
+    this.setChartLegendNote(hasData ? (studentMode ? '合计 ' + total + ' 人次' : '总课时 ' + total.toFixed(2) + 'h') + '，悬停可查看占比。' : '暂无统计数据');
+    return chart;
 };
 
 TimetableApp.prototype.renderDurationPieChart = function (ctx, data) {
@@ -2473,7 +2603,7 @@ TimetableApp.prototype.renderDurationPieChart = function (ctx, data) {
     var centerTextColor = isDark ? '#f8fafc' : '#0f172a';
 
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
-    var catColors = ['#2a78d6', '#c97b63', '#eda100', '#12907a', '#6b4ce6'];
+    var catColors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
     var labels = [];
     var values = [];
     var colors = [];

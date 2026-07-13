@@ -445,7 +445,7 @@
         <div class="modal-content stats-modal-content">
             <div class="modal-header">
                 <div class="stats-title-group">
-                    <h3 id="statsTitle">课时统计</h3>
+                    <h3 id="statsTitle">课时统计总览</h3>
                     <p class="stats-subtitle" id="statsSubtitle">用图表和摘要快速查看这个时间范围的课程表现。</p>
                 </div>
                 <button class="modal-close" onclick="app.closeStatsModal()">&times;</button>
@@ -523,6 +523,16 @@
                             </div>
                             <div class="chart-legend-note" id="pieChartLegendNote"></div>
                         </div>
+                        <div class="chart-panel chart-panel-comparison">
+                            <div class="chart-panel-head">
+                                <div class="chart-panel-title" id="comparisonChartTitle">各班型课时对比</div>
+                                <div class="chart-panel-subtitle">横向比较不同班型的累计课时与占比。</div>
+                            </div>
+                            <div class="chart-canvas-wrapper chart-canvas-small">
+                                <canvas id="statsComparisonChart"></canvas>
+                            </div>
+                            <div class="chart-legend-note" id="comparisonChartLegendNote"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="stats-detail-section" id="statsDetailSection">
@@ -537,6 +547,7 @@
                         <div class="stats-by-grade" id="statsByGrade"></div>
                     </div>
                 </div>
+                <div class="stats-data-updated" id="statsDataUpdated">数据更新于 --</div>
             </div>
         </div>
     </div>
