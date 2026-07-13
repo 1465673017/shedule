@@ -6492,6 +6492,32 @@ body.dark-theme-active .student-card-light .student-name {
     background: linear-gradient(135deg, #ff9f2e, #ff7a00);
 }
 
+.stats-grid#statsCards .stats-card-icon {
+    display: none;
+}
+
+.stats-grid#statsCards .stats-card-hours .stats-card-icon { color: #1677ff; }
+.stats-grid#statsCards .stats-card-lessons .stats-card-icon { color: #20b486; }
+.stats-grid#statsCards .stats-card-people .stats-card-icon { color: #7651c9; }
+.stats-grid#statsCards .stats-card-average .stats-card-icon { color: #ff8a16; }
+
+.stats-grid#statsCards .stats-card {
+    justify-content: center;
+    text-align: center;
+}
+
+.stats-grid#statsCards .stats-card-copy,
+.stats-grid#statsCards .st-label,
+.stats-grid#statsCards .st-num {
+    width: 100%;
+    text-align: center;
+}
+
+.stats-grid#statsCards .st-foot {
+    justify-content: center;
+    text-align: center;
+}
+
 .stats-card-copy {
     flex: 1;
     min-width: 0;
@@ -6619,6 +6645,137 @@ body.dark-theme-active .stats-data-updated {
     flex-direction: column;
     gap: 4px;
     margin-bottom: 10px;
+}
+
+.chart-panel-wide .chart-panel-head {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+}
+
+.chart-panel-wide + .chart-panel .chart-panel-head {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+}
+
+.chart-title-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.chart-title-legend:empty { display: none; }
+
+.chart-title-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: auto;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.chart-title-legend-item i {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+}
+
+.chart-title-legend-item.is-hidden { opacity: .35; }
+
+.line-legend-item i {
+    position: relative;
+    width: 28px;
+    height: 12px;
+    border-radius: 0;
+    background: linear-gradient(var(--legend-color), var(--legend-color)) center / 100% 2px no-repeat;
+}
+
+.line-legend-item i::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--legend-color);
+    transform: translate(-50%, -50%);
+}
+
+.chart-pie-canvas {
+    position: relative;
+    width: 100%;
+    height: 190px;
+    align-self: center;
+}
+
+.chart-pie-layout.duration-breakdown-active {
+    display: grid;
+    grid-template-columns: minmax(180px, .9fr) minmax(240px, 1.1fr);
+    align-items: center;
+    gap: 18px;
+}
+
+.duration-pie-breakdown {
+    min-width: 0;
+    padding-right: 0;
+}
+.duration-pie-breakdown:empty { display: none; }
+.duration-breakdown-head,
+.duration-breakdown-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+    column-gap: 10px;
+}
+
+.duration-breakdown-head {
+    padding: 0 8px 6px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.duration-breakdown-head span:nth-child(n+2),
+.duration-breakdown-row > strong,
+.duration-breakdown-row > span:last-child { text-align: center; }
+
+.duration-breakdown-row {
+    width: 100%;
+    min-height: 29px;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #334155;
+    font-size: 11px;
+}
+
+.duration-breakdown-row:hover { background: #f1f5f9; }
+.duration-breakdown-row.is-hidden { opacity: .35; }
+.duration-breakdown-row.is-empty {
+    opacity: .58;
+    cursor: default;
+}
+.duration-breakdown-type { display:flex; align-items:center; gap:8px; font-weight:600; }
+.duration-breakdown-type i { width:10px; height:10px; border-radius:3px; }
+.duration-breakdown-row strong { color:#0f172a; font-size:11px; }
+.duration-breakdown-row > span:last-child { color:#475569; }
+.duration-breakdown-empty { display:grid; place-items:center; height:100%; color:#94a3b8; font-size:13px; }
+
+@media (max-width: 760px) {
+    .chart-pie-layout.duration-breakdown-active { grid-template-columns:1fr; height:auto; }
+    .chart-pie-layout.duration-breakdown-active .chart-pie-canvas { height:210px; }
+    .duration-pie-breakdown { padding-right:0; }
 }
 
 .chart-panel-title {

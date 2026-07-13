@@ -1476,6 +1476,7 @@ TimetableApp.prototype.renderStudentPieChart = function (ctx, data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            radius: '76%',
             cutout: '56%',
             plugins: {
                 legend: this.getChartLegendOptions(textColor),
@@ -1651,6 +1652,36 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
 
     var totalHours = data.totalMinutesData.reduce(function (a, b) { return a + b; }, 0);
     var totalHoursDisplay = (totalHours / 60).toFixed(2);
+    var stackedTotalLabelPlugin = {
+        id: 'durationStackedTotalLabels',
+        afterDatasetsDraw: function (chart) {
+            if (!hasData) return;
+            var drawCtx = chart.ctx;
+            drawCtx.save();
+            drawCtx.fillStyle = isDark ? '#e2e8f0' : '#344054';
+            drawCtx.font = '700 10px sans-serif';
+            drawCtx.textAlign = 'center';
+            drawCtx.textBaseline = 'bottom';
+
+            data.labels.forEach(function (_label, dataIndex) {
+                var visibleTotal = 0;
+                var topY = Infinity;
+                var centerX = null;
+                chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                    if (!chart.isDatasetVisible(datasetIndex) || dataset.label === '暂无数据') return;
+                    visibleTotal += Number(dataset.data[dataIndex] || 0);
+                    var bar = chart.getDatasetMeta(datasetIndex).data[dataIndex];
+                    if (bar) {
+                        centerX = bar.x;
+                        topY = Math.min(topY, bar.y);
+                    }
+                });
+                if (centerX === null || !isFinite(topY) || visibleTotal <= 0) return;
+                drawCtx.fillText(visibleTotal.toFixed(1), centerX, Math.max(chart.chartArea.top + 11, topY - 5));
+            });
+            drawCtx.restore();
+        }
+    };
     var chart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1670,10 +1701,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
             },
             plugins: {
                 legend: this.getChartLegendOptions(textColor, {
-                    onClick: function (event, legendItem, legend) {
-                        Chart.defaults.plugins.legend.onClick.call(this, event, legendItem, legend);
-                        self.renderLinkedCharts('duration', data, self._activeChartSliceIndex, { updateLine: true });
-                    }
+                    display: false
                 }),
                 tooltip: {
                     callbacks: {
@@ -1693,6 +1721,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
                 y: {
                     stacked: true,
                     beginAtZero: true,
+                    grace: '12%',
                     grid: { color: gridColor },
                     ticks: {
                         color: textColor,
@@ -1701,8 +1730,29 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
                     }
                 }
             }
-        }
+        },
+        plugins: [stackedTotalLabelPlugin]
     });
+
+    var titleLegend = document.getElementById('barChartTitleLegend');
+    if (titleLegend) {
+        titleLegend.innerHTML = '';
+        chart.data.datasets.forEach(function (dataset, datasetIndex) {
+            if (dataset.label === '暂无数据') return;
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'chart-title-legend-item';
+            button.innerHTML = '<i style="background:' + dataset.backgroundColor + '"></i><span>' + dataset.label + '</span>';
+            button.onclick = function () {
+                var visible = chart.isDatasetVisible(datasetIndex);
+                chart.setDatasetVisibility(datasetIndex, !visible);
+                button.classList.toggle('is-hidden', visible);
+                chart.update();
+                self.renderLinkedCharts('duration', data, self._activeChartSliceIndex, { updateLine: true });
+            };
+            titleLegend.appendChild(button);
+        });
+    }
 
     this.setChartLegendNote(hasData ? '' : '暂无课时数据');
     return chart;
@@ -1767,7 +1817,7 @@ TimetableApp.prototype.renderDurationLineChart = function (ctx, data) {
                 intersect: false
             },
             plugins: {
-                legend: this.getChartLegendOptions(textColor),
+                legend: this.getChartLegendOptions(textColor, { display: false }),
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
@@ -1794,6 +1844,26 @@ TimetableApp.prototype.renderDurationLineChart = function (ctx, data) {
             }
         }
     });
+
+    var titleLegend = document.getElementById('lineChartTitleLegend');
+    if (titleLegend) {
+        titleLegend.innerHTML = '';
+        chart.data.datasets.forEach(function (dataset, datasetIndex) {
+            if (dataset.label === '暂无数据') return;
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'chart-title-legend-item line-legend-item';
+            button.style.setProperty('--legend-color', dataset.borderColor);
+            button.innerHTML = '<i></i><span>' + dataset.label + '</span>';
+            button.onclick = function () {
+                var visible = chart.isDatasetVisible(datasetIndex);
+                chart.setDatasetVisibility(datasetIndex, !visible);
+                button.classList.toggle('is-hidden', visible);
+                chart.update();
+            };
+            titleLegend.appendChild(button);
+        });
+    }
 
     this.setChartLegendNote(hasData ? '' : '暂无课时数据');
     return chart;
@@ -2483,9 +2553,17 @@ TimetableApp.prototype.renderLinkedCharts = function (category, data, index, opt
 
     if (shouldUpdateLine && this._chartInstances.line) this._chartInstances.line.destroy();
     if (this._chartInstances.pie) this._chartInstances.pie.destroy();
+    if (this._chartInstances.comparison) this._chartInstances.comparison.destroy();
 
     var lineCanvas = document.getElementById('statsLineChart');
     var pieCanvas = document.getElementById('statsPieChart');
+    var comparisonCanvas = document.getElementById('statsComparisonChart');
+    var pieLayout = document.getElementById('statsPieLayout');
+    if (pieLayout) pieLayout.classList.toggle('duration-breakdown-active', category === 'duration');
+    if (category !== 'duration') {
+        var durationBreakdown = document.getElementById('durationPieBreakdown');
+        if (durationBreakdown) durationBreakdown.innerHTML = '';
+    }
     if ((shouldUpdateLine && !lineCanvas) || !pieCanvas) return;
 
     if (category === 'student') {
@@ -2502,6 +2580,10 @@ TimetableApp.prototype.renderLinkedCharts = function (category, data, index, opt
         }
         this._chartNoteTarget = 'pieChartLegendNote';
         this._chartInstances.pie = this.renderDurationPieChart(pieCanvas.getContext('2d'), detailData);
+    }
+    if (comparisonCanvas) {
+        this._chartNoteTarget = 'comparisonChartLegendNote';
+        this._chartInstances.comparison = this.renderTypeComparisonChart(comparisonCanvas.getContext('2d'), detailData, category);
     }
     this._chartNoteTarget = null;
 };
@@ -2532,6 +2614,10 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     var updated = document.getElementById('statsDataUpdated');
     if (updated) updated.textContent = '数据更新于 ' + new Date().toLocaleString('zh-CN', { hour12: false });
     var cat = this._currentChartCategory;
+    var titleLegend = document.getElementById('barChartTitleLegend');
+    if (cat === 'student' && titleLegend) titleLegend.innerHTML = '';
+    var lineTitleLegend = document.getElementById('lineChartTitleLegend');
+    if (cat === 'student' && lineTitleLegend) lineTitleLegend.innerHTML = '';
     var copy = this.getChartPanelCopy(cat, seriesData.granularity, null);
     this.setChartPanelText('barChartTitle', 'barChartSubtitle', copy.barTitle, copy.barSubtitle);
     this.setChartPanelText('lineChartTitle', 'lineChartSubtitle', copy.lineTitle, copy.lineSubtitle);
@@ -2564,12 +2650,6 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     this._chartNoteTarget = null;
     this.renderLinkedCharts(cat, seriesData, null, { updateLine: true });
 
-    var comparisonCanvas = document.getElementById('statsComparisonChart');
-    if (comparisonCanvas) {
-        this._chartNoteTarget = 'comparisonChartLegendNote';
-        this._chartInstances.comparison = this.renderTypeComparisonChart(comparisonCanvas.getContext('2d'), seriesData, cat);
-        this._chartNoteTarget = null;
-    }
 };
 
 TimetableApp.prototype.updateStatsCardsForChartSlice = function (seriesData, index) {
@@ -2603,6 +2683,16 @@ TimetableApp.prototype.renderTypeComparisonChart = function (ctx, data, category
         data.leaveData.reduce(function (a, b) { return a + b; }, 0),
         data.absentData.reduce(function (a, b) { return a + b; }, 0)
     ] : labels.map(function (type) { return (data.typeMinutes[type] || 0) / 60; });
+    if (!studentMode) {
+        var rankedTypes = labels.map(function (label, index) {
+            return { label: label, value: values[index], color: colors[index] };
+        }).sort(function (a, b) {
+            return b.value - a.value;
+        });
+        labels = rankedTypes.map(function (item) { return item.label; });
+        values = rankedTypes.map(function (item) { return item.value; });
+        colors = rankedTypes.map(function (item) { return item.color; });
+    }
     var total = values.reduce(function (sum, value) { return sum + value; }, 0);
     var hasData = total > 0;
 
@@ -2640,7 +2730,7 @@ TimetableApp.prototype.renderTypeComparisonChart = function (ctx, data, category
     });
     var title = document.getElementById('comparisonChartTitle');
     if (title) title.textContent = studentMode ? '出勤状态对比（人次）' : '各班型课时对比（小时）';
-    this.setChartLegendNote(hasData ? (studentMode ? '合计 ' + total + ' 人次' : '总课时 ' + total.toFixed(2) + 'h') + '，悬停可查看占比。' : '暂无统计数据');
+    this.setChartLegendNote(studentMode && hasData ? '合计 ' + total + ' 人次，悬停可查看占比。' : (hasData ? '' : '暂无统计数据'));
     return chart;
 };
 
@@ -2743,7 +2833,7 @@ TimetableApp.prototype.renderDurationPieChart = function (ctx, data) {
             maintainAspectRatio: false,
             cutout: '56%',
             plugins: {
-                legend: this.getChartLegendOptions(textColor),
+                legend: this.getChartLegendOptions(textColor, { display: false }),
                 tooltip: {
                     callbacks: {
                         label: function (context) {
@@ -2759,6 +2849,36 @@ TimetableApp.prototype.renderDurationPieChart = function (ctx, data) {
         },
         plugins: [doughnutLabelPlugin]
     });
+
+    var breakdown = document.getElementById('durationPieBreakdown');
+    var renderBreakdown = function () {
+        if (!breakdown) return;
+        var visibleTotal = getVisibleTotalMin(chart);
+        var rows = typeOrder.map(function (type, typeIndex) {
+            var minutes = data.typeMinutes[type] || 0;
+            var chartIndex = labels.indexOf(type);
+            var isVisible = chartIndex >= 0 && chart.getDataVisibility(chartIndex);
+            var hours = minutes > 0 ? (minutes / 60).toFixed(2) : '-';
+            var percent = minutes > 0 && isVisible && visibleTotal > 0
+                ? (minutes / visibleTotal * 100).toFixed(1) + '%'
+                : '-';
+            var stateClass = minutes <= 0 ? ' is-empty' : (isVisible ? '' : ' is-hidden');
+            return '<button type="button" class="duration-breakdown-row' + stateClass + '" data-index="' + chartIndex + '"' + (chartIndex < 0 ? ' disabled' : '') + '>' +
+                '<span class="duration-breakdown-type"><i style="background:' + catColors[typeIndex] + '"></i>' + type + '</span>' +
+                '<strong>' + hours + '</strong><span>' + percent + '</span></button>';
+        }).join('');
+        breakdown.innerHTML = '<div class="duration-breakdown-head"><span>班型</span><span>课时（小时）</span><span>占比</span></div>' + rows;
+        breakdown.querySelectorAll('.duration-breakdown-row').forEach(function (row) {
+            row.onclick = function () {
+                var itemIndex = Number(row.dataset.index);
+                if (itemIndex < 0) return;
+                chart.toggleDataVisibility(itemIndex);
+                chart.update();
+                renderBreakdown();
+            };
+        });
+    };
+    renderBreakdown();
 
     this.setChartLegendNote(chartHasData ? '' : '暂无上课时长数据');
     return chart;

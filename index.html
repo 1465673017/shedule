@@ -496,6 +496,7 @@
                         <div class="chart-panel chart-panel-wide">
                             <div class="chart-panel-head">
                                 <div class="chart-panel-title" id="barChartTitle">出勤结构总览</div>
+                                <div class="chart-title-legend" id="barChartTitleLegend"></div>
                                 <div class="chart-panel-subtitle" id="barChartSubtitle">把核心变化先放到主图看。</div>
                             </div>
                             <div class="chart-canvas-wrapper chart-canvas-large">
@@ -506,6 +507,7 @@
                         <div class="chart-panel">
                             <div class="chart-panel-head">
                                 <div class="chart-panel-title" id="lineChartTitle">学生到课趋势</div>
+                                <div class="chart-title-legend line-title-legend" id="lineChartTitleLegend"></div>
                                 <div class="chart-panel-subtitle" id="lineChartSubtitle">用趋势看这段时间的变化。</div>
                             </div>
                             <div class="chart-canvas-wrapper chart-canvas-small">
@@ -518,8 +520,9 @@
                                 <div class="chart-panel-title" id="pieChartTitle">占比分布</div>
                                 <div class="chart-panel-subtitle" id="pieChartSubtitle">用分布看结构。</div>
                             </div>
-                            <div class="chart-canvas-wrapper chart-canvas-small">
-                                <canvas id="statsPieChart"></canvas>
+                            <div class="chart-canvas-wrapper chart-canvas-small chart-pie-layout" id="statsPieLayout">
+                                <div class="chart-pie-canvas"><canvas id="statsPieChart"></canvas></div>
+                                <div class="duration-pie-breakdown" id="durationPieBreakdown"></div>
                             </div>
                             <div class="chart-legend-note" id="pieChartLegendNote"></div>
                         </div>
