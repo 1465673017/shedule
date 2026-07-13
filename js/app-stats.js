@@ -2271,8 +2271,14 @@ TimetableApp.prototype.renderDayStats = function () {
     this.updateStatsHeader('日统计', this.getStatsViewSubtitle('日统计', startDate, endDate));
     this._chartGranularity = 'day';
     var lessons = this.aggregateLessons(startDate, endDate);
-    var summary = this.renderStatsCards(lessons, { startDate: startDate, endDate: endDate });
-    this.updateStatsOverview(summary, startDate, endDate);
+    var cardDate = new Date(this._statsDate || this.currentDate || startDate);
+    cardDate.setHours(0, 0, 0, 0);
+    var cardLessons = this.aggregateLessons(cardDate, cardDate);
+    var summary = this.renderStatsCards(cardLessons, { startDate: cardDate, endDate: cardDate });
+    this._statsBaseCardLessons = cardLessons;
+    this._statsBaseCardStart = cardDate;
+    this._statsBaseCardEnd = cardDate;
+    this.updateStatsOverview(summary, cardDate, cardDate);
     this.renderStatsByGrade(lessons);
     this._lastChartLessons = lessons;
     this._lastChartStart = startDate;
@@ -2295,8 +2301,14 @@ TimetableApp.prototype.renderWeekStats = function () {
     this.updateStatsHeader('周统计', this.getStatsViewSubtitle('周统计', startDate, endDate));
     this._chartGranularity = 'week';
     var lessons = this.aggregateLessons(statsRange.start, statsRange.end);
-    var summary = this.renderStatsCards(lessons, { startDate: statsRange.start, endDate: statsRange.end });
-    this.updateStatsOverview(summary, statsRange.start, statsRange.end);
+    var cardAnchor = new Date(this._statsDate || this.currentDate || startDate);
+    var cardWeek = this.getWeekRange(cardAnchor);
+    var cardLessons = this.aggregateLessons(cardWeek.start, cardWeek.end);
+    var summary = this.renderStatsCards(cardLessons, { startDate: cardWeek.start, endDate: cardWeek.end });
+    this._statsBaseCardLessons = cardLessons;
+    this._statsBaseCardStart = cardWeek.start;
+    this._statsBaseCardEnd = cardWeek.end;
+    this.updateStatsOverview(summary, cardWeek.start, cardWeek.end);
     this.renderStatsByGrade(lessons);
     this._lastChartLessons = lessons;
     this._lastChartStart = statsRange.start;
@@ -2316,8 +2328,15 @@ TimetableApp.prototype.renderMonthStats = function () {
     this.updateStatsHeader('月统计', this.getStatsViewSubtitle('月统计', startDate, endDate));
     this._chartGranularity = 'month';
     var lessons = this.aggregateLessons(startDate, endDate);
-    var summary = this.renderStatsCards(lessons, { startDate: startDate, endDate: endDate });
-    this.updateStatsOverview(summary, startDate, endDate);
+    var cardAnchor = new Date(this._statsDate || this.currentDate || startDate);
+    var cardMonthStart = new Date(cardAnchor.getFullYear(), cardAnchor.getMonth(), 1);
+    var cardMonthEnd = new Date(cardAnchor.getFullYear(), cardAnchor.getMonth() + 1, 0);
+    var cardLessons = this.aggregateLessons(cardMonthStart, cardMonthEnd);
+    var summary = this.renderStatsCards(cardLessons, { startDate: cardMonthStart, endDate: cardMonthEnd });
+    this._statsBaseCardLessons = cardLessons;
+    this._statsBaseCardStart = cardMonthStart;
+    this._statsBaseCardEnd = cardMonthEnd;
+    this.updateStatsOverview(summary, cardMonthStart, cardMonthEnd);
     this.renderStatsByGrade(lessons);
     this._lastChartLessons = lessons;
     this._lastChartStart = startDate;
@@ -2337,8 +2356,15 @@ TimetableApp.prototype.renderYearStats = function () {
     this.updateStatsHeader('年统计', '当前查看年统计，主图突出全年结构变化，附图补充趋势和占比。');
     this._chartGranularity = 'year';
     var lessons = this.aggregateLessons(startDate, endDate);
-    var summary = this.renderStatsCards(lessons, { startDate: startDate, endDate: endDate });
-    this.updateStatsOverview(summary, startDate, endDate);
+    var cardAnchor = new Date(this._statsDate || this.currentDate || startDate);
+    var cardYearStart = new Date(cardAnchor.getFullYear(), 0, 1);
+    var cardYearEnd = new Date(cardAnchor.getFullYear(), 11, 31);
+    var cardLessons = this.aggregateLessons(cardYearStart, cardYearEnd);
+    var summary = this.renderStatsCards(cardLessons, { startDate: cardYearStart, endDate: cardYearEnd });
+    this._statsBaseCardLessons = cardLessons;
+    this._statsBaseCardStart = cardYearStart;
+    this._statsBaseCardEnd = cardYearEnd;
+    this.updateStatsOverview(summary, cardYearStart, cardYearEnd);
     this.renderStatsByGrade(lessons);
     this._lastChartLessons = lessons;
     this._lastChartStart = startDate;
@@ -2521,6 +2547,7 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     var handleBarHover = function (index) {
         if (self._activeChartSliceIndex === index) return;
         self._activeChartSliceIndex = index;
+        self.updateStatsCardsForChartSlice(seriesData, index);
         self.renderLinkedCharts(cat, seriesData, index, { updateLine: false });
     };
     canvas.onmouseleave = function () {
@@ -2543,6 +2570,26 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
         this._chartInstances.comparison = this.renderTypeComparisonChart(comparisonCanvas.getContext('2d'), seriesData, cat);
         this._chartNoteTarget = null;
     }
+};
+
+TimetableApp.prototype.updateStatsCardsForChartSlice = function (seriesData, index) {
+    if (index === null || index === undefined) {
+        if (this._statsBaseCardLessons && this._statsBaseCardStart && this._statsBaseCardEnd) {
+            this.renderStatsCards(this._statsBaseCardLessons, {
+                startDate: this._statsBaseCardStart,
+                endDate: this._statsBaseCardEnd
+            });
+        }
+        return;
+    }
+
+    var sliceStart = seriesData.groupStartDates && seriesData.groupStartDates[index];
+    var sliceEnd = seriesData.groupEndDates && seriesData.groupEndDates[index];
+    if (!sliceStart || !sliceEnd) return;
+    sliceStart = new Date(sliceStart);
+    sliceEnd = new Date(sliceEnd);
+    var sliceLessons = this.aggregateLessons(sliceStart, sliceEnd);
+    this.renderStatsCards(sliceLessons, { startDate: sliceStart, endDate: sliceEnd });
 };
 
 TimetableApp.prototype.renderTypeComparisonChart = function (ctx, data, category) {
