@@ -312,21 +312,6 @@ class TimetableApp {
     }
 
 
-    getCell1v1Status(key) {
-        // 获取当前周该课位的版本，检查其学生列表
-        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
-        const version = this.getCellVersion(key, weekStartStr);
-        if (!version || !version.student || !Array.isArray(version.student) || version.student.length === 0) {
-            return { has1v1: false, studentCount: 0 };
-        }
-        const studentCount = version.student.length;
-        const has1v1 = version.student.some(studentId => {
-            const student = this.students.find(s => s.id === studentId);
-            return student && student.is1v1;
-        });
-        return { has1v1, studentCount };
-    }
-
     getAuditionStudentAssignedKeys(studentId, excludeKeys = []) {
         const student = this.students.find(s => String(s.id) === String(studentId));
         if (!student || !student.isAudition) {
@@ -387,16 +372,6 @@ class TimetableApp {
                 this.setStudentRecurrence(key, studentId, 'temporary');
             }
         }
-    }
-
-    getContrastColor(hex) {
-        if (!hex || hex.length < 7) return '#333';
-        const r = parseInt(hex.substring(1, 3), 16);
-        const g = parseInt(hex.substring(3, 5), 16);
-        const b = parseInt(hex.substring(5, 7), 16);
-        // 计算亮度
-        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-        return brightness > 150 ? '#1f2225' : '#ffffff';
     }
 
     ensureUncategorizedSubject() {
@@ -472,22 +447,6 @@ class TimetableApp {
         if (options.weekRange) {
             this.updateWeekRange();
         }
-    }
-
-    loadTimetableTitle() {
-        const savedTitle = localStorage.getItem('timetableTitle');
-        const titleInput = document.getElementById('timetableTitle');
-        if (savedTitle && titleInput) {
-            titleInput.value = savedTitle;
-        }
-    }
-
-    saveTimetableTitle(title) {
-        localStorage.setItem('timetableTitle', title);
-    }
-
-    saveTableTitle(title) {
-        localStorage.setItem('tableTitle', title);
     }
 
     openResetModal() {
@@ -849,13 +808,6 @@ class TimetableApp {
         this.closeGradeModal();
     }
 
-    loadTableTitle() {
-        const savedTitle = localStorage.getItem('tableTitle');
-        const titleInput = document.getElementById('tableTitle');
-        if (savedTitle && titleInput) {
-            titleInput.value = savedTitle;
-        }
-    }
     updateWeekRange() {
         const range = this.getWeekRange(this.currentDate);
         const startDate = range.start;

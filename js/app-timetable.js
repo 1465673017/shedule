@@ -1,33 +1,8 @@
 // app-timetable.js - Timetable rendering and cell operations
 // Auto-split from script.js
 
-TimetableApp.prototype.openTimeModal = function(e) {
-        const timeText = e.target;
-        const period = timeText.dataset.period;
-        const modal = document.getElementById('timeModal');
-        const timeInput = document.getElementById('timeRange');
-        
-        timeInput.value = timeText.textContent;
-        timeInput.dataset.period = period;
-        modal.style.display = 'block';
-    }
-
 TimetableApp.prototype.closeTimeModal = function() {
         document.getElementById('timeModal').style.display = 'none';
-    }
-
-TimetableApp.prototype.saveTime = function(e) {
-        e.preventDefault();
-        
-        const timeInput = document.getElementById('timeRange');
-        const period = timeInput.dataset.period;
-        const newTime = timeInput.value.trim();
-        
-        if (!newTime) return;
-        
-        document.querySelector(`[data-period="${period}"]`).textContent = newTime;
-        this.saveData();
-        this.closeTimeModal();
     }
 
 TimetableApp.prototype.getCell1v1Status = function(key) {

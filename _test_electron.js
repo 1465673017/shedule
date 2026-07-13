@@ -1,1 +1,0 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron'); console.log('app:', typeof app); console.log('BrowserWindow:', typeof BrowserWindow); app.whenReady().then(() => { console.log('Electron API works!'); app.quit(); });
