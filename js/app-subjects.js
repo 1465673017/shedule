@@ -5,6 +5,7 @@ TimetableApp.prototype.openSubjectModal = function (subject = null) {
     this.editingSubject = subject;
     const modal = document.getElementById('subjectModal');
     const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('entityModalSubtitle');
     const nameLabel = document.getElementById('nameLabel');
     const teacherLabel = document.getElementById('teacherLabel');
     const nameInput = document.getElementById('subjectName');
@@ -13,7 +14,8 @@ TimetableApp.prototype.openSubjectModal = function (subject = null) {
     const deleteBtn = document.getElementById('deleteSubjectBtn');
     const oneV1Toggle = document.getElementById('oneV1Toggle');
 
-    title.textContent = '科目设置';
+    title.textContent = subject ? '编辑科目' : '添加科目';
+    if (subtitle) subtitle.textContent = '设置科目名称、老师和课程卡片的显示颜色';
     nameLabel.textContent = '科目名称';
     teacherLabel.textContent = '老师姓名';
     teacherInput.placeholder = '可选';
@@ -143,6 +145,7 @@ TimetableApp.prototype.openStudentModal = function (student = null) {
     this.editingSubject = student;
     const modal = document.getElementById('subjectModal');
     const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('entityModalSubtitle');
     const nameLabel = document.getElementById('nameLabel');
     const teacherLabel = document.getElementById('teacherLabel');
     const nameInput = document.getElementById('subjectName');
@@ -154,6 +157,7 @@ TimetableApp.prototype.openStudentModal = function (student = null) {
     const auditionBtn = document.getElementById('auditionBtn');
 
     title.textContent = student ? '编辑学生' : '添加学生';
+    if (subtitle) subtitle.textContent = '填写学生信息，并按需要设置学生类型';
     nameLabel.textContent = '学生姓名';
     teacherLabel.textContent = '学生年级';
 
@@ -427,4 +431,3 @@ TimetableApp.prototype.renderSubjects = function () {
         pool.appendChild(card);
     });
 }
-

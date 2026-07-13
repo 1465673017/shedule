@@ -63,6 +63,14 @@ TimetableApp.prototype.changeTextStatsRange = function (delta) {
     this.renderTextStatsModal();
 }
 
+TimetableApp.prototype.setTextStatsDate = function (value) {
+    const nextDate = this.parseStatsInputDate(value);
+    if (!nextDate || Number.isNaN(nextDate.getTime())) return;
+    nextDate.setHours(0, 0, 0, 0);
+    this._textStatsAnchorDate = nextDate;
+    this.renderTextStatsModal();
+}
+
 TimetableApp.prototype.formatStatsInputDate = function (date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -294,7 +302,7 @@ TimetableApp.prototype.getTextStatsRangeLabel = function (range) {
         case 'day':
             return `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`;
         case 'week':
-            return `${formatMD(start)} - ${formatMD(end)}`;
+            return `${formatMD(start)}（周一）— ${formatMD(end)}（周日）`;
         case 'month':
             return `${start.getFullYear()}年${start.getMonth() + 1}月`;
         case 'year':
@@ -318,8 +326,16 @@ TimetableApp.prototype.updateTextStatsNavButtons = function () {
     const [prevLabel, nextLabel] = labelMap[this._textStatsTab] || ['上一项', '下一项'];
     const prevBtn = document.getElementById('textStatsPrevBtn');
     const nextBtn = document.getElementById('textStatsNextBtn');
-    if (prevBtn) prevBtn.textContent = prevLabel;
-    if (nextBtn) nextBtn.textContent = nextLabel;
+    if (prevBtn) {
+        prevBtn.setAttribute('aria-label', prevLabel);
+        prevBtn.title = prevLabel;
+        prevBtn.innerHTML = '<span class="text-stats-nav-icon" aria-hidden="true">‹</span>';
+    }
+    if (nextBtn) {
+        nextBtn.setAttribute('aria-label', nextLabel);
+        nextBtn.title = nextLabel;
+        nextBtn.innerHTML = '<span class="text-stats-nav-icon" aria-hidden="true">›</span>';
+    }
 }
 
 TimetableApp.prototype.renderTextStatsModal = function () {
@@ -328,12 +344,12 @@ TimetableApp.prototype.renderTextStatsModal = function () {
     const isDayView = this._textStatsTab === 'day';
 
     const title = document.getElementById('textStatsTitle');
-    const rangeLabel = document.getElementById('textStatsRangeLabel');
+    const dateInput = document.getElementById('textStatsDateInput');
     const subtitle = document.getElementById('textStatsSubtitle');
     const summaryNote = document.getElementById('textStatsSummaryNote');
     const detailCount = document.getElementById('textStatsDetailCount');
     if (title) title.textContent = this.getTextStatsTitle(range);
-    if (rangeLabel) rangeLabel.textContent = this.getTextStatsRangeLabel(range);
+    if (dateInput) dateInput.value = this.formatStatsInputDate(new Date(this._textStatsAnchorDate || range.start));
     if (subtitle) subtitle.textContent = isDayView ? '查看当天已完成课程的课时与到课情况。' : '按当前范围汇总课程、课时、试听和到课情况。';
     this.updateTextStatsNavButtons();
 

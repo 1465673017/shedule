@@ -219,27 +219,44 @@
 
     <!-- 科目/学生编辑弹窗 -->
     <div id="subjectModal" class="modal">
-        <div class="modal-content">
-            <h3 id="modalTitle">科目设置</h3>
+        <div class="modal-content entity-editor-modal">
+            <div class="modal-header">
+                <div class="modal-title-block">
+                    <h3 id="modalTitle">科目设置</h3>
+                    <p id="entityModalSubtitle" class="modal-subtitle">设置科目名称、老师和显示颜色</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeSubjectModal()">×</button>
+            </div>
             <form id="subjectForm">
-                <div class="form-group">
-                    <div class="name-label-row">
-                        <label id="nameLabel">科目名称</label>
-                        <div id="oneV1Toggle" class="one-v1-toggle" style="display: none;">
-                            <button type="button" id="oneV1Btn" class="one-v1-btn" onclick="app.toggleOneV1()">1v1</button>
-                            <button type="button" id="auditionBtn" class="one-v1-btn" onclick="app.toggleAudition()">试听</button>
+                <div class="modal-body">
+                    <div class="modal-section">
+                        <div class="form-group">
+                            <label id="nameLabel">科目名称</label>
+                            <input type="text" id="subjectName" required="" autocomplete="off">
                         </div>
                     </div>
-                    <input type="text" id="subjectName" required="">
-                </div>
-                <div class="form-group">
-                    <label id="teacherLabel">老师姓名</label>
-                    <input type="text" id="teacherName" placeholder="可选">
-                    <div id="gradeSelector" class="grade-selector" style="display: none;"></div>
-                </div>
-                <div id="colorFormGroup" class="form-group">
-                    <label>颜色</label>
-                    <div class="color-options">
+                    <div id="oneV1Toggle" class="modal-section student-type-section one-v1-toggle" style="display: none;">
+                        <div class="section-heading-row">
+                            <div>
+                                <div class="section-title">学生类型</div>
+                                <div class="section-hint">普通学生无需选择；1v1 与试听不可同时启用</div>
+                            </div>
+                            <div class="student-type-actions">
+                            <button type="button" id="oneV1Btn" class="one-v1-btn" onclick="app.toggleOneV1()">1v1</button>
+                            <button type="button" id="auditionBtn" class="one-v1-btn" onclick="app.toggleAudition()">试听</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <div class="form-group">
+                            <label id="teacherLabel">老师姓名</label>
+                            <input type="text" id="teacherName" placeholder="可选">
+                            <div id="gradeSelector" class="grade-selector" style="display: none;"></div>
+                        </div>
+                    </div>
+                    <div id="colorFormGroup" class="modal-section form-group">
+                        <label>显示颜色</label>
+                        <div class="color-options">
                         <div class="preset-colors">
                             <div class="color-option" data-color="#FFE4E1" style="background: #FFE4E1" title="浅红"></div>
                             <div class="color-option" data-color="#E3F2FD" style="background: #E3F2FD" title="浅蓝"></div>
@@ -265,32 +282,41 @@
                             <input type="color" id="customColor" value="#FF6B6B">
                             <input type="text" id="customColorText" placeholder="#FF6B6B" maxlength="7">
                         </div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn primary">保存</button>
-                    <button type="button" id="deleteSubjectBtn" class="btn danger" style="display: none;">删除</button>
+                    <button type="button" id="deleteSubjectBtn" class="btn danger action-leading" style="display: none;">删除</button>
                     <button type="button" id="cancelBtn" class="btn secondary">取消</button>
+                    <button type="submit" class="btn primary">保存</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="studentBatchModal" class="modal">
-        <div class="modal-content">
-            <h3>批量导入学生</h3>
-            <form id="studentBatchForm">
-                <div class="form-group">
-                    <label for="studentBatchGrade">统一年级</label>
-                    <select id="studentBatchGrade" required></select>
+        <div class="modal-content standard-form-modal">
+            <div class="modal-header">
+                <div class="modal-title-block">
+                    <h3>批量导入学生</h3>
+                    <p class="modal-subtitle">选择统一年级，并用顿号分隔多个学生姓名</p>
                 </div>
-                <div class="form-group">
-                    <label for="studentBatchNames">学生姓名</label>
-                    <textarea id="studentBatchNames" required placeholder="请输入学生姓名，使用“、”分隔，例如：张三、李四、王五"></textarea>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeStudentBatchModal()">×</button>
+            </div>
+            <form id="studentBatchForm">
+                <div class="modal-body">
+                    <div class="modal-section form-group">
+                        <label for="studentBatchGrade">统一年级</label>
+                        <select id="studentBatchGrade" required></select>
+                    </div>
+                    <div class="modal-section form-group">
+                        <label for="studentBatchNames">学生姓名</label>
+                        <textarea id="studentBatchNames" required placeholder="请输入学生姓名，使用“、”分隔，例如：张三、李四、王五"></textarea>
+                    </div>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn primary">导入</button>
                     <button type="button" id="cancelStudentBatchBtn" class="btn secondary">取消</button>
+                    <button type="submit" class="btn primary">导入</button>
                 </div>
             </form>
         </div>
@@ -298,40 +324,48 @@
 
     <!-- 时间编辑弹窗 -->
     <div id="timeModal" class="modal">
-        <div class="modal-content">
-            <h3>修改课时</h3>
+        <div class="modal-content standard-form-modal">
+            <div class="modal-header">
+                <div class="modal-title-block">
+                    <h3>修改课时</h3>
+                    <p class="modal-subtitle">设置课时名称以及开始、结束时间</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTimeModal()">×</button>
+            </div>
             <form id="timeForm">
-                <div class="form-group">
+                <div class="modal-body">
+                <div class="modal-section form-group">
                     <label>课时名称</label>
                     <input type="text" id="periodName" required="" placeholder="第1课时">
                 </div>
-                <div class="form-group">
+                <div class="modal-section form-group">
                     <label>开始时间</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <select id="startHour" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <div class="time-select-row">
+                        <select id="startHour">
                             <option value="">时</option>
                         <option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option></select>
                         <span>:</span>
-                        <select id="startMinute" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <select id="startMinute">
                             <option value="">分</option>
                         <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="modal-section form-group">
                     <label>结束时间</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <select id="endHour" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <div class="time-select-row">
+                        <select id="endHour">
                             <option value="">时</option>
                         <option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option></select>
                         <span>:</span>
-                        <select id="endMinute" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <select id="endMinute">
                             <option value="">分</option>
                         <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
                     </div>
+                </div>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn primary">保存</button>
                     <button type="button" id="cancelTimeBtn" class="btn secondary">取消</button>
+                    <button type="submit" class="btn primary">保存</button>
                 </div>
             </form>
         </div>
@@ -339,23 +373,31 @@
 
     <!-- 添加课程弹窗 -->
     <div id="addLessonModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content lesson-editor-modal">
             <div class="modal-header">
-                <h3 id="addLessonTitle">添加课程</h3>
-                <button class="modal-close" onclick="app.closeAddLessonModal()">×</button>
+                <div class="modal-title-block">
+                    <h3 id="addLessonTitle">添加课程</h3>
+                    <p class="modal-subtitle">选择科目和参与本节课的学生</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeAddLessonModal()">×</button>
             </div>
             <form id="addLessonForm">
-                <div class="form-group">
-                    <label>选择科目</label>
-                    <div class="subject-picker" id="lessonSubjectPicker"></div>
-                </div>
-                <div class="form-group">
-                    <label>选择学生 <span id="lessonStudentCount" class="student-count-tag"></span></label>
-                    <div class="student-picker" id="lessonStudentPicker"></div>
+                <div class="modal-body">
+                    <div class="modal-section form-group">
+                        <label>选择科目</label>
+                        <div class="subject-picker" id="lessonSubjectPicker"></div>
+                    </div>
+                    <div class="modal-section form-group">
+                        <div class="section-heading-row picker-heading">
+                            <label>选择学生</label>
+                            <span id="lessonStudentCount" class="student-count-tag"></span>
+                        </div>
+                        <div class="student-picker" id="lessonStudentPicker"></div>
+                    </div>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn primary">保存</button>
                     <button type="button" id="cancelLessonBtn" class="btn secondary">取消</button>
+                    <button type="submit" class="btn primary">保存</button>
                 </div>
             </form>
         </div>
@@ -363,12 +405,15 @@
 
     <!-- 学生点名弹窗 -->
     <div id="attendanceModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content attendance-modal-content">
             <div class="modal-header">
-                <h3 id="attendanceTitle">学生点名</h3>
-                <button class="modal-close" onclick="app.closeAttendanceModal()">×</button>
+                <div class="modal-title-block">
+                    <h3 id="attendanceTitle">学生点名</h3>
+                    <p class="modal-subtitle">记录本节课的学生出勤情况</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeAttendanceModal()">×</button>
             </div>
-            <div id="attendanceContent">
+            <div id="attendanceContent" class="modal-body">
                 <div id="attendanceLessonInfo" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; font-size: 14px; color: #666;"></div>
                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #444;">学生名单</div>
                 <div class="lesson-popup-students" id="attendanceStudentList"></div>
@@ -488,20 +533,28 @@
                     <h3 id="textStatsTitle">课时统计</h3>
                     <p class="text-stats-subtitle" id="textStatsSubtitle">按当前范围整理课程、课时和到课情况。</p>
                 </div>
-                <button class="modal-close" onclick="app.closeTextStatsModal()">×</button>
+                <div class="text-stats-header-tools">
+                    <div class="text-stats-range-row">
+                    <div class="text-stats-navigator">
+                        <button type="button" class="text-stats-nav-btn" id="textStatsPrevBtn" aria-label="上一项" title="上一项" onclick="app.changeTextStatsRange(-1)">
+                            <span class="text-stats-nav-icon" aria-hidden="true">‹</span>
+                        </button>
+                        <div class="text-stats-range-center">
+                            <input type="date" class="text-stats-date-input" id="textStatsDateInput" aria-label="选择统计日期" onchange="app.setTextStatsDate(this.value)">
+                        </div>
+                        <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" aria-label="下一项" title="下一项" onclick="app.changeTextStatsRange(1)">
+                            <span class="text-stats-nav-icon" aria-hidden="true">›</span>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTextStatsModal()">×</button>
             </div>
             <div class="stats-tabs" id="textStatsTabs">
                 <button class="stats-tab active" data-tab="day" onclick="app.switchTextStatsTab('day')">日统计</button>
                 <button class="stats-tab" data-tab="week" onclick="app.switchTextStatsTab('week')">周统计</button>
                 <button class="stats-tab" data-tab="month" onclick="app.switchTextStatsTab('month')">月统计</button>
                 <button class="stats-tab" data-tab="year" onclick="app.switchTextStatsTab('year')">年统计</button>
-            </div>
-            <div class="text-stats-range-row">
-                <div class="text-stats-navigator">
-                    <button type="button" class="text-stats-nav-btn" id="textStatsPrevBtn" onclick="app.changeTextStatsRange(-1)">上一项</button>
-                    <div class="text-stats-range-display" id="textStatsRangeLabel"></div>
-                    <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" onclick="app.changeTextStatsRange(1)">下一项</button>
-                </div>
             </div>
             <div class="text-stats-summary-panel">
                 <div class="text-stats-summary-head">
@@ -524,8 +577,11 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>⚙️ 设置</h3>
-                <button class="modal-close" onclick="app.closeSettingsModal()">×</button>
+                <div class="modal-title-block">
+                    <h3>设置</h3>
+                    <p class="modal-subtitle">管理主题、年级和每日课时时间</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeSettingsModal()">×</button>
             </div>
             <div class="settings-content">
                 <div class="settings-tabs">
@@ -641,14 +697,21 @@
 
     <!-- 年级编辑弹窗 -->
     <div id="gradeModal" class="modal">
-        <div class="modal-content">
-            <h3 id="gradeModalTitle">添加年级</h3>
+        <div class="modal-content standard-form-modal">
+            <div class="modal-header">
+                <div class="modal-title-block">
+                    <h3 id="gradeModalTitle">添加年级</h3>
+                    <p class="modal-subtitle">设置年级名称和学生卡片的标识颜色</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeGradeModal()">×</button>
+            </div>
             <form id="gradeForm">
-                <div class="form-group">
+                <div class="modal-body">
+                <div class="modal-section form-group">
                     <label>年级名称</label>
                     <input type="text" id="gradeName" required="" placeholder="如：一年级">
                 </div>
-                <div class="form-group">
+                <div class="modal-section form-group">
                     <label>颜色</label>
                     <div class="color-options">
                         <div class="preset-colors">
@@ -675,10 +738,11 @@
                         </div>
                     </div>
                 </div>
+                </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn primary">保存</button>
-                    <button type="button" id="deleteGradeBtn" class="btn danger" style="display: none;">删除</button>
+                    <button type="button" id="deleteGradeBtn" class="btn danger action-leading" style="display: none;">删除</button>
                     <button type="button" id="cancelGradeBtn" class="btn secondary">取消</button>
+                    <button type="submit" class="btn primary">保存</button>
                 </div>
             </form>
         </div>
@@ -686,10 +750,13 @@
 
     <!-- 教程弹窗 -->
     <div id="resetModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content reset-modal-content">
             <div class="modal-header">
-                <h3>重置选项</h3>
-                <button class="modal-close" onclick="app.closeResetModal()">×</button>
+                <div class="modal-title-block">
+                    <h3>重置选项</h3>
+                    <p class="modal-subtitle">请选择需要清除的数据范围</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeResetModal()">×</button>
             </div>
             <div style="margin-bottom: 16px; color: #666; font-size: 14px; line-height: 1.7;">
                 请选择要执行的重置范围。
@@ -727,8 +794,11 @@
     <div id="exportModal" class="modal">
         <div class="modal-content export-modal-content">
             <div class="modal-header">
-                <h3>导出选项</h3>
-                <button class="modal-close" onclick="app.closeExportModal()">×</button>
+                <div class="modal-title-block">
+                    <h3>导出选项</h3>
+                    <p class="modal-subtitle">选择需要导出的内容和文件格式</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeExportModal()">×</button>
             </div>
             <div class="export-tabs">
                 <button type="button" id="exportTabSchedule" class="export-tab active" onclick="app.switchExportTab('schedule')">课表</button>
@@ -776,13 +846,16 @@
         </div>
     </div>
 
-    <div id="tutorialModal" class="modal" style="background: rgba(0, 0, 0, 0.7);" onclick="if(event.target===this)app.closeTutorialModal()">
-        <div class="modal-content" style="max-width: 800px; max-height: 85vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); margin: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 20px 25px 15px; margin: 0 -25px 20px;">
-                <h3 style="margin: 0; font-size: 24px; color: #333;">📚 课程表使用教程</h3>
-                <button onclick="app.closeTutorialModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.3s;" onmouseover="this.style.background=&#39;#f5f5f5&#39;; this.style.color=&#39;#333&#39;;" onmouseout="this.style.background=&#39;none&#39;; this.style.color=&#39;#999&#39;;">×</button>
+    <div id="tutorialModal" class="modal tutorial-modal" onclick="if(event.target===this)app.closeTutorialModal()">
+        <div class="modal-content tutorial-modal-content">
+            <div class="modal-header">
+                <div class="modal-title-block">
+                    <h3>课程表使用教程</h3>
+                    <p class="modal-subtitle">从基础设置到排课导出的完整操作说明</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTutorialModal()">×</button>
             </div>
-            <div class="tutorial-content" style="text-align: left; line-height: 1.8; font-size: 16px; color: #555;">
+            <div class="tutorial-content">
                 <h4>📋 快速上手指南</h4>
                 <p><strong>🎯 第一步：设置课时</strong></p>
                 <ul>
@@ -866,8 +939,8 @@
                     </button>
                 </div>
             </div>
-            <div class="form-actions" style="display: flex; justify-content: center; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                <button onclick="app.closeTutorialModal()" class="btn secondary" style="font-size: 16px; padding: 12px 30px;">
+            <div class="form-actions tutorial-actions">
+                <button type="button" onclick="app.closeTutorialModal()" class="btn secondary tutorial-dismiss-btn">
                     我知道了
                 </button>
             </div>
