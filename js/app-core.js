@@ -297,6 +297,7 @@ class TimetableApp {
             gradeModal: () => this.closeGradeModal(),
             tutorialModal: () => this.closeTutorialModal(),
             studentBatchModal: () => this.closeStudentBatchModal(),
+            courseDataImportModal: () => this.closeCourseDataImportModal(),
             resetModal: () => this.closeResetModal(),
             exportModal: () => this.closeExportModal()
         };
@@ -486,13 +487,17 @@ class TimetableApp {
         if (modal) {
             const startInput = document.getElementById('customResetStartDate');
             const endInput = document.getElementById('customResetEndDate');
-            if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
+            const referenceDate = this.currentDate || new Date();
+            const weekRange = this.getWeekRange(referenceDate);
+            if (startInput) startInput.value = this.formatLocalDate(weekRange.start);
+            if (endInput) endInput.value = this.formatLocalDate(weekRange.end);
+            this.syncSharedDateRangeLabel('reset');
             modal.style.display = 'block';
         }
     }
 
     closeResetModal() {
+        this.closeSharedDateRangePicker('reset');
         const modal = document.getElementById('resetModal');
         if (modal) {
             modal.style.display = 'none';
@@ -507,6 +512,160 @@ class TimetableApp {
         if (Number.isNaN(date.getTime())) return null;
         date.setHours(0, 0, 0, 0);
         return date;
+    }
+
+    getSharedDateRangeConfig(scope) {
+        const configs = {
+            reset: {
+                rootId: 'resetDateRangePicker', startId: 'customResetStartDate', endId: 'customResetEndDate',
+                textId: 'resetDateRangeText', popoverId: 'resetDatePopover',
+                titleId: 'resetCalendarTitle', gridId: 'resetCalendarGrid'
+            },
+            lessonSheet: {
+                rootId: 'lessonSheetDateRangePicker', startId: 'lessonSheetStartDate', endId: 'lessonSheetEndDate',
+                textId: 'lessonSheetDateRangeText', popoverId: 'lessonSheetDatePopover',
+                titleId: 'lessonSheetCalendarTitle', gridId: 'lessonSheetCalendarGrid'
+            }
+        };
+        return configs[scope] || null;
+    }
+
+    formatSharedDateRangeLabel(startDate, endDate) {
+        const format = date => `${date.getFullYear()}年${date.getMonth() + 1}月${String(date.getDate()).padStart(2, '0')}日`;
+        return `${format(startDate)}-${format(endDate)}`;
+    }
+
+    syncSharedDateRangeLabel(scope) {
+        const config = this.getSharedDateRangeConfig(scope);
+        if (!config) return;
+        const startInput = document.getElementById(config.startId);
+        const endInput = document.getElementById(config.endId);
+        const label = document.getElementById(config.textId);
+        if (!label) return;
+        const start = this.parseDateInputValue(startInput ? startInput.value : '');
+        const end = this.parseDateInputValue(endInput ? endInput.value : '');
+        label.textContent = start && end ? this.formatSharedDateRangeLabel(start, end) : '请选择日期范围';
+    }
+
+    toggleSharedDateRangePicker(scope) {
+        const config = this.getSharedDateRangeConfig(scope);
+        if (!config) return;
+        const popover = document.getElementById(config.popoverId);
+        if (!popover) return;
+        if (popover.style.display !== 'none' && popover.style.display) {
+            this.closeSharedDateRangePicker(scope);
+            return;
+        }
+
+        if (this._activeSharedDateRangeScope && this._activeSharedDateRangeScope !== scope) {
+            this.closeSharedDateRangePicker(this._activeSharedDateRangeScope);
+        }
+        const startInput = document.getElementById(config.startId);
+        const start = this.parseDateInputValue(startInput ? startInput.value : '') || new Date();
+        this._sharedDateRangeState = this._sharedDateRangeState || {};
+        this._sharedDateRangeState[scope] = {
+            month: new Date(start.getFullYear(), start.getMonth(), 1),
+            pendingStart: null
+        };
+        this._activeSharedDateRangeScope = scope;
+        popover.style.display = 'block';
+        this.renderSharedDateRangePicker(scope);
+        setTimeout(() => this.bindSharedDateRangeOutsideClick(scope), 0);
+    }
+
+    closeSharedDateRangePicker(scope) {
+        const config = this.getSharedDateRangeConfig(scope);
+        if (config) {
+            const popover = document.getElementById(config.popoverId);
+            if (popover) popover.style.display = 'none';
+        }
+        if (this._sharedDateRangeState && this._sharedDateRangeState[scope]) {
+            this._sharedDateRangeState[scope].pendingStart = null;
+        }
+        if (this._sharedDateRangeOutsideHandler) {
+            document.removeEventListener('mousedown', this._sharedDateRangeOutsideHandler);
+            this._sharedDateRangeOutsideHandler = null;
+        }
+        if (this._activeSharedDateRangeScope === scope) this._activeSharedDateRangeScope = null;
+    }
+
+    bindSharedDateRangeOutsideClick(scope) {
+        if (this._sharedDateRangeOutsideHandler) {
+            document.removeEventListener('mousedown', this._sharedDateRangeOutsideHandler);
+        }
+        this._sharedDateRangeOutsideHandler = event => {
+            const config = this.getSharedDateRangeConfig(scope);
+            const root = config ? document.getElementById(config.rootId) : null;
+            if (root && root.contains(event.target)) return;
+            this.closeSharedDateRangePicker(scope);
+        };
+        document.addEventListener('mousedown', this._sharedDateRangeOutsideHandler);
+    }
+
+    changeSharedCalendarMonth(scope, delta) {
+        const state = this._sharedDateRangeState && this._sharedDateRangeState[scope];
+        if (!state) return;
+        state.month = new Date(state.month.getFullYear(), state.month.getMonth() + delta, 1);
+        this.renderSharedDateRangePicker(scope);
+    }
+
+    renderSharedDateRangePicker(scope) {
+        const config = this.getSharedDateRangeConfig(scope);
+        const state = this._sharedDateRangeState && this._sharedDateRangeState[scope];
+        if (!config || !state) return;
+        const title = document.getElementById(config.titleId);
+        const grid = document.getElementById(config.gridId);
+        if (!title || !grid) return;
+
+        const month = state.month;
+        const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+        const gridStart = new Date(monthStart);
+        gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+        const startInput = document.getElementById(config.startId);
+        const endInput = document.getElementById(config.endId);
+        const startDate = state.pendingStart || this.parseDateInputValue(startInput ? startInput.value : '');
+        const endDate = state.pendingStart || this.parseDateInputValue(endInput ? endInput.value : '');
+
+        title.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+        grid.innerHTML = '';
+        for (let index = 0; index < 42; index++) {
+            const day = new Date(gridStart);
+            day.setDate(gridStart.getDate() + index);
+            day.setHours(0, 0, 0, 0);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'stats-calendar-day';
+            button.textContent = String(day.getDate());
+            if (day.getMonth() !== month.getMonth()) button.classList.add('other-month');
+            if (startDate && endDate && day >= startDate && day <= endDate) button.classList.add('in-range');
+            if ((startDate && day.getTime() === startDate.getTime()) || (endDate && day.getTime() === endDate.getTime())) {
+                button.classList.add('range-edge');
+            }
+            const dateValue = this.formatLocalDate(day);
+            button.addEventListener('click', () => this.selectSharedDateRangeDate(scope, dateValue));
+            grid.appendChild(button);
+        }
+    }
+
+    selectSharedDateRangeDate(scope, dateValue) {
+        const config = this.getSharedDateRangeConfig(scope);
+        const state = this._sharedDateRangeState && this._sharedDateRangeState[scope];
+        const picked = this.parseDateInputValue(dateValue);
+        if (!config || !state || !picked) return;
+        if (!state.pendingStart) {
+            state.pendingStart = picked;
+            const label = document.getElementById(config.textId);
+            if (label) label.textContent = `${picked.getFullYear()}年${picked.getMonth() + 1}月${String(picked.getDate()).padStart(2, '0')}日-请选择结束日期`;
+            this.renderSharedDateRangePicker(scope);
+            return;
+        }
+
+        const rangeStart = state.pendingStart <= picked ? state.pendingStart : picked;
+        const rangeEnd = state.pendingStart <= picked ? picked : state.pendingStart;
+        document.getElementById(config.startId).value = this.formatLocalDate(rangeStart);
+        document.getElementById(config.endId).value = this.formatLocalDate(rangeEnd);
+        this.syncSharedDateRangeLabel(scope);
+        this.closeSharedDateRangePicker(scope);
     }
 
     addDays(date, days) {

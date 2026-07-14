@@ -1850,6 +1850,16 @@ body {
     background: #f8fafc;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
+    gap: 12px;
+    white-space: nowrap;
+}
+
+.lps-identity {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
 }
 
 .lps-name {
@@ -1857,6 +1867,9 @@ body {
     font-weight: 500;
     cursor: pointer;
     color: #1f2225;
+    line-height: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .lps-name:hover {
@@ -1867,12 +1880,16 @@ body {
     font-size: 12px;
     color: #64748b;
     margin-left: 6px;
+    line-height: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .lps-leave {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
 }
 
 .att-row {
@@ -3912,6 +3929,46 @@ body {
     white-space: nowrap;
 }
 
+.attendance-lesson-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+}
+
+.attendance-lesson-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.attendance-lesson-period,
+.attendance-lesson-subject,
+.attendance-lesson-time {
+    display: inline-block;
+    line-height: 30px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attendance-lesson-period {
+    flex: 0 0 auto;
+    color: var(--text-1, #1e293b);
+}
+
+.attendance-lesson-subject {
+    color: var(--text-2, #475569);
+}
+
+.attendance-lesson-time {
+    flex: 0 0 auto;
+    color: var(--text-3, #64748b);
+}
+
 .actual-duration-display:hover {
     background: #e0efff;
     border-color: #80b8ff;
@@ -3984,32 +4041,38 @@ body {
 /* Settings Tabs */
 .settings-tabs {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 20px;
+    gap: 4px;
+    margin: 4px 0 20px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: #f3f7fb;
 }
 
 .settings-tab {
-    padding: 10px 15px;
+    flex: 1 1 0;
+    min-height: 38px;
+    padding: 8px 16px;
     border: none;
+    border-radius: 9px;
     background: transparent;
     cursor: pointer;
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--text-3);
-    transition: all 0.2s ease;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    /* To overlap with the border-bottom of settings-tabs */
+    transition: background-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 .settings-tab:hover {
+    background: rgba(255, 255, 255, .62);
     color: var(--primary-color);
 }
 
 .settings-tab.active {
+    background: #fff;
     color: var(--primary-color);
-    font-weight: 600;
-    border-bottom-color: var(--primary-color);
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .08);
 }
 
 .settings-tab-pane {
@@ -4021,13 +4084,23 @@ body {
 }
 
 .actual-duration-edit-icon {
-    font-size: 9px;
     color: #4a90d9;
-    margin-left: 2px;
-    line-height: 1;
-    vertical-align: middle;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 1px;
+    transition: transform 0.18s ease;
+}
+
+.actual-duration-edit-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.actual-duration-display:has(.duration-editor-dropdown) .actual-duration-edit-icon {
+    transform: rotate(180deg);
 }
 
 /* 时长编辑下拉面板 */
@@ -4510,7 +4583,8 @@ body.dark-theme-active .grade-actions .btn-icon:hover {
 }
 
 body.dark-theme-active .settings-tabs {
-    border-bottom-color: #334155;
+    border-color: #334155;
+    background: #0f172a;
 }
 
 body.dark-theme-active .settings-tab {
@@ -4518,12 +4592,14 @@ body.dark-theme-active .settings-tab {
 }
 
 body.dark-theme-active .settings-tab:hover {
-    color: #818cf8;
+    background: #1e293b;
+    color: #93c5fd;
 }
 
 body.dark-theme-active .settings-tab.active {
-    color: #818cf8;
-    border-bottom-color: #818cf8;
+    background: #334155;
+    color: #bfdbfe;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .24);
 }
 
 body.dark-theme-active .stats-tab:hover {
@@ -5150,6 +5226,49 @@ body.dark-theme-active .lps-name {
 
 body.dark-theme-active .lps-grade {
     color: #94a3b8;
+}
+
+body.dark-theme-active .actual-duration-display {
+    background: rgba(var(--primary-rgb), 0.14);
+    border-color: rgba(var(--primary-rgb), 0.42);
+}
+
+body.dark-theme-active .actual-duration-display:hover {
+    background: rgba(var(--primary-rgb), 0.22);
+    border-color: rgba(var(--primary-rgb), 0.62);
+}
+
+body.dark-theme-active .actual-duration-label,
+body.dark-theme-active .actual-duration-edit-icon {
+    color: var(--primary-color);
+}
+
+body.dark-theme-active .actual-duration-value {
+    color: var(--modal-text-strong, #f1f5f9);
+}
+
+body.dark-theme-active .duration-editor-dropdown {
+    background: var(--modal-control-bg, #182235);
+    border-color: var(--modal-control-border, #475569);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.42);
+}
+
+body.dark-theme-active .duration-editor-header {
+    color: var(--modal-text-strong, #f1f5f9);
+    background: var(--modal-section-bg, #151f30);
+    border-bottom-color: var(--modal-border, #334155);
+}
+
+body.dark-theme-active .duration-slider-group label {
+    color: var(--modal-text-soft, #cbd5e1);
+}
+
+body.dark-theme-active .duration-range {
+    background: var(--modal-border, #334155);
+}
+
+body.dark-theme-active .duration-slider-val {
+    color: var(--primary-color);
 }
 
 body.dark-theme-active .att-row {
@@ -9695,6 +9814,71 @@ body.reference-main-ui .stats-date-range-picker:hover {
     border-color: transparent;
     background: rgba(255, 255, 255, .48);
     color: #347ff0;
+}
+
+body.reference-main-ui .shared-date-range-picker {
+    position: relative;
+    width: 100%;
+}
+
+body.reference-main-ui .reset-date-action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+body.reference-main-ui .reset-date-action-row .shared-date-range-picker {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+body.reference-main-ui .reset-date-action-btn {
+    flex: 0 0 auto;
+    min-width: 108px;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+body.reference-main-ui .reset-date-action-btn:hover {
+    transform: none;
+    box-shadow: 0 5px 14px rgba(220, 38, 38, .18);
+}
+
+body.reference-main-ui .shared-date-range-picker .stats-date-range-picker {
+    width: 100%;
+    background: rgba(255, 255, 255, .34);
+}
+
+body.reference-main-ui .shared-date-range-picker .stats-date-popover {
+    z-index: 1200;
+}
+
+body.reference-main-ui #resetModal .reset-modal-content,
+body.reference-main-ui #exportModal .export-modal-content,
+body.reference-main-ui #exportModal .export-panel.active {
+    overflow: visible;
+}
+
+body.reference-main-ui #resetDateRangePicker .stats-date-popover,
+body.reference-main-ui #lessonSheetDateRangePicker .stats-date-popover {
+    width: 252px;
+}
+
+@media (max-width: 520px) {
+    body.reference-main-ui .reset-date-action-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    body.reference-main-ui .reset-date-action-btn {
+        width: 100%;
+    }
 }
 
 body.reference-main-ui .stats-date-range-picker .stats-date-range-caret {

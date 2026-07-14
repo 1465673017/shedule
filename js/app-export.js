@@ -31,12 +31,13 @@ TimetableApp.prototype.openExportModal = function () {
     const modal = document.getElementById('exportModal');
     if (modal) {
         this.initLessonSheetExportRange(true);
-        this.switchExportTab('schedule');
+        this.switchExportTab('lessonSheet');
         modal.style.display = 'block';
     }
 }
 
 TimetableApp.prototype.closeExportModal = function () {
+    this.closeSharedDateRangePicker('lessonSheet');
     const modal = document.getElementById('exportModal');
     if (modal) {
         modal.style.display = 'none';
@@ -96,7 +97,10 @@ TimetableApp.prototype.initLessonSheetExportRange = function (forceReset) {
     const endInput = document.getElementById('lessonSheetEndDate');
     if (!startInput || !endInput) return;
 
-    if (!forceReset && startInput.value && endInput.value) return;
+    if (!forceReset && startInput.value && endInput.value) {
+        this.syncSharedDateRangeLabel('lessonSheet');
+        return;
+    }
 
     const baseDate = this.currentDate instanceof Date ? this.currentDate : new Date();
     const start = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
@@ -104,6 +108,7 @@ TimetableApp.prototype.initLessonSheetExportRange = function (forceReset) {
 
     startInput.value = this.formatLocalDate(start);
     endInput.value = this.formatLocalDate(end);
+    this.syncSharedDateRangeLabel('lessonSheet');
 }
 
 TimetableApp.prototype.getLessonSheetExportRange = function () {

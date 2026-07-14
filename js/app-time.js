@@ -69,14 +69,15 @@ TimetableApp.prototype.renderAllPeriods = function() {
 
 TimetableApp.prototype.insertPeriodAfter = function(index) {
         const prevPeriod = this.periods[index];
+        const periodDuration = this.getConfiguredPeriodDuration();
         
         let newStart = '08:00';
-        let newEnd = '08:40';
+        let newEnd = this.addMinutesToTime(newStart, periodDuration);
         
         if (prevPeriod) {
             const prevEnd = prevPeriod.time.split('-')[1];
             newStart = prevEnd;
-            newEnd = this.addMinutesToTime(prevEnd, 40);
+            newEnd = this.addMinutesToTime(prevEnd, periodDuration);
         }
         
         const newPeriod = { name: `第${index + 2}节`, time: `${newStart}-${newEnd}` };
@@ -87,20 +88,42 @@ TimetableApp.prototype.insertPeriodAfter = function(index) {
     }
 
 TimetableApp.prototype.addPeriodToEnd = function() {
+        const periodDuration = this.getConfiguredPeriodDuration();
         let newStart = '08:00';
-        let newEnd = '08:40';
+        let newEnd = this.addMinutesToTime(newStart, periodDuration);
         
         if (this.periods.length > 0) {
             const lastPeriod = this.periods[this.periods.length - 1];
             const lastEnd = lastPeriod.time.split('-')[1];
             newStart = lastEnd;
-            newEnd = this.addMinutesToTime(lastEnd, 40);
+            newEnd = this.addMinutesToTime(lastEnd, periodDuration);
         }
         
         const newPeriod = { name: `第${this.periods.length + 1}节`, time: `${newStart}-${newEnd}` };
         this.periods.push(newPeriod);
         
         this.renderPeriods();
+    }
+
+TimetableApp.prototype.getConfiguredPeriodDuration = function() {
+        const durationInput = typeof document !== 'undefined'
+            ? document.getElementById('periodDuration')
+            : null;
+        const inputDuration = durationInput ? parseInt(durationInput.value, 10) : NaN;
+        if (Number.isFinite(inputDuration) && inputDuration > 0) return inputDuration;
+
+        const savedDuration = this.quickSettingsState
+            ? parseInt(this.quickSettingsState.periodDuration, 10)
+            : NaN;
+        if (Number.isFinite(savedDuration) && savedDuration > 0) return savedDuration;
+
+        if (Array.isArray(this.periods) && this.periods.length > 0 && this.periods[0].time) {
+            const [start, end] = this.periods[0].time.split('-');
+            const inferredDuration = this.timeToMinutes(end) - this.timeToMinutes(start);
+            if (Number.isFinite(inferredDuration) && inferredDuration > 0) return inferredDuration;
+        }
+
+        return 40;
     }
 
 TimetableApp.prototype.addMinutesToTime = function(timeStr, minutes) {

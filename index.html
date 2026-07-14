@@ -813,21 +813,29 @@
             </div>
             <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee;">
                 <div style="font-size: 14px; font-weight: 600; color: #444; margin-bottom: 10px;">自定义重置</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label for="customResetStartDate" style="display: block; font-size: 12px; color: #666; margin-bottom: 6px;">开始日期</label>
-                        <input type="date" id="customResetStartDate" class="setting-input">
+                <div class="reset-date-action-row">
+                    <div class="shared-date-range-picker" id="resetDateRangePicker">
+                        <input type="hidden" id="customResetStartDate">
+                        <input type="hidden" id="customResetEndDate">
+                        <button type="button" class="stats-date-range-picker" onclick="app.toggleSharedDateRangePicker('reset')">
+                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                            <span class="stats-date-range-value" id="resetDateRangeText">请选择日期范围</span>
+                            <span class="stats-date-range-caret">&#9662;</span>
+                        </button>
+                        <div class="stats-date-popover" id="resetDatePopover" style="display:none;">
+                            <div class="stats-calendar-header">
+                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('reset', -1)">&#8249;</button>
+                                <div class="stats-calendar-title" id="resetCalendarTitle"></div>
+                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('reset', 1)">&#8250;</button>
+                            </div>
+                            <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                            <div class="stats-calendar-grid" id="resetCalendarGrid"></div>
+                        </div>
                     </div>
-                    <div>
-                        <label for="customResetEndDate" style="display: block; font-size: 12px; color: #666; margin-bottom: 6px;">结束日期</label>
-                        <input type="date" id="customResetEndDate" class="setting-input">
-                    </div>
+                    <button type="button" class="btn danger reset-date-action-btn" onclick="app.resetScheduleByCustomRange()">按日期重置</button>
                 </div>
-                <button type="button" class="btn secondary" onclick="app.resetScheduleByCustomRange()" style="width: 100%; margin-top: 12px;">按日期范围清除课程</button>
                 <div style="margin-top: 8px; color: #888; font-size: 12px; line-height: 1.6;">
-                    只选开始日期：清除此日期及以后所有课程。<br>
-                    只选结束日期：清除此日期及以前所有课程。<br>
-                    同时选择开始和结束日期：只清除该区间内课程。
+                    依次选择起点和终点，只清除所选日期范围内的课程。
                 </div>
             </div>
             <div style="margin-top: 12px; color: #888; font-size: 12px; line-height: 1.6;">
@@ -847,10 +855,10 @@
                 <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeExportModal()">×</button>
             </div>
             <div class="export-tabs">
-                <button type="button" id="exportTabSchedule" class="export-tab active" onclick="app.switchExportTab('schedule')">课表</button>
-                <button type="button" id="exportTabLessonSheet" class="export-tab" onclick="app.switchExportTab('lessonSheet')">课时单</button>
+                <button type="button" id="exportTabLessonSheet" class="export-tab active" onclick="app.switchExportTab('lessonSheet')">课时单</button>
+                <button type="button" id="exportTabSchedule" class="export-tab" onclick="app.switchExportTab('schedule')">课表</button>
             </div>
-            <div id="exportPanelSchedule" class="export-panel active">
+            <div id="exportPanelSchedule" class="export-panel">
                 <div class="export-options">
                     <button type="button" class="export-option-card" onclick="app.handleExportOption('image')">
                         <span class="export-option-title">导出图片</span>
@@ -866,16 +874,24 @@
                     </button>
                 </div>
             </div>
-            <div id="exportPanelLessonSheet" class="export-panel">
+            <div id="exportPanelLessonSheet" class="export-panel active">
                 <div class="export-panel-tip">课时单支持按日期范围导出，默认范围为当前查看月份，包含日期、学生、出勤和实际上课时长。</div>
-                <div class="export-range-row">
-                    <div class="export-range-field">
-                        <label for="lessonSheetStartDate">开始日期</label>
-                        <input type="date" id="lessonSheetStartDate" class="setting-input">
-                    </div>
-                    <div class="export-range-field">
-                        <label for="lessonSheetEndDate">结束日期</label>
-                        <input type="date" id="lessonSheetEndDate" class="setting-input">
+                <div class="shared-date-range-picker" id="lessonSheetDateRangePicker">
+                    <input type="hidden" id="lessonSheetStartDate">
+                    <input type="hidden" id="lessonSheetEndDate">
+                    <button type="button" class="stats-date-range-picker" onclick="app.toggleSharedDateRangePicker('lessonSheet')">
+                        <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                        <span class="stats-date-range-value" id="lessonSheetDateRangeText">请选择日期范围</span>
+                        <span class="stats-date-range-caret">&#9662;</span>
+                    </button>
+                    <div class="stats-date-popover" id="lessonSheetDatePopover" style="display:none;">
+                        <div class="stats-calendar-header">
+                            <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
+                            <div class="stats-calendar-title" id="lessonSheetCalendarTitle"></div>
+                            <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
+                        </div>
+                        <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                        <div class="stats-calendar-grid" id="lessonSheetCalendarGrid"></div>
                     </div>
                 </div>
                 <div class="export-options">

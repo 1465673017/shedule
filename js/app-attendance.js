@@ -49,15 +49,18 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
         const actualDisplay = this.formatDuration(Math.floor(actualMin / 60), actualMin % 60);
 
         lessonInfo.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div>
-                    <strong>${dayName} ${periodLabel}</strong>
-                    <div>${subject ? subject.name : '无科目'} ${periodInfo ? ' - ' + periodInfo.time : ''}</div>
+            <div class="attendance-lesson-summary">
+                <div class="attendance-lesson-main">
+                    <strong class="attendance-lesson-period">${dayName} ${periodLabel}</strong>
+                    <span class="attendance-lesson-subject">${subject ? subject.name : '无科目'}</span>
+                    <span class="attendance-lesson-time">${periodInfo ? periodInfo.time : ''}</span>
                 </div>
                 <div class="actual-duration-display" onclick="app.showDurationEditor(event, '${key}')" title="点击修改实际上课时间">
                     <span class="actual-duration-label">实上</span>
                     <span class="actual-duration-value">${actualDisplay}</span>
-                    <span class="actual-duration-edit-icon">edit</span>
+                    <span class="actual-duration-edit-icon" aria-hidden="true">
+                        <svg viewBox="0 0 16 16"><path d="M4 6L8 10L12 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
                 </div>
             </div>
         `;
@@ -111,11 +114,16 @@ TimetableApp.prototype.closeAttendanceModal = function() {
     }
 
 TimetableApp.prototype.showDurationEditor = function(event, key) {
-        event.stopPropagation();
-        // Remove any existing editor
+    event.stopPropagation();
+    const displayEl = event.currentTarget;
+    const existingEditor = document.getElementById('durationEditorDropdown');
+    if (existingEditor && existingEditor.parentElement === displayEl) {
         this.hideDurationEditor();
+        return;
+    }
+    // Close an editor opened from another duration control.
+    this.hideDurationEditor();
 
-        const displayEl = event.currentTarget;
         const scheduledMinutes = this.getScheduledMinutes(key);
         const erpActualMin = window.ScheduleErpService.getActualMinutes(this, key, this._attModalDateKey);
         const currentMin = erpActualMin !== undefined
@@ -253,7 +261,7 @@ TimetableApp.prototype.renderAttendanceStudentList = function(students, key) {
             const completedDisabled = isCompleted ? 'disabled disabled-btn' : '';
             html += `
                 <div class="lps-item">
-                    <div>
+                    <div class="lps-identity">
                         <span class="lps-name">${student.name}</span>
                         <span class="lps-grade">${student.teacher || ''}</span>
                     </div>
