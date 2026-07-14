@@ -66,16 +66,32 @@
     function ensureStudent(app, source, course, oneToOne) {
         const externalId = String(source.id || '');
         const grade = String(course.grade && course.grade.name || '').trim();
-        let student = app.students.find(s => externalId && String(s.externalStudentId || '') === externalId)
-            || app.students.find(s => s.name === source.name && s.grade === grade);
+        const classType = oneToOne ? '1v1' : '1vN';
+        const studentClassType = student => student.classType || (student.is1v1 ? '1v1' : '1vN');
+        let student = app.students.find(s =>
+            externalId &&
+            String(s.externalStudentId || '') === externalId &&
+            studentClassType(s) === classType
+        ) || app.students.find(s =>
+            s.name === source.name &&
+            s.grade === grade &&
+            studentClassType(s) === classType &&
+            (!externalId || !s.externalStudentId)
+        );
         if (!student) {
-            student = { id: externalId ? `import_student_${externalId}` : `import_student_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: source.name, grade };
+            student = {
+                id: externalId
+                    ? `import_student_${externalId}_${classType}`
+                    : `import_student_${Date.now()}_${classType}_${Math.random().toString(36).slice(2, 7)}`,
+                name: source.name,
+                grade
+            };
             app.students.push(student);
         }
         student.externalStudentId = externalId || student.externalStudentId;
         student.grade = grade || student.grade;
         student.is1v1 = !!oneToOne;
-        student.classType = oneToOne ? '1v1' : '1vN';
+        student.classType = classType;
         return student;
     }
 
