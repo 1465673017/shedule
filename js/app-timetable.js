@@ -170,7 +170,11 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
         }
 
         const isEmpty = !newSubject && newStudents.length === 0;
-        this.setCellVersion(key, weekStartStr, newSubject, newStudents, { cutoff: isEmpty });
+        if (isEmpty && window.ScheduleErpService && typeof window.ScheduleErpService.deleteSingleCellOccurrence === 'function') {
+            window.ScheduleErpService.deleteSingleCellOccurrence(this, key, weekStartStr);
+        } else {
+            this.setCellVersion(key, weekStartStr, newSubject, newStudents, { cutoff: isEmpty });
+        }
 
         this.syncRealtime();
     }

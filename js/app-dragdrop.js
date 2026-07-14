@@ -367,7 +367,11 @@ TimetableApp.prototype.setupDragAndDrop = function() {
                     // 回收科目背景时，整节课连同学生一起删除
 
                     if (sourceVersion && sourceVersion.subject) {
-                        this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
+                        if (window.ScheduleErpService && typeof window.ScheduleErpService.deleteSingleCellOccurrence === 'function') {
+                            window.ScheduleErpService.deleteSingleCellOccurrence(this, sourceKey, weekStartStr);
+                        } else {
+                            this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
+                        }
 
                     }
 

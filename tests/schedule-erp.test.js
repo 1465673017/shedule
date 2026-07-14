@@ -356,5 +356,97 @@ assert.deepStrictEqual(
     'switching recurring back on should not overwrite a later explicit course instance'
 );
 
-console.log('Schedule ERP tests passed');
+const singleDeleteApp = makeApp();
+ScheduleErpService.setCellVersion(singleDeleteApp, '4-afternoon-0', '2026-06-29', 'math', ['s1', 's2']);
+assert.strictEqual(
+    ScheduleErpService.deleteSingleCellOccurrence(singleDeleteApp, '4-afternoon-0', '2026-07-13'),
+    true,
+    'a projected occurrence should be removable'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleDeleteApp, '4-afternoon-0', '2026-07-06')),
+    ['s1', 's2'],
+    'the occurrence before a single deletion should remain'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(singleDeleteApp, '4-afternoon-0', '2026-07-13'),
+    null,
+    'only the selected occurrence should be empty'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleDeleteApp, '4-afternoon-0', '2026-07-20')),
+    ['s1', 's2'],
+    'the following occurrence should restart the recurrence'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleDeleteApp, '4-afternoon-0', '2026-07-27')),
+    ['s1', 's2'],
+    'the restarted recurrence should continue into later weeks'
+);
 
+ScheduleErpService.deleteSingleCellOccurrence(singleDeleteApp, '4-afternoon-0', '2026-07-20');
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(singleDeleteApp, '4-afternoon-0', '2026-07-20'),
+    null,
+    'a second consecutive occurrence can also be removed independently'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleDeleteApp, '4-afternoon-0', '2026-07-27')),
+    ['s1', 's2'],
+    'the recurrence should restart after consecutive removed occurrences'
+);
+Object.setPrototypeOf(singleDeleteApp, TimetableApp.prototype);
+singleDeleteApp.getCellVersion = function(cellKey, weekStartStr) {
+    return ScheduleErpService.getCellVersion(this, cellKey, weekStartStr);
+};
+singleDeleteApp.currentDate = new Date(2026, 6, 7);
+assert.strictEqual(
+    singleDeleteApp.getStudentRecurrenceType('4-afternoon-0', 's1'),
+    'stopped',
+    'the lesson immediately before a removed occurrence should show stopped'
+);
+singleDeleteApp.currentDate = new Date(2026, 6, 28);
+assert.strictEqual(
+    singleDeleteApp.getStudentRecurrenceType('4-afternoon-0', 's1'),
+    'recurring',
+    'the restored branch should show recurring at its new start'
+);
+
+const boundedInsertApp = makeApp();
+ScheduleErpService.setCellVersion(boundedInsertApp, '5-afternoon-0', '2026-06-29', 'math', ['s2']);
+ScheduleErpService.deleteSingleCellOccurrence(boundedInsertApp, '5-afternoon-0', '2026-07-06');
+ScheduleErpService.deleteSingleCellOccurrence(boundedInsertApp, '5-afternoon-0', '2026-07-13');
+ScheduleErpService.deleteSingleCellOccurrence(boundedInsertApp, '5-afternoon-0', '2026-07-20');
+ScheduleErpService.setCellVersion(boundedInsertApp, '5-afternoon-0', '2026-07-06', 'math', ['s1']);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(boundedInsertApp, '5-afternoon-0', '2026-07-06')),
+    ['s1'],
+    'a new lesson should replace the first deleted occurrence'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(boundedInsertApp, '5-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'a new lesson should bridge the next consecutive deleted occurrence'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(boundedInsertApp, '5-afternoon-0', '2026-07-20')),
+    ['s1'],
+    'an earlier inserted lesson should recur up to the week before a future explicit lesson'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(boundedInsertApp, '5-afternoon-0', '2026-07-27')),
+    ['s2'],
+    'the future explicit lesson should remain the recurrence boundary'
+);
+Object.setPrototypeOf(boundedInsertApp, TimetableApp.prototype);
+boundedInsertApp.getCellVersion = function(cellKey, weekStartStr) {
+    return ScheduleErpService.getCellVersion(this, cellKey, weekStartStr);
+};
+boundedInsertApp.currentDate = new Date(2026, 6, 21);
+assert.strictEqual(
+    boundedInsertApp.getStudentRecurrenceType('5-afternoon-0', 's1'),
+    'stopped',
+    'the final bridged occurrence should stop before the future explicit course'
+);
+
+console.log('Schedule ERP tests passed');

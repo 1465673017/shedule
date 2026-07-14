@@ -273,6 +273,33 @@
         });
     }
 
+    function clearConsecutiveEmptyStopsBeforeNextCourse(app, cellKey, fromWeekStart) {
+        if (!cellKey || !fromWeekStart) return;
+        const erp = ensureErpData(app);
+        const futureInstances = erp.courseInstances
+            .filter(instance => instance.cellKey === cellKey && instance.weekStart > fromWeekStart)
+            .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+        const removedInstanceIds = new Set();
+
+        for (const instance of futureInstances) {
+            const hasSubject = !!instance.subjectId;
+            const hasStudents = normalizeIds(instance.studentIds).length > 0 ||
+                erp.studentCourseRelations.some(rel => rel.courseInstanceId === instance.id);
+            const isEmptyStop = instance.isDeleted || (!hasSubject && !hasStudents);
+
+            // A real explicit course is the boundary for the newly inserted
+            // recurrence. Never clear that course or any versions after it.
+            if (!isEmptyStop) break;
+            removedInstanceIds.add(instance.id);
+        }
+
+        if (removedInstanceIds.size === 0) return;
+        erp.courseInstances = erp.courseInstances.filter(instance => !removedInstanceIds.has(instance.id));
+        erp.repeatRules = erp.repeatRules.filter(rule => !removedInstanceIds.has(rule.courseInstanceId));
+        erp.studentCourseRelations = erp.studentCourseRelations.filter(rel => !removedInstanceIds.has(rel.courseInstanceId));
+        erp.exceptionRules = erp.exceptionRules.filter(rule => !removedInstanceIds.has(rule.courseInstanceId));
+    }
+
     function findNextExplicitVersionWeek(app, cellKey, fromWeekStart) {
         const erp = ensureErpData(app);
         let nextWeek = null;
@@ -567,6 +594,9 @@
                 syncAttendanceInstanceIds(app, existing ? existing.id : null, instance.id);
                 if (!options.cutoff) {
                     clearInstanceDeletionRules(app, instance.id, weekStartStr);
+                    if (options.source !== 'course-import') {
+                        clearConsecutiveEmptyStopsBeforeNextCourse(app, key, weekStartStr);
+                    }
                 }
                 if (options.cutoff) {
                     upsertExceptionRule(app, {
@@ -580,6 +610,54 @@
                 }
             }
             buildTimetableProjection(app);
+        },
+
+        deleteSingleCellOccurrence(app, key, weekStartStr) {
+            const currentVersion = this.getCellVersion(app, key, weekStartStr);
+            if (!currentVersion) return false;
+
+            // A projected weekly lesson has no explicit instance of its own.  Split
+            // the recurrence around the removed week so the cutoff only occupies
+            // that week and the following occurrence becomes a fresh branch.
+            const nextWeekStart = addWeeks(weekStartStr, 1);
+            const nextVersion = this.getCellVersion(app, key, nextWeekStart);
+            const nextSnapshot = nextVersion ? {
+                ...nextVersion,
+                student: normalizeIds(nextVersion.student),
+                actualMinutesByDate: nextVersion.actualMinutesByDate
+                    ? { ...nextVersion.actualMinutesByDate }
+                    : undefined
+            } : null;
+
+            this.setCellVersion(app, key, weekStartStr, null, [], { cutoff: true });
+
+            if (nextSnapshot && (nextSnapshot.subject || nextSnapshot.student.length > 0)) {
+                this.setCellVersion(
+                    app,
+                    key,
+                    nextWeekStart,
+                    nextSnapshot.subject,
+                    nextSnapshot.student
+                );
+                const restoredVersion = this.getCellVersion(app, key, nextWeekStart);
+                if (restoredVersion) {
+                    copyStudentBranchState(
+                        app,
+                        nextSnapshot.courseInstanceId,
+                        restoredVersion.courseInstanceId,
+                        nextSnapshot.student,
+                        nextWeekStart,
+                        key
+                    );
+                    const restoredInstance = getInstanceForVersion(app, restoredVersion);
+                    if (restoredInstance && nextSnapshot.actualMinutesByDate) {
+                        restoredInstance.actualMinutesByDate = { ...nextSnapshot.actualMinutesByDate };
+                    }
+                }
+            }
+
+            buildTimetableProjection(app);
+            return true;
         },
 
         setRelationStatus(app, cellKey, studentId, relationStatus, weekStart) {
