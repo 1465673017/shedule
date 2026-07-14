@@ -33,8 +33,8 @@ body {
 
 .sidebar-actions {
     gap: 10px;
-    padding-bottom: 20px;
-    margin-bottom: 4px;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 .sidebar-actions .btn {
@@ -604,8 +604,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-bottom: 16px;
-    margin-bottom: 16px;
+    padding-bottom: 0;
+    margin-bottom: 0;
     border-bottom: none;
 }
 
@@ -7900,8 +7900,8 @@ body.reference-main-ui .timetable-container {
 
 body.reference-main-ui .sidebar-actions {
     gap: 10px;
-    padding-bottom: 20px;
-    margin-bottom: 4px;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 body.reference-main-ui .sidebar-actions .btn {
