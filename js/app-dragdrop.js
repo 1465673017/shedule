@@ -43,6 +43,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
         // 课表内部拖拽
 
         const timetable = document.getElementById('timetable');
+        const leftSidebar = document.querySelector('.left-sidebar');
 
         timetable.addEventListener('dragstart', (e) => {
 
@@ -69,6 +70,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
                 };
 
                 studentCard.classList.add('dragging');
+                leftSidebar.classList.add('drag-over-recycle');
 
                 e.dataTransfer.effectAllowed = 'move';
 
@@ -97,6 +99,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
                 };
 
                 subjectCell.classList.add('dragging');
+                leftSidebar.classList.add('drag-over-recycle');
 
                 e.dataTransfer.effectAllowed = 'move';
 
@@ -122,6 +125,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
             }
 
+            leftSidebar.classList.remove('drag-over-recycle');
             this.draggedItem = null;
 
         });
@@ -313,8 +317,6 @@ TimetableApp.prototype.setupDragAndDrop = function() {
         });
 
         // 左侧菜单栏：从课表拖放课程/学生到此处回收（删除但不入池）
-
-        const leftSidebar = document.querySelector('.left-sidebar');
 
         leftSidebar.addEventListener('dragover', (e) => {
 

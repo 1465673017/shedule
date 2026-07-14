@@ -1592,11 +1592,12 @@ body {
 }
 
 .time-period-item .delete-period-btn {
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: #fff;
-    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    padding: 0;
+    background: rgba(254, 242, 242, .8);
+    border-radius: 7px;
     color: #ff6b6b;
     font-size: 14px;
     cursor: pointer;
@@ -1604,12 +1605,18 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    border: 1px solid #ff6b6b;
+    border: 1px solid rgba(220, 38, 38, .22);
 }
 
 .time-period-item .delete-period-btn:hover {
     background: #ff6b6b;
     color: white;
+}
+
+.time-period-item .delete-period-btn svg {
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
 }
 
 .period-add-zone {
@@ -4128,6 +4135,17 @@ body.dark-theme-active {
     --border-color: #334155;
     --divider-color: #1e293b;
     --light-color: #1e293b;
+    --modal-bg: #1e293b;
+    --modal-shell-bg: #111827;
+    --modal-section-bg: #151f30;
+    --modal-control-bg: #182235;
+    --modal-footer-bg: #0f172a;
+    --modal-border: #334155;
+    --modal-control-border: #475569;
+    --modal-text: #e2e8f0;
+    --modal-text-strong: #f1f5f9;
+    --modal-text-soft: #cbd5e1;
+    --modal-text-muted: #94a3b8;
 }
 
 /* 当暗色主题激活时，调整整个应用的样式 */
@@ -4202,16 +4220,6 @@ body.dark-theme-active .subject-info .subject-name {
 body.dark-theme-active .subject-info .teacher-name {
     color: #cbd5e1;
     background: rgba(148, 163, 184, 0.14);
-}
-
-body.dark-theme-active .subject-card {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(148, 163, 184, 0.12);
-}
-
-body.dark-theme-active .subject-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(129, 140, 248, 0.24);
 }
 
 body.dark-theme-active .subjects::-webkit-scrollbar-thumb {
@@ -4337,30 +4345,30 @@ body.dark-theme-active .today-col:hover::before {
 }
 
 body.dark-theme-active .modal-content {
-    background: #1e293b;
-    color: #e2e8f0;
+    background: var(--modal-bg);
+    color: var(--modal-text);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 body.dark-theme-active .modal-header {
-    border-bottom-color: #334155;
+    border-bottom-color: var(--modal-border);
 }
 
 body.dark-theme-active .modal-header h3 {
-    color: #f1f5f9;
+    color: var(--modal-text-strong);
 }
 
 body.dark-theme-active .modal-close {
-    color: #94a3b8;
+    color: var(--modal-text-muted);
 }
 
 body.dark-theme-active .modal-close:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #f1f5f9;
+    color: var(--modal-text-strong);
 }
 
 body.dark-theme-active .form-group label {
-    color: #cbd5e1;
+    color: var(--modal-text-soft);
 }
 
 body.dark-theme-active .form-group input[type="text"],
@@ -4369,9 +4377,9 @@ body.dark-theme-active .form-group input[type="date"],
 body.dark-theme-active .form-group input[type="number"],
 body.dark-theme-active .form-group select,
 body.dark-theme-active .form-group textarea {
-    background: #334155;
-    border-color: #475569;
-    color: #e2e8f0;
+    background: var(--modal-border);
+    border-color: var(--modal-control-border);
+    color: var(--modal-text);
 }
 
 body.dark-theme-active .form-group input:focus {
@@ -4518,10 +4526,6 @@ body.dark-theme-active .settings-tab.active {
     border-bottom-color: #818cf8;
 }
 
-body.dark-theme-active .stats-tab {
-    color: #94a3b8;
-}
-
 body.dark-theme-active .stats-tab:hover {
     color: #818cf8;
     background: rgba(255, 255, 255, 0.05);
@@ -4545,12 +4549,6 @@ body.dark-theme-active .stats-date-input {
 
 body.dark-theme-active .stats-date-input:focus {
     border-color: #818cf8;
-}
-
-body.dark-theme-active .stats-date-range-picker {
-    background: #1e293b;
-    border-color: #475569;
-    color: #e2e8f0;
 }
 
 body.dark-theme-active .stats-date-range-picker:hover,
@@ -4698,10 +4696,6 @@ body.dark-theme-active .grade-row .gr-dates {
 body.dark-theme-active .grade-detail {
     background: #1e293b;
     border-top-color: #334155;
-}
-
-body.dark-theme-active .att-inline-row:hover {
-    background: #334155;
 }
 
 body.dark-theme-active .subject-picker {
@@ -4909,33 +4903,33 @@ body.dark-theme-active .student-chip .sc-grade {
 
 body.dark-theme-active .entity-editor-modal,
 body.dark-theme-active .lesson-editor-modal {
-    border-color: #334155;
+    border-color: var(--modal-border);
 }
 
 body.dark-theme-active .entity-editor-modal .modal-header,
 body.dark-theme-active .lesson-editor-modal .modal-header,
 body.dark-theme-active .entity-editor-modal .form-actions,
 body.dark-theme-active .lesson-editor-modal .form-actions {
-    background: #1e293b;
+    background: var(--modal-bg);
 }
 
 body.dark-theme-active .modal-subtitle,
 body.dark-theme-active .section-hint {
-    color: #94a3b8;
+    color: var(--modal-text-muted);
 }
 
 body.dark-theme-active .section-title {
-    color: #e2e8f0;
+    color: var(--modal-text);
 }
 
 body.dark-theme-active .modal-section {
     background: #273449;
-    border-color: #475569;
+    border-color: var(--modal-control-border);
 }
 
 body.dark-theme-active .lesson-editor-modal .subject-picker,
 body.dark-theme-active .lesson-editor-modal .student-picker {
-    background: #1e293b;
+    background: var(--modal-bg);
 }
 
 @media (max-width: 640px) {
@@ -5094,7 +5088,7 @@ body.dark-theme-active .standard-form-modal,
 body.dark-theme-active .attendance-modal-content,
 body.dark-theme-active .reset-modal-content,
 body.dark-theme-active .tutorial-modal-content {
-    border-color: #334155;
+    border-color: var(--modal-border);
 }
 
 body.dark-theme-active .standard-form-modal .modal-header,
@@ -5103,11 +5097,11 @@ body.dark-theme-active .reset-modal-content .modal-header,
 body.dark-theme-active .tutorial-modal-content .modal-header,
 body.dark-theme-active .standard-form-modal .form-actions,
 body.dark-theme-active .tutorial-actions {
-    background: #1e293b;
+    background: var(--modal-bg);
 }
 
 body.dark-theme-active .tutorial-content {
-    color: #cbd5e1;
+    color: var(--modal-text-soft);
 }
 
 @media (max-width: 640px) {
@@ -6113,19 +6107,6 @@ body.dark-theme-active .text-stats-date-input:focus {
     transform: translateY(-50%) scale(1.08);
 }
 
-body.dark-theme-active .student-card-light {
-    background: rgba(96, 165, 250, 0.18);
-    border-color: transparent;
-}
-
-body.dark-theme-active .student-card-light:hover {
-    background: rgba(96, 165, 250, 0.24);
-}
-
-body.dark-theme-active .student-card-light .student-name {
-    color: #dbeafe;
-}
-
 .subject-card .status-badges {
     position: absolute;
     top: 4px;
@@ -6876,6 +6857,10 @@ body.dark-theme-active .stats-data-updated {
     line-height: 1.5;
 }
 
+.chart-legend-note:empty {
+    display: none;
+}
+
 .stats-detail-section {
     margin-top: 16px;
     border-radius: 16px;
@@ -7008,6 +6993,26 @@ body.dark-theme-active .chart-panel-title,
 body.dark-theme-active .stats-detail-toggle-title,
 body.dark-theme-active .stats-card .st-num {
     color: #f8fafc;
+}
+
+body.dark-theme-active .duration-breakdown-head {
+    color: var(--modal-text-soft);
+}
+
+body.dark-theme-active .duration-breakdown-row {
+    color: var(--modal-text);
+}
+
+body.dark-theme-active .duration-breakdown-row:hover {
+    background: rgba(51, 65, 85, 0.72);
+}
+
+body.dark-theme-active .duration-breakdown-row strong {
+    color: var(--modal-text-strong);
+}
+
+body.dark-theme-active .duration-breakdown-row>span:last-child {
+    color: var(--modal-text-soft);
 }
 
 body.dark-theme-active .text-stats-modal-content {
@@ -7289,6 +7294,11 @@ body.dark-theme-active .text-stats-detail-title span:last-child {
 body.dark-theme-active .subject-bg-light {
     background-color: rgba(30, 41, 59, 0.88) !important;
     border-color: rgba(148, 163, 184, 0.16) !important;
+    border-left-color: color-mix(in srgb, var(--grade-accent-color, #64748b) 62%, #475569 38%) !important;
+    box-shadow:
+        inset 3px 0 8px color-mix(in srgb, var(--grade-accent-color, #64748b) 14%, transparent),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 4px 10px rgba(2, 6, 23, 0.18) !important;
 }
 
 body.dark-theme-active .subject-name-light {
@@ -7835,6 +7845,47 @@ body.reference-main-ui .left-sidebar {
     backdrop-filter: blur(18px);
 }
 
+body.reference-main-ui .left-sidebar.drag-over-recycle {
+    outline: 2px dashed rgba(239, 68, 68, .62);
+    outline-offset: -7px;
+    box-shadow:
+        inset 0 0 40px rgba(239, 68, 68, .24),
+        6px 0 24px rgba(239, 68, 68, .2);
+}
+
+body.reference-main-ui .left-sidebar.drag-over-recycle::after {
+    content: "拖到此处删除";
+    position: fixed;
+    left: 52px;
+    bottom: 24px;
+    z-index: 1000;
+    width: 200px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    border: 1px solid rgba(239, 68, 68, .35);
+    border-radius: 12px;
+    background: rgba(254, 242, 242, .96);
+    color: #dc2626;
+    box-shadow: 0 10px 26px rgba(185, 28, 28, .18);
+    font-size: 14px;
+    font-weight: 650;
+    text-align: center;
+    pointer-events: none;
+}
+
+body.reference-main-ui.dark-theme-active .left-sidebar.drag-over-recycle {
+    outline-color: rgba(248, 113, 113, .72);
+    box-shadow:
+        inset 0 0 44px rgba(239, 68, 68, .3),
+        6px 0 26px rgba(239, 68, 68, .24);
+}
+
+body.reference-main-ui.dark-theme-active .left-sidebar.drag-over-recycle::after {
+    border-color: rgba(248, 113, 113, .38);
+    background: rgba(69, 10, 10, .94);
+    color: #fca5a5;
+}
+
 body.reference-main-ui .container {
     left: 304px;
     padding: 18px 24px 16px;
@@ -7951,6 +8002,30 @@ body.reference-main-ui .subject-card.student-type {
 
 body.reference-main-ui .subject-card {
     align-items: center;
+}
+
+body.reference-main-ui .subject-card.student-type .assigned-badge {
+    right: 8px;
+    bottom: 4px;
+    padding: 2px 6px;
+    border: 1px solid rgba(52, 127, 240, .18);
+    border-radius: 999px;
+    background: rgba(52, 127, 240, .1);
+    color: #3476d5;
+    line-height: 1.2;
+    z-index: 4;
+    pointer-events: none;
+    transition: opacity .15s ease;
+}
+
+body.reference-main-ui .subject-card.student-type:hover .assigned-badge {
+    opacity: 0;
+}
+
+body.reference-main-ui.dark-theme-active .subject-card.student-type .assigned-badge {
+    border-color: rgba(96, 165, 250, .28);
+    background: rgba(37, 99, 235, .2);
+    color: #bfdbfe;
 }
 
 body.reference-main-ui .subject-card .subject-info {
@@ -8172,7 +8247,7 @@ body.reference-main-ui .timetable thead tr {
 }
 
 body.reference-main-ui .timetable tbody tr {
-    height: calc((100% - 56px)/6);
+    height: calc((100% - 50x)/6);
 }
 
 body.reference-main-ui .timetable th {
@@ -9524,6 +9599,7 @@ body.reference-main-ui .stats-modal-content {
 body.reference-main-ui .stats-modal-content .modal-header {
     margin: 0;
     padding: 28px 48px 22px 0;
+    border-bottom: 0;
 }
 
 body.reference-main-ui .stats-modal-content .modal-header h3 {
@@ -9590,7 +9666,7 @@ body.reference-main-ui .stats-filter-row {
     padding: 0 0 14px;
     gap: 14px;
     border: 0;
-    border-bottom: 1px solid #dce6f2;
+    border-bottom: 0;
     border-radius: 0;
     background: transparent;
 }
@@ -9710,6 +9786,29 @@ body.reference-main-ui .stats-grid#statsCards .stats-card:nth-child(4n) {
     border-right: 0;
 }
 
+body.reference-main-ui .stats-grid#statsCards.student-summary-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+}
+
+body.reference-main-ui .stats-grid#statsCards.student-summary-grid .stats-card,
+body.reference-main-ui .stats-grid#statsCards.student-summary-grid .stats-card:nth-child(4n) {
+    border-right: 1px solid rgba(190, 207, 228, .42);
+}
+
+body.reference-main-ui .stats-grid#statsCards.student-summary-grid .stats-card:last-child {
+    border-right: 0;
+}
+
+body.reference-main-ui.dark-theme-active .stats-grid#statsCards.student-summary-grid .stats-card,
+body.reference-main-ui.dark-theme-active .stats-grid#statsCards.student-summary-grid .stats-card:nth-child(4n) {
+    border-right-color: rgba(148, 163, 184, .18);
+}
+
+body.reference-main-ui.dark-theme-active .stats-grid#statsCards.student-summary-grid .stats-card:last-child {
+    border-right: 0;
+}
+
 body.reference-main-ui .stats-grid#statsCards .stats-card:hover {
     border-right-color: rgba(190, 207, 228, .42);
     border-radius: 12px;
@@ -9789,7 +9888,7 @@ body.reference-main-ui.dark-theme-active .stats-grid#statsCards .stats-card:hove
 }
 
 body.reference-main-ui.dark-theme-active .stats-filter-row {
-    border-bottom-color: #334155;
+    border-bottom-color: transparent;
     background: transparent;
 }
 
@@ -9993,23 +10092,42 @@ body.reference-main-ui .student-card-light .status-badge {
     border: 1px solid rgba(100, 116, 139, .13) !important;
     background: rgba(100, 116, 139, .08) !important;
     color: #64748b !important;
+    pointer-events: none;
+    transition: opacity .15s ease;
 }
 
 body.reference-main-ui .student-card-light .status-badge.one-v1 {
-    border-color: rgba(52, 133, 91, .16) !important;
-    background: rgba(52, 168, 105, .11) !important;
-    color: #278354 !important;
+    border-color: rgba(34, 197, 94, .28) !important;
+    background: #dcfce7 !important;
+    color: #4b5563 !important;
 }
 
 body.reference-main-ui .student-card-light .status-badge.audition {
-    border-color: rgba(52, 127, 240, .14) !important;
-    background: rgba(52, 127, 240, .1) !important;
-    color: #3476d5 !important;
+    border-color: rgba(245, 158, 11, .32) !important;
+    background: #fef3c7 !important;
+    color: #4b5563 !important;
+}
+
+body.reference-main-ui.dark-theme-active .student-card-light .status-badge.one-v1 {
+    border-color: rgba(74, 222, 128, .32) !important;
+    background: rgba(22, 101, 52, .72) !important;
+    color: #d7dee8 !important;
+}
+
+body.reference-main-ui.dark-theme-active .student-card-light .status-badge.audition {
+    border-color: rgba(251, 191, 36, .36) !important;
+    background: rgba(146, 64, 14, .76) !important;
+    color: #d7dee8 !important;
 }
 
 body.reference-main-ui .student-card-light .delete-cell-btn-light {
     background: rgba(100, 116, 139, .1) !important;
     color: #7b8798 !important;
+    z-index: 20;
+}
+
+body.reference-main-ui .student-card-light:hover .status-badge {
+    opacity: 0;
 }
 
 body.reference-main-ui .student-card-light .delete-cell-btn-light:hover {
@@ -10075,6 +10193,39 @@ body.reference-main-ui.dark-theme-active .copy-course-btn {
     box-shadow: none !important;
 }
 
+body.reference-main-ui .paste-indicator {
+    border: 1px solid rgba(37, 99, 235, .14);
+    background: rgba(239, 246, 255, .92);
+    color: #2563eb;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .42);
+}
+
+body.reference-main-ui.dark-theme-active .paste-indicator {
+    border-color: rgba(129, 140, 248, .28);
+    background: rgba(30, 41, 59, .88);
+    color: #a5b4fc;
+    box-shadow: inset 0 0 0 1px rgba(129, 140, 248, .08);
+}
+
+body.reference-main-ui .empty-cell .plus-indicator {
+    color: rgba(100, 116, 139, .42);
+    transition: color .18s ease, transform .18s ease;
+}
+
+body.reference-main-ui.dark-theme-active .timetable td.empty-cell:hover {
+    background: rgba(96, 165, 250, .065);
+    box-shadow: inset 0 0 0 1px rgba(129, 140, 248, .12);
+}
+
+body.reference-main-ui.dark-theme-active .empty-cell .plus-indicator {
+    color: rgba(148, 163, 184, .38);
+}
+
+body.reference-main-ui.dark-theme-active .empty-cell:hover .plus-indicator {
+    color: rgba(165, 180, 252, .72);
+    transform: scale(1.04);
+}
+
 /* 暗色主题最终覆盖：避免后置浅色规则造成界面割裂 */
 body.reference-main-ui.dark-theme-active {
     background: radial-gradient(circle at 55% 0, #172033 0, #0f172a 48%, #0b1220 100%);
@@ -10106,7 +10257,10 @@ body.reference-main-ui.dark-theme-active .pool-tabs {
     background: #1e293b;
 }
 
-body.reference-main-ui.dark-theme-active .pool-tab { color: #94a3b8; }
+body.reference-main-ui.dark-theme-active .pool-tab {
+    color: #94a3b8;
+}
+
 body.reference-main-ui.dark-theme-active .pool-tab.active {
     background: #334155;
     color: #bfdbfe;
@@ -10149,8 +10303,13 @@ body.reference-main-ui.dark-theme-active .today-btn {
 
 body.reference-main-ui.dark-theme-active .week-copy strong,
 body.reference-main-ui.dark-theme-active .date-picker,
-body.reference-main-ui.dark-theme-active .calendar-icon { color: #e2e8f0; }
-body.reference-main-ui.dark-theme-active #currentWeekRange { color: #94a3b8; }
+body.reference-main-ui.dark-theme-active .calendar-icon {
+    color: #e2e8f0;
+}
+
+body.reference-main-ui.dark-theme-active #currentWeekRange {
+    color: #94a3b8;
+}
 
 body.reference-main-ui.dark-theme-active .timetable {
     background: #111827;
@@ -10164,34 +10323,45 @@ body.reference-main-ui.dark-theme-active .timetable .period-cell {
     color: #cbd5e1;
 }
 
+body.reference-main-ui.dark-theme-active .timetable td.cell.occupied:hover:not(.drag-over) {
+    background: rgba(17, 24, 39, .92);
+    box-shadow: none;
+}
+
 body.reference-main-ui.dark-theme-active .timetable th {
     background: #182235;
     color: #dbe4ef;
 }
 
-body.reference-main-ui.dark-theme-active .cell:empty::after { color: rgba(148, 163, 184, .34); }
+body.reference-main-ui.dark-theme-active .cell:empty::after {
+    color: rgba(148, 163, 184, .34);
+}
 
 body.reference-main-ui.dark-theme-active .modal-content {
-    border-color: #334155;
-    background: #111827;
-    color: #dbe4ef;
+    border-color: var(--modal-border);
+    background: var(--modal-shell-bg);
+    color: var(--modal-text);
     box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
 }
 
 body.reference-main-ui.dark-theme-active .modal-content .modal-header h3,
 body.reference-main-ui.dark-theme-active .modal-content h3,
-body.reference-main-ui.dark-theme-active .modal-content h4 { color: #f1f5f9; }
+body.reference-main-ui.dark-theme-active .modal-content h4 {
+    color: var(--modal-text-strong);
+}
 
 body.reference-main-ui.dark-theme-active .modal-subtitle,
 body.reference-main-ui.dark-theme-active .text-stats-subtitle,
-body.reference-main-ui.dark-theme-active .stats-subtitle { color: #94a3b8; }
+body.reference-main-ui.dark-theme-active .stats-subtitle {
+    color: var(--modal-text-muted);
+}
 
 body.reference-main-ui.dark-theme-active .modal-section,
 body.reference-main-ui.dark-theme-active .settings-section,
 body.reference-main-ui.dark-theme-active .text-stats-summary-panel,
 body.reference-main-ui.dark-theme-active .text-stats-detail-panel {
-    border-color: #334155;
-    background: rgba(24, 34, 53, .92);
+    border-color: var(--modal-border);
+    background: color-mix(in srgb, var(--modal-control-bg) 92%, transparent);
     box-shadow: none;
 }
 
@@ -10200,12 +10370,15 @@ body.reference-main-ui.dark-theme-active .text-stats-modal-content {
 }
 
 body.reference-main-ui.dark-theme-active .text-stats-modal-content>#textStatsTabs {
-    background: #1e293b;
+    background: var(--modal-bg);
 }
 
-body.reference-main-ui.dark-theme-active .text-stats-modal-content>#textStatsTabs .stats-tab { color: #94a3b8; }
+body.reference-main-ui.dark-theme-active .text-stats-modal-content>#textStatsTabs .stats-tab {
+    color: var(--modal-text-muted);
+}
+
 body.reference-main-ui.dark-theme-active .text-stats-modal-content>#textStatsTabs .stats-tab.active {
-    background: #334155;
+    background: var(--modal-border);
     color: #bfdbfe;
 }
 
@@ -10213,63 +10386,72 @@ body.reference-main-ui.dark-theme-active .text-stats-summary-kicker,
 body.reference-main-ui.dark-theme-active .text-stats-detail-title,
 body.reference-main-ui.dark-theme-active .text-stats-modal-content .stats-card .st-num,
 body.reference-main-ui.dark-theme-active .stats-modal-content .stats-card .st-num,
-body.reference-main-ui.dark-theme-active .chart-panel-title { color: #e7edf6; }
+body.reference-main-ui.dark-theme-active .chart-panel-title {
+    color: #e7edf6;
+}
 
 body.reference-main-ui.dark-theme-active .text-stats-modal-content .stats-card .st-label,
 body.reference-main-ui.dark-theme-active .stats-modal-content .stats-card .st-label,
 body.reference-main-ui.dark-theme-active .chart-legend-note,
-body.reference-main-ui.dark-theme-active .stats-data-updated { color: #94a3b8; }
+body.reference-main-ui.dark-theme-active .stats-data-updated {
+    color: var(--modal-text-muted);
+}
 
 body.reference-main-ui.dark-theme-active .text-stats-summary-head .text-stats-date-input,
 body.reference-main-ui.dark-theme-active .text-stats-summary-head .text-stats-nav-btn {
     background: transparent;
-    color: #cbd5e1;
+    color: var(--modal-text-soft);
     color-scheme: dark;
 }
 
 body.reference-main-ui.dark-theme-active .text-stats-summary-head .text-stats-nav-btn:hover {
-    background: #334155;
+    background: var(--modal-border);
     color: #bfdbfe;
 }
 
 body.reference-main-ui.dark-theme-active .text-stats-modal-content .grade-row {
-    border-color: #334155;
-    background: #182235;
+    border-color: var(--modal-border);
+    background: var(--modal-control-bg);
 }
 
 body.reference-main-ui.dark-theme-active .text-stats-modal-content .grade-row:hover {
-    border-color: #475569;
-    background: #1e293b;
+    border-color: var(--modal-control-border);
+    background: var(--modal-bg);
 }
 
 body.reference-main-ui.dark-theme-active input,
 body.reference-main-ui.dark-theme-active select,
 body.reference-main-ui.dark-theme-active textarea {
-    border-color: #475569;
-    background-color: #182235;
-    color: #e2e8f0;
+    border-color: var(--modal-control-border);
+    background-color: var(--modal-control-bg);
+    color: var(--modal-text);
     color-scheme: dark;
 }
 
 body.reference-main-ui.dark-theme-active .modal-content label,
 body.reference-main-ui.dark-theme-active .section-title,
-body.reference-main-ui.dark-theme-active .form-group>label { color: #cbd5e1; }
+body.reference-main-ui.dark-theme-active .form-group>label {
+    color: var(--modal-text-soft);
+}
 
 body.reference-main-ui.dark-theme-active .modal-content .btn.secondary,
 body.reference-main-ui.dark-theme-active .modal-content .btn.tertiary {
-    border-color: #475569;
-    background: #1e293b;
-    color: #cbd5e1;
+    border-color: var(--modal-control-border);
+    background: var(--modal-bg);
+    color: var(--modal-text-soft);
 }
 
 body.reference-main-ui.dark-theme-active .form-actions,
 body.reference-main-ui.dark-theme-active .settings-tabs,
 body.reference-main-ui.dark-theme-active .lesson-editor-modal .picker-heading {
-    border-color: #334155;
-    background: #0f172a;
+    border-color: var(--modal-border);
+    background: var(--modal-footer-bg);
 }
 
-body.reference-main-ui.dark-theme-active .settings-tab { color: #94a3b8; }
+body.reference-main-ui.dark-theme-active .settings-tab {
+    color: #94a3b8;
+}
+
 body.reference-main-ui.dark-theme-active .settings-tab.active {
     background: #334155;
     color: #bfdbfe;
@@ -10293,9 +10475,9 @@ body.reference-main-ui.dark-theme-active #addLessonModal .lesson-editor-modal,
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal,
 body.reference-main-ui.dark-theme-active #studentBatchModal .standard-form-modal,
 body.reference-main-ui.dark-theme-active #exportModal .export-modal-content {
-    border-color: #334155;
-    background: #111827;
-    color: #e2e8f0;
+    border-color: var(--modal-border);
+    background: var(--modal-shell-bg);
+    color: var(--modal-text);
     box-shadow: 0 24px 70px rgba(0, 0, 0, .42);
 }
 
@@ -10303,15 +10485,15 @@ body.reference-main-ui.dark-theme-active #addLessonModal .modal-header,
 body.reference-main-ui.dark-theme-active #subjectModal .modal-header,
 body.reference-main-ui.dark-theme-active #studentBatchModal .modal-header,
 body.reference-main-ui.dark-theme-active #exportModal .modal-header {
-    border-color: #334155;
-    background: #111827;
+    border-color: var(--modal-border);
+    background: var(--modal-shell-bg);
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .modal-header h3,
 body.reference-main-ui.dark-theme-active #subjectModal .modal-header h3,
 body.reference-main-ui.dark-theme-active #studentBatchModal .modal-header h3,
 body.reference-main-ui.dark-theme-active #exportModal .modal-header h3 {
-    color: #f1f5f9;
+    color: var(--modal-text-strong);
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .modal-subtitle,
@@ -10321,24 +10503,24 @@ body.reference-main-ui.dark-theme-active #exportModal .modal-subtitle,
 body.reference-main-ui.dark-theme-active #subjectModal .section-hint,
 body.reference-main-ui.dark-theme-active #subjectModal .entity-color-hint,
 body.reference-main-ui.dark-theme-active #addLessonModal .lesson-picker-hint {
-    color: #94a3b8;
+    color: var(--modal-text-muted);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .modal-body {
-    border-color: #334155;
-    background: #151f30;
+    border-color: var(--modal-border);
+    background: var(--modal-section-bg);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .modal-section {
-    border-color: #334155;
+    border-color: var(--modal-border);
     background: transparent;
 }
 
-body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .form-group > label,
-body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal #colorFormGroup > label,
+body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .form-group>label,
+body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal #colorFormGroup>label,
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .section-title,
-body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .custom-color > label {
-    color: #dbe4ef;
+body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .custom-color>label {
+    color: var(--modal-text);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .optional-label {
@@ -10350,9 +10532,9 @@ body.reference-main-ui.dark-theme-active #studentBatchModal select,
 body.reference-main-ui.dark-theme-active #studentBatchModal textarea,
 body.reference-main-ui.dark-theme-active #exportModal input[type="date"],
 body.reference-main-ui.dark-theme-active #addLessonModal .lesson-student-search-wrap {
-    border-color: #475569;
-    background: #1e293b;
-    color: #e2e8f0;
+    border-color: var(--modal-control-border);
+    background: var(--modal-bg);
+    color: var(--modal-text);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal input::placeholder,
@@ -10362,49 +10544,60 @@ body.reference-main-ui.dark-theme-active #addLessonModal input::placeholder {
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-name-count {
-    color: #94a3b8;
+    color: var(--modal-text-muted);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal .preset-colors {
-    border-color: #334155;
+    border-color: var(--modal-border);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal #customColor {
-    background: #1e293b;
+    background: var(--modal-bg);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal.student-mode .one-v1-btn,
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal.student-mode .grade-chip {
-    border-color: #475569;
-    background: #1e293b;
-    color: #cbd5e1;
+    border-color: var(--modal-control-border);
+    background: var(--modal-control-bg) !important;
+    color: #aebdd0;
+    font-weight: 500;
     box-shadow: none;
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal.student-mode .one-v1-btn:hover,
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal.student-mode .grade-chip:hover {
     border-color: #60a5fa;
-    background: #263449;
-    color: #bfdbfe;
+    background: #263449 !important;
+    color: var(--modal-text-soft);
 }
 
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal.student-mode .one-v1-btn.active,
 body.reference-main-ui.dark-theme-active #subjectModal .entity-editor-modal.student-mode .grade-chip.selected {
     border-color: #3b82f6;
-    background: rgba(37, 99, 235, .26);
+    background: rgba(37, 99, 235, .26) !important;
     color: #dbeafe;
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .modal-section,
 body.reference-main-ui.dark-theme-active #studentBatchModal .modal-section {
-    border-color: #334155;
-    background: #151f30;
+    border-color: var(--modal-border);
+    background: var(--modal-section-bg);
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker,
 body.reference-main-ui.dark-theme-active #addLessonModal .student-picker {
-    border-color: #334155;
-    background: #0f172a;
+    border-color: var(--modal-border);
+    background: var(--modal-footer-bg);
+}
+
+body.reference-main-ui.dark-theme-active #addLessonModal .student-chip .sc-name {
+    color: var(--modal-text-strong);
+    font-weight: 600;
+    text-shadow: none;
+}
+
+body.reference-main-ui.dark-theme-active #addLessonModal .student-chip .sc-grade {
+    color: var(--modal-text-muted);
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .student-count-tag:not(:empty) {
@@ -10419,22 +10612,22 @@ body.reference-main-ui.dark-theme-active #addLessonModal .lesson-student-search-
 body.reference-main-ui.dark-theme-active #addLessonModal .form-actions,
 body.reference-main-ui.dark-theme-active #subjectModal .form-actions,
 body.reference-main-ui.dark-theme-active #studentBatchModal .form-actions {
-    border-color: #334155;
-    background: #0f172a;
+    border-color: var(--modal-border);
+    background: var(--modal-footer-bg);
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-tabs {
-    border-color: #334155;
-    background: #0f172a;
+    border-color: var(--modal-border);
+    background: var(--modal-footer-bg);
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-tab {
-    color: #94a3b8;
+    color: var(--modal-text-muted);
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-tab:hover {
     color: #dbeafe;
-    background: #1e293b;
+    background: var(--modal-bg);
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-tab.active {
@@ -10445,8 +10638,8 @@ body.reference-main-ui.dark-theme-active #exportModal .export-tab.active {
 
 body.reference-main-ui.dark-theme-active #exportModal .export-panel-tip,
 body.reference-main-ui.dark-theme-active #exportModal .export-option-card {
-    border-color: #334155;
-    background: #182235;
+    border-color: var(--modal-border);
+    background: var(--modal-control-bg);
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-option-card:hover {
@@ -10456,29 +10649,29 @@ body.reference-main-ui.dark-theme-active #exportModal .export-option-card:hover 
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-option-title {
-    color: #e2e8f0;
+    color: var(--modal-text);
 }
 
 body.reference-main-ui.dark-theme-active #exportModal .export-option-desc,
 body.reference-main-ui.dark-theme-active #exportModal .export-panel-tip,
 body.reference-main-ui.dark-theme-active #exportModal .export-range-field label {
-    color: #94a3b8;
+    color: var(--modal-text-muted);
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker .subject-chip {
-    border-color: #334155;
-    background: #182235 !important;
-    color: #dbe4ef;
+    border-color: var(--modal-border);
+    background: var(--modal-control-bg) !important;
+    color: var(--modal-text);
     box-shadow: none;
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker .subject-chip .sc-name {
-    color: #dbe4ef;
+    color: var(--modal-text);
 }
 
 body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker .subject-chip:hover {
-    border-color: #475569;
-    background: #1e293b !important;
+    border-color: var(--modal-control-border);
+    background: var(--modal-bg) !important;
     box-shadow: 0 7px 16px rgba(0, 0, 0, .22);
 }
 
@@ -10490,6 +10683,47 @@ body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker .subjec
 
 body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker .subject-chip.selected .sc-name {
     color: #dbeafe;
+}
+
+body.reference-main-ui.dark-theme-active #addLessonModal .student-picker .student-chip.selected {
+    border-color: #60a5fa !important;
+    background: linear-gradient(135deg, rgba(37, 99, 235, .42), rgba(79, 70, 229, .3)) !important;
+    color: #eff6ff !important;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, .22), 0 8px 20px rgba(30, 64, 175, .2) !important;
+}
+
+body.reference-main-ui.dark-theme-active #addLessonModal .student-picker .student-chip.selected .sc-name {
+    color: #eff6ff !important;
+}
+
+body.reference-main-ui.dark-theme-active #addLessonModal .student-picker .student-chip.selected .sc-grade {
+    color: #bfdbfe !important;
+}
+
+body.reference-main-ui .time-period-item .delete-period-btn {
+    border-color: rgba(220, 38, 38, .18);
+    background: rgba(254, 242, 242, .82);
+    color: #dc4c4c;
+}
+
+body.reference-main-ui .time-period-item .delete-period-btn:hover {
+    border-color: #dc4c4c;
+    background: #dc4c4c;
+    color: #fff;
+    box-shadow: 0 5px 12px rgba(220, 38, 38, .2);
+}
+
+body.reference-main-ui.dark-theme-active .time-period-item .delete-period-btn {
+    border-color: rgba(248, 113, 113, .3);
+    background: rgba(127, 29, 29, .2);
+    color: #fca5a5;
+}
+
+body.reference-main-ui.dark-theme-active .time-period-item .delete-period-btn:hover {
+    border-color: #ef4444;
+    background: rgba(220, 38, 38, .8);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(127, 29, 29, .34);
 }
 
 /* Complete tutorial layout. */
@@ -10563,7 +10797,7 @@ body.reference-main-ui.dark-theme-active #addLessonModal .subject-picker .subjec
     padding-left: 20px;
 }
 
-.tutorial-step-body li + li {
+.tutorial-step-body li+li {
     margin-top: 5px;
 }
 
@@ -10632,11 +10866,11 @@ body.reference-main-ui.dark-theme-active .tutorial-intro strong,
 body.reference-main-ui.dark-theme-active .tutorial-step-body h4,
 body.reference-main-ui.dark-theme-active .tutorial-step-body strong,
 body.reference-main-ui.dark-theme-active .tutorial-shortcuts h4 {
-    color: #e2e8f0;
+    color: var(--modal-text);
 }
 
 body.reference-main-ui.dark-theme-active .tutorial-section {
-    border-color: #334155;
+    border-color: var(--modal-border);
 }
 
 body.reference-main-ui.dark-theme-active .tutorial-step-number {
@@ -10650,8 +10884,8 @@ body.reference-main-ui.dark-theme-active .tutorial-section-warning .tutorial-ste
 }
 
 body.reference-main-ui.dark-theme-active .tutorial-shortcuts {
-    border-color: #334155;
-    background: #182235;
+    border-color: var(--modal-border);
+    background: var(--modal-control-bg);
 }
 
 body.reference-main-ui.dark-theme-active .tutorial-shortcut-grid {

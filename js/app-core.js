@@ -364,6 +364,36 @@ class TimetableApp {
         });
     }
 
+    hasStudentEverScheduled(studentId, excludeKeys = []) {
+        const normalizedId = String(studentId);
+        const erp = this.erpData || {};
+        const instances = Array.isArray(erp.courseInstances) ? erp.courseInstances : [];
+        const relations = Array.isArray(erp.studentCourseRelations) ? erp.studentCourseRelations : [];
+
+        if (relations.some(relation => String(relation.studentId) === normalizedId)) {
+            return true;
+        }
+
+        if (instances.some(instance => {
+            if (!instance || !instance.cellKey || excludeKeys.includes(instance.cellKey)) return false;
+            if (Array.isArray(instance.studentIds) && instance.studentIds.map(String).includes(normalizedId)) return true;
+            const weekStart = instance.weekStart || this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+            const version = this.getCellVersion(instance.cellKey, weekStart);
+            return !!(version && Array.isArray(version.student) && version.student.map(String).includes(normalizedId));
+        })) {
+            return true;
+        }
+
+        return Object.keys(this.timetable || {}).some(key => {
+            if (excludeKeys.includes(key)) return false;
+            const cell = this.timetable[key];
+            const versions = cell && cell.versions ? Object.values(cell.versions) : [cell];
+            return versions.some(version =>
+                version && Array.isArray(version.student) && version.student.map(String).includes(normalizedId)
+            );
+        });
+    }
+
     // 确保试听学生以临时模式存在于课表中（只出现在当前周，不参与循环）
     ensureAuditionStudentsTemporary(key, studentIds) {
         for (const studentId of studentIds) {

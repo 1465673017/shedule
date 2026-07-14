@@ -53,7 +53,9 @@ TimetableApp.prototype.renderAllPeriods = function() {
                 <span class="period-time-separator">-</span>
                 <input type="time" class="period-time-input" value="${end}" 
                     onchange="app.updatePeriodTime(${index}, 'end', this.value)">
-                <button class="delete-period-btn" onclick="app.deletePeriod(${index})">×</button>
+                <button type="button" class="delete-period-btn" title="删除该时间段" aria-label="删除${period.name}" onclick="app.deletePeriod(${index})">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
             `;
             container.appendChild(item);
         });

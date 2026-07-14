@@ -648,6 +648,8 @@ TimetableApp.prototype.saveAsImage = function () {
         );
 
         const cleanContainer = document.createElement('div');
+        cleanContainer.id = 'timetableImageExportCapture';
+        cleanContainer.className = 'timetable-image-export-capture';
         cleanContainer.style.cssText = `
                 position: absolute;
                 top: -9999px;
@@ -724,7 +726,8 @@ TimetableApp.prototype.saveAsImage = function () {
 
         table.querySelectorAll('.subject-bg-light').forEach(card => {
             card.style.overflow = 'visible';
-            card.style.boxShadow = 'none';
+            card.style.setProperty('box-shadow', 'none', 'important');
+            card.style.setProperty('border-left-color', card.style.getPropertyValue('--grade-accent-color') || '#64748b', 'important');
             card.style.paddingTop = '14px';
             card.style.minHeight = '88px';
         });
@@ -793,7 +796,22 @@ TimetableApp.prototype.saveAsImage = function () {
             allowTaint: true,
             width: exportWidth,
             height: cleanContainer.scrollHeight,
-            windowWidth: exportWidth
+            windowWidth: exportWidth,
+            onclone: clonedDocument => {
+                // 图片导出使用独立的浅色打印模板。只修改 html2canvas 的克隆文档，
+                // 避免暗色主题中的 color-mix() 被 html2canvas 1.4.1 解析并导致导出失败。
+                clonedDocument.body.classList.remove('dark-theme-active', 'light-sidebar');
+                const clonedCapture = clonedDocument.getElementById('timetableImageExportCapture');
+                if (clonedCapture) {
+                    clonedCapture.classList.add('force-light-image-export');
+                    clonedCapture.style.setProperty('background', '#ffffff', 'important');
+                    clonedCapture.style.setProperty('color', '#1f2937', 'important');
+                    clonedCapture.querySelectorAll('.subject-bg-light').forEach(card => {
+                        card.style.setProperty('box-shadow', 'none', 'important');
+                        card.style.setProperty('border-left-color', card.style.getPropertyValue('--grade-accent-color') || '#64748b', 'important');
+                    });
+                }
+            }
         }).then(async canvas => {
             document.body.removeChild(cleanContainer);
             const base64Data = canvas.toDataURL('image/png', 1.0).replace(/^data:image\/png;base64,/, '');

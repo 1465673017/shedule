@@ -298,29 +298,11 @@ TimetableApp.prototype.loadSettings = function() {
         }
         this.settings.showSaturday = true;
         this.settings.showSunday = true;
-        // Initialize theme settings with defaults if not present
-        this.settings.menuColor = this.settings.menuColor || '#ffffff';
-        this.settings.scheduleColor = this.settings.scheduleColor || '#ffffff';
-        this.settings.backgroundColor = this.settings.backgroundColor || '#f0f7ff';
-        // Initialize primary color with defaults if not present
-        this.settings.primaryColor = this.settings.primaryColor || '#60a5fa';
-        this.settings.primaryHover = this.settings.primaryHover || '#93c5fd';
-        this.settings.primaryPressed = this.settings.primaryPressed || '#3b82f6';
-        this.settings.primaryBg = this.settings.primaryBg || '#e0f2fe';
-        this.settings.shadowColor = this.settings.shadowColor || 'rgba(96, 165, 250, 0.15)';
+        this.ensureThemeSettings();
     }
 
 TimetableApp.prototype.applySettings = function() {
-        // Make sure theme colors are initialized before applying
-        this.settings.menuColor = this.settings.menuColor || '#ffffff';
-        this.settings.scheduleColor = this.settings.scheduleColor || '#ffffff';
-        this.settings.backgroundColor = this.settings.backgroundColor || '#f0f7ff';
-        this.settings.primaryColor = this.settings.primaryColor || '#60a5fa';
-        this.settings.primaryHover = this.settings.primaryHover || '#93c5fd';
-        this.settings.primaryPressed = this.settings.primaryPressed || '#3b82f6';
-        this.settings.primaryBg = this.settings.primaryBg || '#e0f2fe';
-        this.settings.shadowColor = this.settings.shadowColor || 'rgba(96, 165, 250, 0.15)';
-
+        this.ensureThemeSettings();
         this.applyThemeSettings(); // Apply theme settings
 
     // 应用周六、周日显示设置
@@ -430,6 +412,25 @@ TimetableApp.prototype.getThemeDefinitions = function() {
             primaryBg: 'rgba(99, 102, 241, 0.2)', shadowColor: 'rgba(99, 102, 241, 0.3)'
         },
     };
+}
+
+TimetableApp.prototype.ensureThemeSettings = function() {
+    const themes = this.getThemeDefinitions();
+    const fallback = themes[this.settings.theme] || themes.default;
+    const defaults = {
+        menuColor: fallback.menu,
+        scheduleColor: fallback.schedule,
+        backgroundColor: fallback.bg,
+        primaryColor: fallback.primary,
+        primaryHover: fallback.primaryHover,
+        primaryPressed: fallback.primaryPressed,
+        primaryBg: fallback.primaryBg,
+        shadowColor: fallback.shadowColor
+    };
+
+    Object.entries(defaults).forEach(([key, value]) => {
+        if (!this.settings[key]) this.settings[key] = value;
+    });
 }
 
 TimetableApp.prototype.applyPredefinedTheme = function(themeName) {

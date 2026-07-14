@@ -349,25 +349,45 @@ TimetableApp.prototype.renderSubjects = function () {
 
     let items = this.currentPool === 'subject' ? this.subjects : this.students;
 
+    const scheduledStudentIds = new Set();
+    if (this.currentPool === 'student') {
+        this.students.forEach(student => {
+            if (this.hasStudentEverScheduled(student.id)) {
+                scheduledStudentIds.add(String(student.id));
+            }
+        });
+    }
+
     if (this.currentPool === 'student' && this.currentStudentFilter !== 'all') {
         items = items.filter(student => {
             if (this.currentStudentFilter === 'ongoing') {
-                return !student.isAudition && !student.completed && this.isStudentOngoing(student.id);
+                return !student.isAudition && !student.completed;
             } else if (this.currentStudentFilter === 'completed') {
-                return !!student.completed;
+                return !!student.completed && !student.isAudition;
             } else if (this.currentStudentFilter === 'audition') {
-                return student.isAudition && !student.completed && !this.isStudentCompleted(student.id);
+                return !!student.isAudition;
             }
             return true;
         });
     }
 
-    // 学生池中已结课的学生排在最后
+    // 学生池按状态分组，再按姓名拼音/首字母排序。
     if (this.currentPool === 'student') {
+        const nameCollator = typeof Intl !== 'undefined' && Intl.Collator
+            ? new Intl.Collator('zh-CN-u-co-pinyin', { sensitivity: 'base', numeric: true })
+            : null;
+        const getPriority = student => {
+            const scheduled = scheduledStudentIds.has(String(student.id));
+            if (student.isAudition) return scheduled ? 4 : 0;
+            if (student.completed) return 3;
+            return scheduled ? 2 : 1;
+        };
         items = [...items].sort((a, b) => {
-            if (a.completed && !b.completed) return 1;
-            if (!a.completed && b.completed) return -1;
-            return 0;
+            const priorityDiff = getPriority(a) - getPriority(b);
+            if (priorityDiff !== 0) return priorityDiff;
+            const aName = String(a.name || '').trim();
+            const bName = String(b.name || '').trim();
+            return nameCollator ? nameCollator.compare(aName, bName) : aName.localeCompare(bName);
         });
     }
 
@@ -395,6 +415,9 @@ TimetableApp.prototype.renderSubjects = function () {
         const oneV1Badge = (this.currentPool === 'student' && item.is1v1) ? '<span class="status-badge one-v1">1v1</span>' : '';
         const auditionBadge = (this.currentPool === 'student' && item.isAudition) ? '<span class="status-badge audition">试</span>' : '';
         const completedBadge = (this.currentPool === 'student' && item.completed) ? '<span class="status-badge completed">结</span>' : '';
+        const assignedBadge = (this.currentPool === 'student' && item.isAudition && scheduledStudentIds.has(String(item.id)))
+            ? '<span class="assigned-badge">已排课</span>'
+            : '';
 
         card.innerHTML = `
                 <div class="status-badges">
@@ -402,6 +425,7 @@ TimetableApp.prototype.renderSubjects = function () {
                     ${auditionBadge}
                     ${oneV1Badge}
                 </div>
+                ${assignedBadge}
                 <div class="subject-info">
                     <div class="subject-name">${item.name}</div>
                     ${extraHtml}

@@ -717,14 +717,14 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                 const plusIndicator = document.createElement('div');
                 plusIndicator.className = 'plus-indicator';
                 plusIndicator.textContent = '+';
-                plusIndicator.style.cssText = 'font-size: 24px; color: #ccc; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;';
+                plusIndicator.style.cssText = 'font-size: 24px; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;';
                 cell.appendChild(plusIndicator);
 
                 if (this.copiedCourse) {
                     const pasteIndicator = document.createElement('div');
                     pasteIndicator.className = 'paste-indicator';
                     pasteIndicator.textContent = '粘贴';
-                    pasteIndicator.style.cssText = 'position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: #2563eb; background: rgba(239, 246, 255, 0.95); z-index: 3;';
+                    pasteIndicator.style.cssText = 'position: absolute; inset: 3px; display: none; align-items: center; justify-content: center; border-radius: 8px; font-size: 14px; font-weight: 600; z-index: 3;';
                     cell.appendChild(pasteIndicator);
 
                     cell.addEventListener('mouseenter', () => {
