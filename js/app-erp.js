@@ -247,37 +247,37 @@
         });
     }
 
-    function clearFutureEmptyRecurringStops(app, cellKey, fromWeekStart) {
-        if (!cellKey || !fromWeekStart) return;
+    function removeInstanceGraph(app, instanceIds) {
         const erp = ensureErpData(app);
-        const removedInstanceIds = new Set();
-
-        erp.courseInstances = erp.courseInstances.filter(instance => {
-            if (instance.cellKey !== cellKey) return true;
-            if (!instance.weekStart || instance.weekStart < fromWeekStart) return true;
-            const hasSubject = !!instance.subjectId;
-            const hasStudents = normalizeIds(instance.studentIds).length > 0 ||
-                erp.studentCourseRelations.some(rel => rel.courseInstanceId === instance.id);
-            const isEmptyStop = instance.isDeleted || (!hasSubject && !hasStudents);
-            if (!isEmptyStop) return true;
-            removedInstanceIds.add(instance.id);
-            return false;
-        });
-
-        if (removedInstanceIds.size === 0) return;
-
-        erp.repeatRules = erp.repeatRules.filter(rule => !removedInstanceIds.has(rule.courseInstanceId));
-        erp.exceptionRules = erp.exceptionRules.filter(rule => {
-            if (!removedInstanceIds.has(rule.courseInstanceId)) return true;
-            return rule.type !== 'delete-instance';
-        });
+        const ids = instanceIds instanceof Set ? instanceIds : new Set(instanceIds || []);
+        if (ids.size === 0) return;
+        erp.courseInstances = erp.courseInstances.filter(instance => !ids.has(instance.id));
+        erp.repeatRules = erp.repeatRules.filter(rule => !ids.has(rule.courseInstanceId));
+        erp.studentCourseRelations = erp.studentCourseRelations.filter(rel => !ids.has(rel.courseInstanceId));
+        erp.exceptionRules = erp.exceptionRules.filter(rule => !ids.has(rule.courseInstanceId));
     }
 
-    function clearConsecutiveEmptyStopsBeforeNextCourse(app, cellKey, fromWeekStart) {
+    function pruneOrphanedErpData(app) {
+        const erp = ensureErpData(app);
+        const instanceIds = new Set(erp.courseInstances.map(instance => instance.id));
+        erp.studentCourseRelations = erp.studentCourseRelations.filter(rel => instanceIds.has(rel.courseInstanceId));
+        erp.repeatRules = erp.repeatRules.filter(rule => instanceIds.has(rule.courseInstanceId));
+        erp.exceptionRules = erp.exceptionRules.filter(rule =>
+            !rule.courseInstanceId || instanceIds.has(rule.courseInstanceId)
+        );
+    }
+
+    function clearEmptyRecurringStops(app, cellKey, fromWeekStart, mode = 'until-next-course') {
         if (!cellKey || !fromWeekStart) return;
         const erp = ensureErpData(app);
         const futureInstances = erp.courseInstances
-            .filter(instance => instance.cellKey === cellKey && instance.weekStart > fromWeekStart)
+            .filter(instance =>
+                instance.cellKey === cellKey &&
+                instance.weekStart &&
+                (mode === 'all-future-empty'
+                    ? instance.weekStart >= fromWeekStart
+                    : instance.weekStart > fromWeekStart)
+            )
             .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
         const removedInstanceIds = new Set();
 
@@ -289,15 +289,14 @@
 
             // A real explicit course is the boundary for the newly inserted
             // recurrence. Never clear that course or any versions after it.
-            if (!isEmptyStop) break;
+            if (!isEmptyStop) {
+                if (mode === 'until-next-course') break;
+                continue;
+            }
             removedInstanceIds.add(instance.id);
         }
 
-        if (removedInstanceIds.size === 0) return;
-        erp.courseInstances = erp.courseInstances.filter(instance => !removedInstanceIds.has(instance.id));
-        erp.repeatRules = erp.repeatRules.filter(rule => !removedInstanceIds.has(rule.courseInstanceId));
-        erp.studentCourseRelations = erp.studentCourseRelations.filter(rel => !removedInstanceIds.has(rel.courseInstanceId));
-        erp.exceptionRules = erp.exceptionRules.filter(rule => !removedInstanceIds.has(rule.courseInstanceId));
+        removeInstanceGraph(app, removedInstanceIds);
     }
 
     function findNextExplicitVersionWeek(app, cellKey, fromWeekStart) {
@@ -443,6 +442,28 @@
         return `${y}-${m}-${day}`;
     }
 
+    function restoreCellSnapshot(app, cellKey, weekStart, snapshot) {
+        if (!snapshot || (!snapshot.subject && normalizeIds(snapshot.student).length === 0)) return null;
+        const studentIds = normalizeIds(snapshot.student);
+        window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, snapshot.subject, studentIds);
+        const restoredVersion = window.ScheduleErpService.getCellVersion(app, cellKey, weekStart);
+        if (!restoredVersion) return null;
+
+        copyStudentBranchState(
+            app,
+            snapshot.courseInstanceId,
+            restoredVersion.courseInstanceId,
+            studentIds,
+            weekStart,
+            cellKey
+        );
+        const restoredInstance = getInstanceForVersion(app, restoredVersion);
+        if (restoredInstance && snapshot.actualMinutesByDate) {
+            restoredInstance.actualMinutesByDate = { ...snapshot.actualMinutesByDate };
+        }
+        return restoredVersion;
+    }
+
     function isDateKeyInWeek(dateKey, weekStartStr) {
         if (!dateKey || !weekStartStr) return false;
         if (dateKey === weekStartStr) return true;
@@ -546,6 +567,11 @@
     window.ScheduleErpService = {
         ensureErpData,
         buildTimetableProjection,
+        pruneOrphanedErpData,
+
+        restoreCellSnapshot(app, cellKey, weekStart, snapshot) {
+            return restoreCellSnapshot(app, cellKey, weekStart, snapshot);
+        },
 
         getCellVersion(app, key, weekStartStr) {
             buildTimetableProjection(app);
@@ -568,16 +594,18 @@
             const normalizedStudents = normalizeIds(studentIds);
             const normalizedSubjectId = normalizeSubjectId(app, subjectId, normalizedStudents);
             const hasContent = normalizedSubjectId !== null || normalizedStudents.length > 0;
-            const template = makeTemplate(app, normalizedSubjectId, normalizedStudents, options.source || 'schedule');
             const existing = erp.courseInstances.find(instance =>
                 instance.cellKey === key && instance.weekStart === weekStartStr
             );
+            const template = hasContent
+                ? makeTemplate(app, normalizedSubjectId, normalizedStudents, options.source || 'schedule')
+                : null;
             erp.courseInstances = erp.courseInstances.filter(instance => instance !== existing);
             if (hasContent || options.cutoff) {
                 const instanceId = existing ? existing.id : makeId('ci');
                 const instance = {
                     id: instanceId,
-                    courseTemplateId: template.id,
+                    courseTemplateId: template ? template.id : (existing ? existing.courseTemplateId : null),
                     cellKey: key,
                     weekStart: weekStartStr,
                     subjectId: normalizedSubjectId,
@@ -590,12 +618,16 @@
                 };
                 erp.courseInstances.push(instance);
                 syncRelations(app, instance, normalizedStudents);
-                makeRepeatRule(app, instance);
+                if (options.cutoff) {
+                    erp.repeatRules = erp.repeatRules.filter(rule => rule.courseInstanceId !== instance.id);
+                } else {
+                    makeRepeatRule(app, instance);
+                }
                 syncAttendanceInstanceIds(app, existing ? existing.id : null, instance.id);
                 if (!options.cutoff) {
                     clearInstanceDeletionRules(app, instance.id, weekStartStr);
                     if (options.source !== 'course-import') {
-                        clearConsecutiveEmptyStopsBeforeNextCourse(app, key, weekStartStr);
+                        clearEmptyRecurringStops(app, key, weekStartStr, 'until-next-course');
                     }
                 }
                 if (options.cutoff) {
@@ -609,6 +641,7 @@
                     });
                 }
             }
+            pruneOrphanedErpData(app);
             buildTimetableProjection(app);
         },
 
@@ -632,31 +665,9 @@
             this.setCellVersion(app, key, weekStartStr, null, [], { cutoff: true });
 
             if (nextSnapshot && (nextSnapshot.subject || nextSnapshot.student.length > 0)) {
-                this.setCellVersion(
-                    app,
-                    key,
-                    nextWeekStart,
-                    nextSnapshot.subject,
-                    nextSnapshot.student
-                );
-                const restoredVersion = this.getCellVersion(app, key, nextWeekStart);
-                if (restoredVersion) {
-                    copyStudentBranchState(
-                        app,
-                        nextSnapshot.courseInstanceId,
-                        restoredVersion.courseInstanceId,
-                        nextSnapshot.student,
-                        nextWeekStart,
-                        key
-                    );
-                    const restoredInstance = getInstanceForVersion(app, restoredVersion);
-                    if (restoredInstance && nextSnapshot.actualMinutesByDate) {
-                        restoredInstance.actualMinutesByDate = { ...nextSnapshot.actualMinutesByDate };
-                    }
-                }
+                restoreCellSnapshot(app, key, nextWeekStart, nextSnapshot);
             }
 
-            buildTimetableProjection(app);
             return true;
         },
 
@@ -685,7 +696,7 @@
                         reason: 'attendance-recurrence'
                     });
                 } else if (type === 'recurring') {
-                    clearFutureEmptyRecurringStops(app, cellKey, effectiveWeekStart);
+                    clearEmptyRecurringStops(app, cellKey, effectiveWeekStart, 'all-future-empty');
                     ensureRecurringStudentFuture(app, cellKey, studentId, weekStart);
                 }
             }
@@ -884,7 +895,6 @@
                 fromWeekStart,
                 toVersion.cellKey
             );
-            buildTimetableProjection(app);
         },
 
         upsertAttendance(app, cellKey, studentId, status, dateKey) {

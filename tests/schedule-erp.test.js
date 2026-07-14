@@ -449,4 +449,48 @@ assert.strictEqual(
     'the final bridged occurrence should stop before the future explicit course'
 );
 
+const cleanupApp = makeApp();
+ScheduleErpService.setCellVersion(cleanupApp, '2-afternoon-0', '2026-07-06', 'math', ['s1']);
+ScheduleErpService.setCellVersion(cleanupApp, '2-afternoon-0', '2026-07-06', null, [], { cutoff: true });
+const cleanupCutoff = cleanupApp.erpData.courseInstances.find(instance =>
+    instance.cellKey === '2-afternoon-0' && instance.weekStart === '2026-07-06'
+);
+assert.ok(cleanupCutoff && cleanupCutoff.isDeleted, 'the cutoff instance should be retained');
+assert.strictEqual(
+    cleanupApp.erpData.repeatRules.some(rule => rule.courseInstanceId === cleanupCutoff.id),
+    false,
+    'a deleted cutoff instance should not keep a repeat rule'
+);
+cleanupApp.erpData.studentCourseRelations.push({
+    id: 'orphan-relation',
+    courseInstanceId: 'missing-instance',
+    studentId: 's1'
+});
+cleanupApp.erpData.repeatRules.push({ id: 'orphan-repeat', courseInstanceId: 'missing-instance' });
+cleanupApp.erpData.exceptionRules.push({ id: 'orphan-exception', courseInstanceId: 'missing-instance' });
+ScheduleErpService.pruneOrphanedErpData(cleanupApp);
+assert.strictEqual(
+    cleanupApp.erpData.studentCourseRelations.some(rel => rel.courseInstanceId === 'missing-instance'),
+    false,
+    'orphaned student relations should be pruned'
+);
+assert.strictEqual(
+    cleanupApp.erpData.repeatRules.some(rule => rule.courseInstanceId === 'missing-instance'),
+    false,
+    'orphaned repeat rules should be pruned'
+);
+assert.strictEqual(
+    cleanupApp.erpData.exceptionRules.some(rule => rule.courseInstanceId === 'missing-instance'),
+    false,
+    'orphaned exception rules should be pruned'
+);
+
+const dragDropSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-dragdrop.js'), 'utf8');
+const timetableSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-timetable.js'), 'utf8');
+assert.strictEqual(
+    /addEventListener\(['"]dblclick['"]/.test(`${dragDropSource}\n${timetableSource}`),
+    false,
+    'the timetable should not register a double-click delete handler'
+);
+
 console.log('Schedule ERP tests passed');

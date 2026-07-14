@@ -856,21 +856,7 @@ TimetableApp.prototype.saveTemporaryCourseEdit = function() {
 
         if (restoreVersion && (restoreVersion.subject || (restoreVersion.student || []).length > 0)) {
 
-            this.setCellVersion(key, nextWeekStr, restoreVersion.subject, restoreVersion.student || []);
-
-            const restoredVersion = this.getCellVersion(key, nextWeekStr);
-
-            if (restoredVersion && window.ScheduleErpService && typeof window.ScheduleErpService.inheritStudentBranchState === 'function') {
-
-                window.ScheduleErpService.inheritStudentBranchState(
-                    this,
-                    restoreVersion,
-                    restoredVersion,
-                    restoreVersion.student || [],
-                    nextWeekStr
-                );
-
-            }
+            window.ScheduleErpService.restoreCellSnapshot(this, key, nextWeekStr, restoreVersion);
 
         }
 

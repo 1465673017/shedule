@@ -302,20 +302,6 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
         });
 
-        // 双击删除课程/学生
-
-        timetable.addEventListener('dblclick', (e) => {
-
-            const cell = e.target.closest('.cell');
-
-            if (cell && cell.classList.contains('occupied')) {
-
-                this.removeItemFromCell(cell);
-
-            }
-
-        });
-
         // 左侧菜单栏：从课表拖放课程/学生到此处回收（删除但不入池）
 
         leftSidebar.addEventListener('dragover', (e) => {
@@ -367,11 +353,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
                     // 回收科目背景时，整节课连同学生一起删除
 
                     if (sourceVersion && sourceVersion.subject) {
-                        if (window.ScheduleErpService && typeof window.ScheduleErpService.deleteSingleCellOccurrence === 'function') {
-                            window.ScheduleErpService.deleteSingleCellOccurrence(this, sourceKey, weekStartStr);
-                        } else {
-                            this.setCellVersion(sourceKey, weekStartStr, null, [], { cutoff: true });
-                        }
+                        window.ScheduleErpService.deleteSingleCellOccurrence(this, sourceKey, weekStartStr);
 
                     }
 

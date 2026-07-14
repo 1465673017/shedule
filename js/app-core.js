@@ -694,16 +694,13 @@ class TimetableApp {
             changed = true;
 
             if (restoreWeekStart && restoreSnapshot && (restoreSnapshot.subject || restoreSnapshot.student.length > 0)) {
-                this.setCellVersion(cellKey, restoreWeekStart, restoreSnapshot.subject, restoreSnapshot.student || []);
-                const restoredVersion = this.getCellVersion(cellKey, restoreWeekStart);
+                const restoredVersion = window.ScheduleErpService.restoreCellSnapshot(
+                    this,
+                    cellKey,
+                    restoreWeekStart,
+                    restoreSnapshot
+                );
                 if (restoredVersion) {
-                    window.ScheduleErpService.inheritStudentBranchState(
-                        this,
-                        restoreSnapshot,
-                        restoredVersion,
-                        restoreSnapshot.student || [],
-                        restoreWeekStart
-                    );
                     const restoredInstance = window.ScheduleErpService.getCourseInstanceForVersion(this, restoredVersion);
                     if (restoredInstance && restoreSnapshot.actualMinutesByDate) {
                         restoredInstance.actualMinutesByDate = Object.fromEntries(

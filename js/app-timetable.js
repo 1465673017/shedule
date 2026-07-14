@@ -170,7 +170,7 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
         }
 
         const isEmpty = !newSubject && newStudents.length === 0;
-        if (isEmpty && window.ScheduleErpService && typeof window.ScheduleErpService.deleteSingleCellOccurrence === 'function') {
+        if (isEmpty) {
             window.ScheduleErpService.deleteSingleCellOccurrence(this, key, weekStartStr);
         } else {
             this.setCellVersion(key, weekStartStr, newSubject, newStudents, { cutoff: isEmpty });
@@ -233,34 +233,18 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         const sourceRestoreStudents = sourceNextVersion ? (sourceNextVersion.student || []) : (sourceVersion.student || []);
 
         if (sourceRestoreSubject || sourceRestoreStudents.length > 0) {
-            this.setCellVersion(sourceKey, nextWeekStr, sourceRestoreSubject, sourceRestoreStudents);
-            const restoredSourceVersion = this.getCellVersion(sourceKey, nextWeekStr);
-            if (restoredSourceVersion) {
-                const sourceStateOrigin = sourceNextVersion || sourceVersion;
-                window.ScheduleErpService.inheritStudentBranchState(
-                    this,
-                    sourceStateOrigin,
-                    restoredSourceVersion,
-                    sourceRestoreStudents,
-                    nextWeekStr
-                );
-            }
+            const sourceStateOrigin = sourceNextVersion || sourceVersion;
+            window.ScheduleErpService.restoreCellSnapshot(this, sourceKey, nextWeekStr, {
+                ...sourceStateOrigin,
+                subject: sourceRestoreSubject,
+                student: sourceRestoreStudents
+            });
         } else {
             this.setCellVersion(sourceKey, nextWeekStr, null, [], { cutoff: true });
         }
 
         if (targetNextVersion && (targetNextVersion.subject || (targetNextVersion.student || []).length > 0)) {
-            this.setCellVersion(targetKey, nextWeekStr, targetNextVersion.subject, targetNextVersion.student || []);
-            const restoredTargetVersion = this.getCellVersion(targetKey, nextWeekStr);
-            if (restoredTargetVersion) {
-                window.ScheduleErpService.inheritStudentBranchState(
-                    this,
-                    targetNextVersion,
-                    restoredTargetVersion,
-                    targetNextVersion.student || [],
-                    nextWeekStr
-                );
-            }
+            window.ScheduleErpService.restoreCellSnapshot(this, targetKey, nextWeekStr, targetNextVersion);
         } else {
             this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
         }
@@ -335,33 +319,13 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
         const movedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
 
         if (sourceNextVersion && (sourceNextVersion.subject || (sourceNextVersion.student || []).length > 0)) {
-            this.setCellVersion(sourceKey, nextWeekStr, sourceNextVersion.subject, sourceNextVersion.student || []);
-            const restoredSourceVersion = this.getCellVersion(sourceKey, nextWeekStr);
-            if (restoredSourceVersion) {
-                window.ScheduleErpService.inheritStudentBranchState(
-                    this,
-                    sourceNextVersion,
-                    restoredSourceVersion,
-                    sourceNextVersion.student || [],
-                    nextWeekStr
-                );
-            }
+            window.ScheduleErpService.restoreCellSnapshot(this, sourceKey, nextWeekStr, sourceNextVersion);
         } else {
             this.setCellVersion(sourceKey, nextWeekStr, null, [], { cutoff: true });
         }
 
         if (targetNextVersion && (targetNextVersion.subject || (targetNextVersion.student || []).length > 0)) {
-            this.setCellVersion(targetKey, nextWeekStr, targetNextVersion.subject, targetNextVersion.student || []);
-            const restoredTargetVersion = this.getCellVersion(targetKey, nextWeekStr);
-            if (restoredTargetVersion) {
-                window.ScheduleErpService.inheritStudentBranchState(
-                    this,
-                    targetNextVersion,
-                    restoredTargetVersion,
-                    targetNextVersion.student || [],
-                    nextWeekStr
-                );
-            }
+            window.ScheduleErpService.restoreCellSnapshot(this, targetKey, nextWeekStr, targetNextVersion);
         } else {
             this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
         }
@@ -741,12 +705,6 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     });
                 }
             }
-            
-            cell.addEventListener('dblclick', () => {
-                if (cell.classList.contains('occupied')) {
-                    this.removeItemFromCell(cell);
-                }
-            });
             
             cell.addEventListener('click', () => {
                 if (cell.classList.contains('empty-cell') && this.copiedCourse) {
