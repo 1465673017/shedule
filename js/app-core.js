@@ -176,6 +176,8 @@ class TimetableApp {
         bind('resetBtn', 'click', () => this.openResetModal());
         bind('exportBtn', 'click', () => this.openExportModal());
         bind('settingsBtn', 'click', () => this.openSettingsModal());
+        bind('importCourseDataBtn', 'click', () => this.openCourseDataImportModal());
+        bind('courseDataImportForm', 'submit', (e) => this.submitCourseDataImport(e));
         window.addEventListener('resize', () => this.syncTimetableLayout());
         
         // 设置弹窗相关

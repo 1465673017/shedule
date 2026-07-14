@@ -18,6 +18,7 @@
                     <button id="resetBtn" class="btn secondary">重置课表</button>
                     <button id="tutorialBtn" class="btn tertiary">查看教程</button>
                     <button id="settingsBtn" class="btn tertiary">基础设置</button>
+                    <button id="importCourseDataBtn" class="btn tertiary">导入课程数据</button>
                 </div>
                 <div class="subject-pool">
                     <div class="pool-tabs">
@@ -328,6 +329,22 @@
                     <button type="button" id="cancelStudentBatchBtn" class="btn secondary">取消</button>
                     <button type="submit" class="btn primary">导入</button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="courseDataImportModal" class="modal">
+        <div class="modal-content standard-form-modal">
+            <div class="modal-header">
+                <div class="modal-title-block"><h3>批量导入课程数据</h3><p class="modal-subtitle">支持完整接口响应、按教师 ID 分组的数据、课程数组或单条课程 JSON</p></div>
+                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeCourseDataImportModal()">×</button>
+            </div>
+            <form id="courseDataImportForm">
+                <div class="modal-body"><div class="modal-section form-group">
+                    <label for="courseDataImportText">课程 JSON</label>
+                    <textarea id="courseDataImportText" required rows="14" placeholder="可直接粘贴完整接口返回 JSON，系统会递归识别其中的全部课程"></textarea>
+                </div><div id="courseDataImportMessage" class="modal-subtitle"></div></div>
+                <div class="form-actions"><button type="button" class="btn secondary" onclick="app.closeCourseDataImportModal()">取消</button><button type="submit" class="btn primary">识别并导入</button></div>
             </form>
         </div>
     </div>
@@ -1021,6 +1038,7 @@
     <script src="./html2canvas.min.js"></script>
     <script src="./js/app-erp.js"></script>
     <script src="./js/app-core.js"></script>
+    <script src="./js/app-course-import.js"></script>
     <script src="./js/app-dragdrop.js"></script>
     <script src="./js/app-subjects.js"></script>
     <script src="./js/app-courses.js"></script>

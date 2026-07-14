@@ -811,7 +811,11 @@
 
         upsertAttendance(app, cellKey, studentId, status, dateKey) {
             const erp = ensureErpData(app);
-            const weekStartStr = app.formatLocalDate(app.getWeekRange(app.currentDate).start);
+            const dateParts = String(dateKey || '').split('-').map(Number);
+            const attendanceDate = dateParts.length === 3 && dateParts.every(Number.isFinite)
+                ? new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
+                : app.currentDate;
+            const weekStartStr = app.formatLocalDate(app.getWeekRange(attendanceDate).start);
             const version = this.getCellVersion(app, cellKey, weekStartStr);
             const courseInstanceId = version ? version.courseInstanceId : null;
             const existing = erp.attendanceRecords.find(record =>
