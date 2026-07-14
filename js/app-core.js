@@ -81,6 +81,9 @@ class TimetableApp {
             showSaturday: true,
             showSunday: true,
             showPeriodTime: true,
+            segmentedStatistics: false,
+            segmentedScheduling: false,
+            stages: [],
             theme: 'default'
         };
         this.grades = [
@@ -527,7 +530,16 @@ class TimetableApp {
                 titleId: 'lessonSheetCalendarTitle', gridId: 'lessonSheetCalendarGrid'
             }
         };
-        return configs[scope] || null;
+        if (configs[scope]) return configs[scope];
+        if (scope.startsWith('stage-')) {
+            const id = scope.slice(6);
+            return {
+                rootId: `stageRange-${id}`, startId: `stageStart-${id}`, endId: `stageEnd-${id}`,
+                textId: `stageRangeText-${id}`, popoverId: `stagePopover-${id}`,
+                titleId: `stageCalendarTitle-${id}`, gridId: `stageCalendarGrid-${id}`
+            };
+        }
+        return null;
     }
 
     formatSharedDateRangeLabel(startDate, endDate) {
@@ -577,7 +589,11 @@ class TimetableApp {
         const config = this.getSharedDateRangeConfig(scope);
         if (config) {
             const popover = document.getElementById(config.popoverId);
-            if (popover) popover.style.display = 'none';
+            const root = document.getElementById(config.rootId);
+            if (popover) {
+                popover.style.display = 'none';
+                if (root && popover.parentElement !== root) root.appendChild(popover);
+            }
         }
         if (this._sharedDateRangeState && this._sharedDateRangeState[scope]) {
             this._sharedDateRangeState[scope].pendingStart = null;
@@ -596,7 +612,9 @@ class TimetableApp {
         this._sharedDateRangeOutsideHandler = event => {
             const config = this.getSharedDateRangeConfig(scope);
             const root = config ? document.getElementById(config.rootId) : null;
+            const popover = config ? document.getElementById(config.popoverId) : null;
             if (root && root.contains(event.target)) return;
+            if (popover && popover.contains(event.target)) return;
             this.closeSharedDateRangePicker(scope);
         };
         document.addEventListener('mousedown', this._sharedDateRangeOutsideHandler);
@@ -665,6 +683,9 @@ class TimetableApp {
         document.getElementById(config.startId).value = this.formatLocalDate(rangeStart);
         document.getElementById(config.endId).value = this.formatLocalDate(rangeEnd);
         this.syncSharedDateRangeLabel(scope);
+        if (scope.startsWith('stage-') && typeof this.updateStageDateRange === 'function') {
+            this.updateStageDateRange(scope.slice(6), this.formatLocalDate(rangeStart), this.formatLocalDate(rangeEnd));
+        }
         this.closeSharedDateRangePicker(scope);
     }
 

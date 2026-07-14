@@ -251,6 +251,7 @@ TimetableApp.prototype.toggleAdvancedSettings = function() {
         const advanced = document.getElementById('advancedSettings');
         toggle.classList.toggle('expanded');
         advanced.classList.toggle('expanded');
+        toggle.setAttribute('aria-expanded', toggle.classList.contains('expanded') ? 'true' : 'false');
         this.updateTimeAdvancedSaveVisibility();
     }
 

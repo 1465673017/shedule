@@ -36,10 +36,15 @@ TimetableApp.prototype.switchSettingsTab = function(tabName) {
             this.initQuickSettings();
             this.updateShowPeriodTimeToggle();
             this.updateTimeAdvancedSaveVisibility();
+        } else if (tabName === 'stage') {
+            this.renderStageSettings();
         }
     }
 
 TimetableApp.prototype.closeSettingsModal = function() {
+        if (this._activeSharedDateRangeScope && this._activeSharedDateRangeScope.startsWith('stage-')) {
+            this.closeSharedDateRangePicker(this._activeSharedDateRangeScope);
+        }
         document.getElementById('settingsModal').style.display = 'none';
     }
 
@@ -298,8 +303,177 @@ TimetableApp.prototype.loadSettings = function() {
         }
         this.settings.showSaturday = true;
         this.settings.showSunday = true;
+        if (!Array.isArray(this.settings.stages)) this.settings.stages = [];
+        if (typeof this.settings.segmentedStatistics !== 'boolean') this.settings.segmentedStatistics = false;
+        if (typeof this.settings.segmentedScheduling !== 'boolean') {
+            this.settings.segmentedScheduling = Boolean(this.settings.segmentedStatistics);
+        }
         this.ensureThemeSettings();
     }
+
+TimetableApp.prototype.createStage = function(index, count) {
+    const year = new Date().getFullYear();
+    const yearStart = new Date(year, 0, 1);
+    const daysInYear = Math.round((new Date(year + 1, 0, 1) - yearStart) / 86400000);
+    const startOffset = Math.floor(daysInYear * index / count);
+    const endOffset = Math.floor(daysInYear * (index + 1) / count) - 1;
+    const formatDate = offset => {
+        const date = new Date(year, 0, 1 + offset);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+    return { id: `stage-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`, name: `第${index + 1}阶段`, startDate: formatDate(startOffset), endDate: formatDate(endOffset) };
+}
+
+TimetableApp.prototype.escapeHtml = function(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+TimetableApp.prototype.renderStageSettings = function() {
+    if (this._activeSharedDateRangeScope && this._activeSharedDateRangeScope.startsWith('stage-')) {
+        this.closeSharedDateRangePicker(this._activeSharedDateRangeScope);
+    }
+    const list = document.getElementById('stagesList');
+    const toggle = document.getElementById('segmentedSchedulingToggle');
+    const countInput = document.getElementById('stageCountInput');
+    const firstStartInput = document.getElementById('firstStageStartDate');
+    if (!list || !toggle || !countInput || !firstStartInput) return;
+    if (!this.settings.stages.length) this.setStageCount(Number(countInput.value) || 2, false);
+    countInput.value = this.settings.stages.length;
+    firstStartInput.value = this.settings.stages[0]?.startDate || '';
+    toggle.classList.toggle('active', Boolean(this.settings.segmentedScheduling));
+    toggle.textContent = this.settings.segmentedScheduling ? '分段排课已开启' : '开启分段排课';
+    list.innerHTML = '';
+    this.settings.stages.forEach((stage, index) => {
+        const row = document.createElement('div');
+        row.className = 'stage-setting-row';
+        const names = ['第一', '第二', '第三', '第四', '第五', '第六', '第七', '第八', '第九', '第十', '第十一', '第十二'];
+        if (!stage.name || /^第\d+阶段$/.test(stage.name)) stage.name = `${names[index] || `第${index + 1}`}阶段`;
+        const scope = `stage-${stage.id}`;
+        const start = this.parseDateInputValue(stage.startDate);
+        const end = this.parseDateInputValue(stage.endDate);
+        const rangeText = start && end ? this.formatSharedDateRangeLabel(start, end) : '请选择日期范围';
+        row.innerHTML = `<input type="text" class="setting-input stage-name-input" maxlength="20" aria-label="阶段名称" value="${this.escapeHtml(stage.name)}" oninput="app.updateStage('${stage.id}', 'name', this.value)">
+            <div class="shared-date-range-picker stage-date-range" id="stageRange-${stage.id}">
+                <input type="hidden" id="stageStart-${stage.id}" value="${stage.startDate || ''}">
+                <input type="hidden" id="stageEnd-${stage.id}" value="${stage.endDate || ''}">
+                <button type="button" class="stats-date-range-picker" onclick="app.toggleStageDateRangePicker('${stage.id}', this)">
+                    <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="stats-date-range-value" id="stageRangeText-${stage.id}">${rangeText}</span>
+                    <span class="stats-date-range-caret">&#9662;</span>
+                </button>
+                <div class="stats-date-popover stage-date-popover" id="stagePopover-${stage.id}" style="display:none;">
+                    <div class="stats-calendar-header"><button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('${scope}', -1)">&#8249;</button><div class="stats-calendar-title" id="stageCalendarTitle-${stage.id}"></div><button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('${scope}', 1)">&#8250;</button></div>
+                    <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                    <div class="stats-calendar-grid" id="stageCalendarGrid-${stage.id}"></div>
+                </div>
+            </div>
+            <div class="stage-order-actions">
+                <button type="button" class="stage-order-button" aria-label="上移${this.escapeHtml(stage.name)}" title="上移" ${index === 0 ? 'disabled' : ''} onclick="app.moveStage('${stage.id}', -1)">↑</button>
+                <button type="button" class="stage-order-button" aria-label="下移${this.escapeHtml(stage.name)}" title="下移" ${index === this.settings.stages.length - 1 ? 'disabled' : ''} onclick="app.moveStage('${stage.id}', 1)">↓</button>
+            </div>`;
+        list.appendChild(row);
+    });
+}
+
+TimetableApp.prototype.setStageCount = function(value, shouldRender = true) {
+    const count = Math.max(1, Math.min(12, Number.parseInt(value, 10) || 1));
+    const firstStartDate = this.settings.stages[0]?.startDate || '';
+    if (count !== this.settings.stages.length) {
+        this.settings.stages = Array.from({ length: count }, (_, index) => this.createStage(index, count));
+        if (firstStartDate) this.settings.stages[0].startDate = firstStartDate;
+    }
+    const input = document.getElementById('stageCountInput');
+    if (input) input.value = count;
+    if (shouldRender) this.renderStageSettings();
+}
+
+TimetableApp.prototype.updateFirstStageStartDate = function(value) {
+    const firstStage = this.settings.stages[0];
+    if (!firstStage) return;
+    firstStage.startDate = value;
+    this.renderStageSettings();
+}
+
+TimetableApp.prototype.updateStageDateRange = function(id, startDate, endDate) {
+    const stage = this.settings.stages.find(item => item.id === id);
+    if (!stage) return;
+    stage.startDate = startDate;
+    stage.endDate = endDate;
+    if (stage === this.settings.stages[0]) {
+        const firstStartInput = document.getElementById('firstStageStartDate');
+        if (firstStartInput) firstStartInput.value = startDate;
+    }
+}
+
+TimetableApp.prototype.toggleStageDateRangePicker = function(id, button) {
+    const scope = `stage-${id}`;
+    this.toggleSharedDateRangePicker(scope);
+    const popover = document.getElementById(`stagePopover-${id}`);
+    if (!popover || popover.style.display === 'none') return;
+    const rect = button.getBoundingClientRect();
+    const width = 252;
+    document.body.appendChild(popover);
+    popover.style.position = 'fixed';
+    popover.style.right = 'auto';
+    popover.style.bottom = 'auto';
+    popover.style.width = `${width}px`;
+    popover.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))}px`;
+    const height = popover.offsetHeight || 292;
+    const fitsBelow = window.innerHeight - rect.bottom >= height + 12;
+    const preferredTop = fitsBelow ? rect.bottom + 6 : rect.top - height - 6;
+    popover.style.top = `${Math.max(12, Math.min(preferredTop, window.innerHeight - height - 12))}px`;
+}
+
+TimetableApp.prototype.moveStage = function(id, direction) {
+    const index = this.settings.stages.findIndex(stage => stage.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= this.settings.stages.length) return;
+    [this.settings.stages[index], this.settings.stages[target]] = [this.settings.stages[target], this.settings.stages[index]];
+    this.renderStageSettings();
+}
+
+TimetableApp.prototype.updateStage = function(id, field, value) {
+    const stage = this.settings.stages.find(item => item.id === id);
+    if (stage && ['name', 'startDate', 'endDate'].includes(field)) {
+        stage[field] = value;
+        if (field === 'startDate' && stage === this.settings.stages[0]) {
+            const firstStartInput = document.getElementById('firstStageStartDate');
+            if (firstStartInput) firstStartInput.value = value;
+        }
+    }
+}
+
+TimetableApp.prototype.toggleSegmentedScheduling = function() {
+    this.settings.segmentedScheduling = !this.settings.segmentedScheduling;
+    this.saveSettings();
+    this.renderStageSettings();
+}
+
+TimetableApp.prototype.saveStageSettings = function() {
+    const message = document.getElementById('stageSettingsMessage');
+    const stages = this.settings.stages.map(stage => ({ ...stage, name: (stage.name || '').trim() }));
+    if (stages.some(stage => !stage.name || !stage.startDate || !stage.endDate || stage.startDate > stage.endDate)) {
+        message.textContent = '请填写阶段名称和完整日期，并确保开始日期不晚于结束日期。';
+        message.className = 'stage-settings-message error';
+        return;
+    }
+    const sorted = [...stages].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    if (sorted.some((stage, index) => index > 0 && stage.startDate <= sorted[index - 1].endDate)) {
+        message.textContent = '阶段日期不能互相重叠，请调整后再保存。';
+        message.className = 'stage-settings-message error';
+        return;
+    }
+    this.settings.stages = stages;
+    this.saveSettings();
+    this.renderStageSettings();
+    message.textContent = '阶段设置已保存。';
+    message.className = 'stage-settings-message success';
+}
 
 TimetableApp.prototype.applySettings = function() {
         this.ensureThemeSettings();
