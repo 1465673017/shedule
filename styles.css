@@ -1505,20 +1505,20 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--light-color);
-    border-radius: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    border-radius: 9px;
     border: 1px solid var(--border-color);
     cursor: pointer;
     margin-bottom: 16px;
     font-family: inherit;
     text-align: left;
-    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .advanced-settings-toggle:hover {
-    background: var(--primary-bg);
-    border-color: var(--primary-color);
+    background: rgba(var(--primary-rgb), 0.05);
+    border-color: rgba(var(--primary-rgb), 0.45);
 }
 
 .advanced-settings-toggle span {
@@ -1537,47 +1537,35 @@ body {
 .advanced-settings-toggle .toggle-icon {
     position: relative;
     flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-    background: var(--primary-bg);
-    color: var(--primary-color);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    width: 20px;
+    height: 20px;
+    color: var(--text-3);
 }
 
-.advanced-settings-toggle .toggle-icon::before,
-.advanced-settings-toggle .toggle-icon::after {
+.advanced-settings-toggle .toggle-icon::before {
     content: '';
     position: absolute;
-    left: 7px;
-    top: 11px;
-    width: 10px;
-    height: 2px;
-    border-radius: 999px;
-    background: currentColor;
-}
-
-.advanced-settings-toggle .toggle-icon::after {
-    left: 11px;
-    top: 7px;
-    width: 2px;
-    height: 10px;
-    transition: opacity 0.16s ease;
+    left: 6px;
+    top: 5px;
+    width: 7px;
+    height: 7px;
+    border-right: 1.8px solid currentColor;
+    border-bottom: 1.8px solid currentColor;
+    transform: rotate(45deg);
 }
 
 .advanced-settings-toggle.expanded {
-    border-color: rgba(var(--primary-rgb), 0.42);
-    background: var(--primary-bg);
-    box-shadow: inset 3px 0 0 var(--primary-color);
+    border-color: rgba(var(--primary-rgb), 0.38);
+    background: rgba(var(--primary-rgb), 0.07);
 }
 
 .advanced-settings-toggle.expanded .toggle-icon {
-    background: var(--primary-color);
-    color: #fff;
+    color: var(--primary-color);
 }
 
-.advanced-settings-toggle.expanded .toggle-icon::after {
-    opacity: 0;
+.advanced-settings-toggle.expanded .toggle-icon::before {
+    top: 8px;
+    transform: rotate(225deg);
 }
 
 .advanced-settings {
@@ -1586,12 +1574,12 @@ body {
 
 .advanced-settings.expanded {
     display: block;
-    animation: advancedSettingsReveal 0.18s ease-out;
+    animation: advancedSettingsReveal 0.16s ease-out;
 }
 
 @keyframes advancedSettingsReveal {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .time-section {
@@ -4217,15 +4205,29 @@ body {
     display: block;
 }
 
-#stageSettingsTab.settings-tab-pane.active { display: flex; flex-direction: column; overflow: hidden; margin: 0 -6px; padding: 2px 6px 8px; }
-.stage-settings-section { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; margin-bottom: 0; }
-.stage-quick-settings { flex: 1 1 auto; min-height: 0; margin-bottom: 0; padding: 12px 14px; overflow-y: auto; }
+#stageSettingsTab.settings-tab-pane.active { display: block; overflow-y: auto; margin: 0 -6px; padding: 2px 6px 8px; }
+.stage-settings-section { margin-bottom: 0; }
+.stage-quick-settings { margin-bottom: 8px; padding: 12px 14px; }
 .stage-quick-settings .quick-settings-header { margin-bottom: 10px; }
 .stage-quick-control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .stage-quick-control-row .form-group { margin: 0; }
 .stage-quick-control-row label { display: block; margin-bottom: 4px; color: var(--text-3); font-size: 12px; font-weight: 500; }
 .stage-quick-control-row .setting-input { max-width: none; }
 .stage-scheduling-toggle { min-width: 0; padding-left: 10px; padding-right: 10px; }
+.stage-month-ranges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; margin-top: 10px; }
+.stage-month-field { margin: 0; }
+.stage-month-field label { display: block; margin-bottom: 3px; color: var(--text-3); font-size: 12px; }
+.stage-month-range-inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 5px; }
+.stage-month-range-inputs > span { color: var(--text-3); font-size: 12px; }
+.stage-month-field .setting-input { padding: 6px 10px; min-height: 32px; }
+.stage-month-field.invalid { padding: 6px; margin: -6px; border: 1px solid rgba(220, 38, 38, .55); border-radius: 8px; background: rgba(254, 226, 226, .45); }
+.stage-month-field.invalid label, .stage-month-field.invalid .stage-month-range-inputs > span { color: #dc2626; }
+.stage-month-field.invalid .setting-input { border-color: #ef4444; }
+.stage-quick-message { min-height: 16px; margin-top: 6px; color: #dc2626; font-size: 12px; line-height: 1.35; }
+.stage-quick-apply { width: 100%; margin-top: 10px; min-height: 34px; }
+.stage-quick-apply:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.stage-advanced-toggle { margin: 0 0 8px; }
+.stage-advanced-settings { padding-top: 2px; }
 .stages-list { display: grid; gap: 8px; margin: 14px 0 10px; }
 .stage-setting-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--schedule-bg-color, #fff); }
 .stage-setting-row .setting-input { min-width: 0; padding: 6px 8px; font-size: 12px; }
@@ -4239,7 +4241,7 @@ body {
 .stage-order-button { display: grid; place-items: center; width: 19px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer; transition: color .18s ease, background-color .18s ease, transform .18s ease; }
 .stage-order-button:hover:not(:disabled) { background: var(--primary-bg); color: var(--primary-color); transform: translateY(-1px); }
 .stage-order-button:disabled { opacity: .32; cursor: default; }
-.stage-settings-footer { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; padding-top: 10px; background: var(--schedule-bg-color, #fff); }
+.stage-settings-footer { display: flex; flex-direction: column; gap: 6px; margin-top: 0; padding-top: 10px; background: var(--schedule-bg-color, #fff); }
 .stage-settings-footer .btn { width: 100%; }
 .stage-settings-message { font-size: 13px; }
 .stage-settings-message.error { color: #dc2626; }
@@ -4247,12 +4249,14 @@ body {
 
 @media (max-width: 760px) {
     .stage-quick-control-row { grid-template-columns: 1fr; }
+    .stage-month-ranges { grid-template-columns: 1fr; }
     .stage-quick-control-row .setting-input { max-width: none; }
     .stage-setting-row { grid-template-columns: minmax(80px, .7fr) minmax(0, 1.3fr) auto; }
 }
 
 body.dark-theme-active .stage-order-button { background: transparent; color: var(--modal-text-soft); }
 body.dark-theme-active .stage-order-button:hover:not(:disabled) { background: rgba(129, 140, 248, .16); color: #a5b4fc; }
+body.dark-theme-active .stage-month-field.invalid { border-color: rgba(248, 113, 113, .7); background: rgba(127, 29, 29, .2); }
 
 .actual-duration-edit-icon {
     color: #4a90d9;
@@ -4699,7 +4703,7 @@ body.dark-theme-active .setting-input:focus {
 }
 
 body.dark-theme-active .advanced-settings-toggle {
-    background: #334155;
+    background: #1e293b;
     border-color: #475569;
 }
 
@@ -4716,9 +4720,13 @@ body.dark-theme-active .advanced-settings-toggle .toggle-icon {
     color: #818cf8;
 }
 
+body.dark-theme-active .advanced-settings-toggle.expanded {
+    background: rgba(129, 140, 248, 0.1);
+    border-color: rgba(129, 140, 248, 0.45);
+}
+
 body.dark-theme-active .advanced-settings-toggle.expanded .toggle-icon {
-    background: #818cf8;
-    color: #fff;
+    color: #a5b4fc;
 }
 
 body.dark-theme-active .time-period-item {
@@ -11274,6 +11282,26 @@ body.reference-main-ui.dark-theme-active .tutorial-shortcuts {
 
 body.reference-main-ui.dark-theme-active .tutorial-shortcut-grid {
     color: #aebdd0;
+}
+
+/* 暗色主题下弱化导出主按钮的亮蓝色，使其融入侧栏背景。 */
+body.dark-theme-active #exportBtn {
+    background: linear-gradient(135deg, #35466f, #465b88);
+    border-color: rgba(148, 163, 214, .34);
+    color: #eef2ff;
+    box-shadow: 0 8px 18px rgba(2, 6, 23, .32), inset 0 1px 0 rgba(255, 255, 255, .06);
+    filter: none;
+}
+
+body.dark-theme-active #exportBtn:hover {
+    background: linear-gradient(135deg, #405481, #53699a);
+    border-color: rgba(165, 180, 252, .55);
+    box-shadow: 0 10px 21px rgba(2, 6, 23, .38), 0 0 0 1px rgba(129, 140, 248, .08);
+}
+
+body.dark-theme-active #exportBtn:active {
+    background: linear-gradient(135deg, #314163, #405278);
+    box-shadow: 0 5px 12px rgba(2, 6, 23, .3);
 }
 
 @media (max-width: 640px) {

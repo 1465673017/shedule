@@ -688,18 +688,27 @@
                             <div class="stage-quick-control-row">
                                 <div class="form-group">
                                     <label for="stageCountInput">全年分段数量</label>
-                                    <input type="number" id="stageCountInput" value="2" min="1" max="12" class="setting-input" onchange="app.setStageCount(this.value)">
+                                    <input type="number" id="stageCountInput" value="4" min="1" max="12" class="setting-input" onchange="app.setStageCount(this.value)">
                                 </div>
                                 <div class="form-group">
                                     <label for="firstStageStartDate">第一阶段起始日期</label>
-                                    <input type="date" id="firstStageStartDate" class="setting-input" onchange="app.updateFirstStageStartDate(this.value)">
+                                    <input type="date" id="firstStageStartDate" class="setting-input" onchange="app.recalculateStageRanges()">
                                 </div>
                             </div>
+                            <div id="stageMonthRanges" class="stage-month-ranges"></div>
+                            <div id="stageQuickMessage" class="stage-quick-message" aria-live="polite"></div>
+                            <button type="button" id="stageQuickApplyBtn" class="btn primary stage-quick-apply" onclick="app.applyStageQuickSettings()">应用快速设置</button>
+                        </div>
+                        <button type="button" class="advanced-settings-toggle stage-advanced-toggle" aria-expanded="false" aria-controls="stageAdvancedSettings" onclick="app.toggleStageAdvancedSettings()">
+                            <span>高级设置 <small>分时间段设置</small></span>
+                            <span class="toggle-icon" aria-hidden="true"></span>
+                        </button>
+                        <div class="advanced-settings stage-advanced-settings" id="stageAdvancedSettings">
                             <div id="stagesList" class="stages-list"></div>
                         </div>
-                        <div class="stage-settings-footer">
+                        <div class="form-actions stage-settings-footer" id="stageAdvancedSaveActions" style="display:none;">
                             <span id="stageSettingsMessage" class="stage-settings-message" aria-live="polite"></span>
-                            <button type="button" class="btn primary" onclick="app.saveStageSettings()">应用快速设置</button>
+                            <button type="button" class="btn primary" onclick="app.saveStageSettings()">保存</button>
                         </div>
                     </div>
                 </div>

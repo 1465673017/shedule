@@ -298,8 +298,10 @@ TimetableApp.prototype.getStudentGradeColor = function(student) {
     // 设置相关方法
 TimetableApp.prototype.loadSettings = function() {
         const savedSettings = localStorage.getItem('timetableSettings');
+        let parsedSettings = null;
         if (savedSettings) {
-            this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+            parsedSettings = JSON.parse(savedSettings);
+            this.settings = { ...this.settings, ...parsedSettings };
         }
         this.settings.showSaturday = true;
         this.settings.showSunday = true;
@@ -308,20 +310,41 @@ TimetableApp.prototype.loadSettings = function() {
         if (typeof this.settings.segmentedScheduling !== 'boolean') {
             this.settings.segmentedScheduling = Boolean(this.settings.segmentedStatistics);
         }
+        if (!Array.isArray(this.settings.stageMonthRanges)) this.settings.stageMonthRanges = [];
+        // 旧版阶段数据没有当前配置版本，首次加载时直接采用新版默认值，
+        // 避免必须先修改输入框才出现 4 段默认配置。
+        if (parsedSettings && parsedSettings.stageRangeSettingsVersion !== 1) {
+            this.settings.stages = [];
+            this.settings.stageMonthRanges = [];
+        }
         this.ensureThemeSettings();
     }
 
-TimetableApp.prototype.createStage = function(index, count) {
-    const year = new Date().getFullYear();
-    const yearStart = new Date(year, 0, 1);
-    const daysInYear = Math.round((new Date(year + 1, 0, 1) - yearStart) / 86400000);
-    const startOffset = Math.floor(daysInYear * index / count);
-    const endOffset = Math.floor(daysInYear * (index + 1) / count) - 1;
-    const formatDate = offset => {
-        const date = new Date(year, 0, 1 + offset);
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+TimetableApp.prototype.getDefaultStageStartDate = function() {
+    const today = new Date();
+    const year = today.getMonth() < 8 ? today.getFullYear() - 1 : today.getFullYear();
+    return `${year}-09-01`;
+}
+
+TimetableApp.prototype.getDefaultStageMonthRanges = function(count) {
+    if (count === 4) return [[9, 12], [1, 2], [3, 6], [7, 8]];
+    const result = [];
+    for (let index = 0; index < count; index++) {
+        const startOffset = Math.floor(12 * index / count);
+        const endOffset = Math.floor(12 * (index + 1) / count) - 1;
+        result.push([((8 + startOffset) % 12) + 1, ((8 + endOffset) % 12) + 1]);
+    }
+    return result;
+}
+
+TimetableApp.prototype.createStage = function(index, source = {}) {
+    const names = ['第一', '第二', '第三', '第四', '第五', '第六', '第七', '第八', '第九', '第十', '第十一', '第十二'];
+    return {
+        id: source.id || `stage-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
+        name: source.name || `${names[index] || `第${index + 1}`}阶段`,
+        startDate: source.startDate || '',
+        endDate: source.endDate || ''
     };
-    return { id: `stage-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`, name: `第${index + 1}阶段`, startDate: formatDate(startOffset), endDate: formatDate(endOffset) };
 }
 
 TimetableApp.prototype.escapeHtml = function(value) {
@@ -341,12 +364,37 @@ TimetableApp.prototype.renderStageSettings = function() {
     const toggle = document.getElementById('segmentedSchedulingToggle');
     const countInput = document.getElementById('stageCountInput');
     const firstStartInput = document.getElementById('firstStageStartDate');
-    if (!list || !toggle || !countInput || !firstStartInput) return;
-    if (!this.settings.stages.length) this.setStageCount(Number(countInput.value) || 2, false);
+    const monthRanges = document.getElementById('stageMonthRanges');
+    if (!list || !toggle || !countInput || !firstStartInput || !monthRanges) return;
+    if (!this.settings.stages.length) {
+        this.settings.stageMonthRanges = [[9, 12], [1, 2], [3, 6], [7, 8]];
+        this.settings.stages = Array.from({ length: 4 }, (_, index) => this.createStage(index));
+        firstStartInput.value = this.getDefaultStageStartDate();
+        this.recalculateStageRanges(false);
+    }
+    if (this.settings.stageMonthRanges.length !== this.settings.stages.length) {
+        this.settings.stageMonthRanges = this.settings.stages.map(stage => {
+            const start = this.parseDateInputValue(stage.startDate);
+            const end = this.parseDateInputValue(stage.endDate);
+            return start && end ? [start.getMonth() + 1, (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() + 1] : [1, 1];
+        });
+    }
     countInput.value = this.settings.stages.length;
     firstStartInput.value = this.settings.stages[0]?.startDate || '';
     toggle.classList.toggle('active', Boolean(this.settings.segmentedScheduling));
     toggle.textContent = this.settings.segmentedScheduling ? '分段排课已开启' : '开启分段排课';
+    const names = ['第一', '第二', '第三', '第四', '第五', '第六', '第七', '第八', '第九', '第十', '第十一', '第十二'];
+    monthRanges.innerHTML = this.settings.stageMonthRanges.map((range, index) => `
+        <div class="form-group stage-month-field" data-stage-index="${index}">
+            <label>${names[index] || `第${index + 1}`}段月份范围</label>
+            <div class="stage-month-range-inputs">
+                <input type="number" id="stageStartMonth-${index}" aria-label="${names[index] || `第${index + 1}`}段起始月" class="setting-input" min="1" max="12" value="${range[0]}" oninput="app.updateStageQuickValidation()" onchange="app.recalculateStageRanges()">
+                <span>至</span>
+                <input type="number" id="stageEndMonth-${index}" aria-label="${names[index] || `第${index + 1}`}段结束月" class="setting-input" min="1" max="120" value="${range[1]}" oninput="app.updateStageQuickValidation()" onchange="app.recalculateStageRanges()">
+                <span>月</span>
+            </div>
+        </div>`).join('');
+    this.updateStageQuickValidation();
     list.innerHTML = '';
     this.settings.stages.forEach((stage, index) => {
         const row = document.createElement('div');
@@ -382,14 +430,127 @@ TimetableApp.prototype.renderStageSettings = function() {
 
 TimetableApp.prototype.setStageCount = function(value, shouldRender = true) {
     const count = Math.max(1, Math.min(12, Number.parseInt(value, 10) || 1));
-    const firstStartDate = this.settings.stages[0]?.startDate || '';
+    const firstStartDate = document.getElementById('firstStageStartDate')?.value || this.settings.stages[0]?.startDate || this.getDefaultStageStartDate();
     if (count !== this.settings.stages.length) {
-        this.settings.stages = Array.from({ length: count }, (_, index) => this.createStage(index, count));
-        if (firstStartDate) this.settings.stages[0].startDate = firstStartDate;
+        const previous = this.settings.stages;
+        this.settings.stages = Array.from({ length: count }, (_, index) => this.createStage(index, previous[index] || {}));
+        this.settings.stageMonthRanges = this.getDefaultStageMonthRanges(count);
     }
     const input = document.getElementById('stageCountInput');
     if (input) input.value = count;
+    const startInput = document.getElementById('firstStageStartDate');
+    if (startInput) startInput.value = firstStartDate;
+    this.recalculateStageRanges(false, true);
     if (shouldRender) this.renderStageSettings();
+}
+
+TimetableApp.prototype.recalculateStageRanges = function(shouldRender = true, useStoredRanges = false) {
+    const startInput = document.getElementById('firstStageStartDate');
+    const count = Math.max(1, Math.min(12, Number.parseInt(document.getElementById('stageCountInput')?.value, 10) || this.settings.stages.length || 4));
+    const startDate = this.parseDateInputValue(startInput?.value || this.settings.stages[0]?.startDate || this.getDefaultStageStartDate());
+    if (!startDate) return;
+    const names = ['第一', '第二', '第三', '第四', '第五', '第六', '第七', '第八', '第九', '第十', '第十一', '第十二'];
+    const ranges = Array.from({ length: count }, (_, index) => {
+        const stored = this.settings.stageMonthRanges[index] || this.getDefaultStageMonthRanges(count)[index];
+        const startInput = document.getElementById(`stageStartMonth-${index}`);
+        const endInput = document.getElementById(`stageEndMonth-${index}`);
+        const startMonth = useStoredRanges ? stored[0] : Number.parseInt(startInput?.value, 10);
+        const endMonth = useStoredRanges ? stored[1] : Number.parseInt(endInput?.value, 10);
+        return [Math.max(1, Math.min(12, startMonth || stored[0] || 1)), Math.max(1, Math.min(120, endMonth || stored[1] || 1))];
+    });
+    if (!this.validateStageMonthRanges(ranges).valid) {
+        this.updateStageQuickValidation(ranges);
+        return false;
+    }
+    this.settings.stageMonthRanges = ranges;
+    let earliestStart = new Date(startDate.getFullYear(), 0, 1);
+    this.settings.stages = Array.from({ length: count }, (_, index) => {
+        const previous = this.settings.stages[index] || {};
+        const [startMonth, rawEndMonth] = ranges[index];
+        let startYear = index === 0 ? startDate.getFullYear() : earliestStart.getFullYear();
+        let stageStart = new Date(startYear, startMonth - 1, 1);
+        while (index > 0 && stageStart < earliestStart) {
+            startYear += 1;
+            stageStart = new Date(startYear, startMonth - 1, 1);
+        }
+        const normalizedEndMonth = ((rawEndMonth - 1) % 12) + 1;
+        let endYear = startYear + Math.floor((rawEndMonth - 1) / 12);
+        let stageEnd = new Date(endYear, normalizedEndMonth, 0);
+        while (stageEnd < stageStart) {
+            endYear += 1;
+            stageEnd = new Date(endYear, normalizedEndMonth, 0);
+        }
+        earliestStart = new Date(stageEnd.getFullYear(), stageEnd.getMonth() + 1, 1);
+        return this.createStage(index, {
+            ...previous,
+            name: previous.name || `${names[index] || `第${index + 1}`}阶段`,
+            startDate: this.formatLocalDate(stageStart),
+            endDate: this.formatLocalDate(stageEnd)
+        });
+    });
+    if (shouldRender) this.renderStageSettings();
+    return true;
+}
+
+TimetableApp.prototype.applyStageQuickSettings = function() {
+    if (!this.recalculateStageRanges(false)) return;
+    this.saveSettings();
+    this.renderStageSettings();
+}
+
+TimetableApp.prototype.getStageMonthRangesFromInputs = function() {
+    const count = Math.max(1, Math.min(12, Number.parseInt(document.getElementById('stageCountInput')?.value, 10) || 4));
+    return Array.from({ length: count }, (_, index) => [
+        Number.parseInt(document.getElementById(`stageStartMonth-${index}`)?.value, 10),
+        Number.parseInt(document.getElementById(`stageEndMonth-${index}`)?.value, 10)
+    ]);
+}
+
+TimetableApp.prototype.validateStageMonthRanges = function(ranges) {
+    const invalid = new Set();
+    if (!ranges.length) return { valid: false, invalid };
+    const baseMonth = ranges[0][0];
+    const intervals = ranges.map(([startMonth, rawEndMonth], index) => {
+        if (!Number.isInteger(startMonth) || startMonth < 1 || startMonth > 12 || !Number.isInteger(rawEndMonth) || rawEndMonth < 1 || rawEndMonth > 120) {
+            invalid.add(index);
+            return null;
+        }
+        const start = (startMonth - baseMonth + 12) % 12;
+        let duration = rawEndMonth - startMonth;
+        while (duration < 0) duration += 12;
+        return { index, start, end: start + duration };
+    }).filter(Boolean);
+    for (let left = 0; left < intervals.length; left++) {
+        for (let right = left + 1; right < intervals.length; right++) {
+            if (intervals[left].start <= intervals[right].end && intervals[right].start <= intervals[left].end) {
+                invalid.add(intervals[left].index);
+                invalid.add(intervals[right].index);
+            }
+        }
+    }
+    return { valid: invalid.size === 0, invalid };
+}
+
+TimetableApp.prototype.updateStageQuickValidation = function(ranges = null) {
+    const currentRanges = ranges || this.getStageMonthRangesFromInputs();
+    const result = this.validateStageMonthRanges(currentRanges);
+    document.querySelectorAll('.stage-month-field').forEach((field, index) => field.classList.toggle('invalid', result.invalid.has(index)));
+    const message = document.getElementById('stageQuickMessage');
+    const button = document.getElementById('stageQuickApplyBtn');
+    if (message) message.textContent = result.valid ? '' : '月份范围存在重叠，请调整标红的分段后再应用。';
+    if (button) button.disabled = !result.valid;
+    return result.valid;
+}
+
+TimetableApp.prototype.toggleStageAdvancedSettings = function() {
+    const toggle = document.querySelector('.stage-advanced-toggle');
+    const advanced = document.getElementById('stageAdvancedSettings');
+    const actions = document.getElementById('stageAdvancedSaveActions');
+    const expanded = !toggle.classList.contains('expanded');
+    toggle.classList.toggle('expanded', expanded);
+    advanced.classList.toggle('expanded', expanded);
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (actions) actions.style.display = expanded ? 'flex' : 'none';
 }
 
 TimetableApp.prototype.updateFirstStageStartDate = function(value) {

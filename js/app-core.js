@@ -83,6 +83,8 @@ class TimetableApp {
             showPeriodTime: true,
             segmentedStatistics: false,
             segmentedScheduling: false,
+            stageRangeSettingsVersion: 1,
+            stageMonthRanges: [],
             stages: [],
             theme: 'default'
         };
