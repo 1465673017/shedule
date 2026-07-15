@@ -365,6 +365,7 @@ TimetableApp.prototype.renderStageSettings = function() {
     const countInput = document.getElementById('stageCountInput');
     const firstStartInput = document.getElementById('firstStageStartDate');
     const monthRanges = document.getElementById('stageMonthRanges');
+    const addZone = document.getElementById('stageAddZone');
     if (!list || !toggle || !countInput || !firstStartInput || !monthRanges) return;
     if (!this.settings.stages.length) {
         this.settings.stageMonthRanges = [[9, 12], [1, 2], [3, 6], [7, 8]];
@@ -426,6 +427,26 @@ TimetableApp.prototype.renderStageSettings = function() {
             </div>`;
         list.appendChild(row);
     });
+    if (addZone) {
+        const reachedLimit = this.settings.stages.length >= 12;
+        addZone.disabled = reachedLimit;
+        addZone.querySelector('span').textContent = reachedLimit ? '最多添加 12 个阶段' : '+ 添加阶段';
+    }
+}
+
+TimetableApp.prototype.addStage = function() {
+    if (!Array.isArray(this.settings.stages)) this.settings.stages = [];
+    if (this.settings.stages.length >= 12) return;
+    const index = this.settings.stages.length;
+    this.settings.stages.push(this.createStage(index));
+    if (!Array.isArray(this.settings.stageMonthRanges)) this.settings.stageMonthRanges = [];
+    this.settings.stageMonthRanges.push([1, 1]);
+    const message = document.getElementById('stageSettingsMessage');
+    if (message) {
+        message.textContent = '已添加新阶段，请填写日期范围后保存。';
+        message.className = 'stage-settings-message';
+    }
+    this.renderStageSettings();
 }
 
 TimetableApp.prototype.setStageCount = function(value, shouldRender = true) {

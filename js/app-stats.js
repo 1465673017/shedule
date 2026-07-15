@@ -930,6 +930,37 @@ TimetableApp.prototype.getInlineOneV1Badge = function () {
 
 // ========== 图形统计系统 ==========
 
+// Keep bar-chart tooltips on one horizontal rail.  The default Chart.js
+// position follows the hovered stack segment, which makes the box jump up and
+// down while the pointer moves across a stacked bar.
+if (typeof Chart !== 'undefined' && Chart.Tooltip && Chart.Tooltip.positioners) {
+    Chart.Tooltip.positioners.statsTopRail = function (items) {
+        if (!items || !items.length) return false;
+        return {
+            x: items[0].element.x,
+            y: this.chart.chartArea.top + 6
+        };
+    };
+
+    // Data refreshes and continuous window-resize events share one restrained
+    // motion policy, so every statistics chart behaves consistently.
+    Chart.defaults.animation.duration = 420;
+    Chart.defaults.animation.easing = 'easeOutQuart';
+    Chart.defaults.resizeDelay = 140;
+    Chart.defaults.plugins.tooltip.position = 'statsTopRail';
+    Chart.defaults.plugins.tooltip.yAlign = 'top';
+    Chart.defaults.plugins.tooltip.animation = {
+        duration: 140,
+        easing: 'easeOutCubic'
+    };
+    if (Chart.defaults.transitions && Chart.defaults.transitions.resize) {
+        Chart.defaults.transitions.resize.animation = {
+            duration: 260,
+            easing: 'easeOutQuart'
+        };
+    }
+}
+
 TimetableApp.prototype.destroyCharts = function () {
     if (this._chartInstances) {
         Object.keys(this._chartInstances).forEach(function (key) {
@@ -977,6 +1008,24 @@ TimetableApp.prototype.getChartLegendOptions = function (textColor, extraOptions
     return Object.assign({}, baseOptions, extraOptions, {
         labels: Object.assign({}, baseOptions.labels, extraOptions.labels || {})
     });
+};
+
+TimetableApp.prototype.animateStatsCards = function (container, isEmpty) {
+    if (!container) return;
+    var nextState = isEmpty ? 'empty' : 'ready';
+    var previousState = container.dataset.statsDataState;
+    container.dataset.statsDataState = nextState;
+    // Hover-linked card updates remain still; only the meaningful transition
+    // between no data and available data gets the entrance motion.
+    if (previousState && previousState === nextState) return;
+    container.classList.remove('stats-cards-entering');
+    // Force the previous animation state to be committed so repeated range
+    // changes also get a transition.
+    void container.offsetWidth;
+    container.classList.add('stats-cards-entering');
+    window.setTimeout(function () {
+        container.classList.remove('stats-cards-entering');
+    }, 520);
 };
 
 TimetableApp.prototype.getLinePointSizes = function (labelCount) {
@@ -1350,6 +1399,8 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     }
                 }),
                 tooltip: {
+                    position: 'statsTopRail',
+                    yAlign: 'top',
                     callbacks: {
                         label: function (ctx) {
                             return ctx.dataset.label + ': ' + ctx.parsed.y + '人';
@@ -1746,6 +1797,8 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
                     display: false
                 }),
                 tooltip: {
+                    position: 'statsTopRail',
+                    yAlign: 'top',
                     callbacks: {
                         label: function (ctx) {
                             if (ctx.dataset.label === '暂无数据') return '暂无数据';
@@ -2116,6 +2169,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
                 '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">参与人数（人次）</div><div class="st-num">-</div></div></div>',
                 '<div class="stats-card stats-card-average"><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">-</div></div></div>'
             ].join('');
+        this.animateStatsCards(container, true);
         return {
             empty: true,
             lessonCount: 0,
@@ -2285,6 +2339,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         container.innerHTML = studentCards.map(function (entry) {
             return '<div class="stats-card"><div class="stats-card-copy"><div class="st-label">' + entry[0] + '</div><div class="st-num">' + entry[1] + '</div><div class="st-foot">' + studentComparisonHtml(entry[1], entry[2]) + '</div></div></div>';
         }).join('');
+        this.animateStatsCards(container, false);
         return {
             empty: false,
             lessonCount: validLessons.length,
@@ -2361,6 +2416,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var dailyAverageHours = classDays > 0 ? (totalMinutes / 60 / classDays).toFixed(2) : '0.00';
     cards.push('<div class="stats-card stats-card-average"><div class="stats-card-icon">▥</div><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">' + dailyAverageHours + '</div><div class="st-foot">' + comparisonHtml(Number(dailyAverageHours), previousMetrics.average) + '</div></div></div>');
     container.innerHTML = cards.join('');
+    this.animateStatsCards(container, false);
 
     return {
         empty: false,
