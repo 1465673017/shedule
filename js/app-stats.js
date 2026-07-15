@@ -451,6 +451,14 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
         }
         return { ...student, status };
     }).filter(Boolean);
+    const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
+    const isStageFinalLesson = window.ScheduleErpService.isStageFinalOccurrence(this, cellData, weekStartStr);
+    const completedStudentCount = students.filter(student => {
+        const isStageAutoCompleted = window.ScheduleErpService.isStudentStageAutoCompleted(this, student.id);
+        if (isStageAutoCompleted) return isStageFinalLesson;
+        if (!student.completed) return false;
+        return !student.manualCompletionDate || student.manualCompletionDate <= dateKey;
+    }).length;
 
     return {
         subject: subject ? subject.name : '未分类',
@@ -461,6 +469,7 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
         absentCount,
         presentNonAuditionCount,
         auditionStudentCount,
+        completedStudentCount,
         period,
         key,
         courseInstanceId: cellData.courseInstanceId || null,
@@ -558,6 +567,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     absentCount: 0,
                     presentNonAuditionCount: 0,
                     auditionStudentCount: 0,
+                    completedStudentCount: 0,
                     perSessionStudents: lesson.studentCount + lesson.leaveCount + lesson.absentCount,
                     statsTypeKey: typeKey,
                     period: lesson.period,
@@ -576,6 +586,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
             aggregated[aggKey].absentCount += lesson.absentCount;
             aggregated[aggKey].presentNonAuditionCount += lesson.presentNonAuditionCount || 0;
             aggregated[aggKey].auditionStudentCount += lesson.auditionStudentCount || 0;
+            aggregated[aggKey].completedStudentCount += lesson.completedStudentCount || 0;
             if (lesson.students) {
                 lesson.students.forEach(s => {
                     if (!aggregated[aggKey].students.find(existing => existing.id === s.id)) {
@@ -2139,9 +2150,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         totalPresentNonAudition += presentNonAuditionCount;
         totalScheduledStudents += totalCount;
         totalMissingStudents += (lesson.leaveCount || 0) + (lesson.absentCount || 0);
-        totalCompletedStudents += (lesson.students || []).filter(function (student) {
-            return student && student.completed;
-        }).length * (lesson.lessonCount || 1);
+        totalCompletedStudents += lesson.completedStudentCount || 0;
 
         if (lesson.typeStats && Object.keys(lesson.typeStats).length > 0) {
             Object.keys(lesson.typeStats).forEach(function (type) {
@@ -2253,9 +2262,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
                 metrics.present += present;
                 metrics.missing += missing;
                 metrics.audition += audition;
-                metrics.completed += (lesson.students || []).filter(function (student) {
-                    return student && student.completed;
-                }).length * (lesson.lessonCount || 1);
+                metrics.completed += lesson.completedStudentCount || 0;
                 return metrics;
             }, { total: 0, present: 0, missing: 0, completed: 0, audition: 0 });
         };

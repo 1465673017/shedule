@@ -1,7 +1,7 @@
 // app-erp.js - Schedule ERP service and timetable projection
 
 (function() {
-    const SCHEMA_VERSION = 4;
+    const SCHEMA_VERSION = 5;
 
     const makeId = (prefix) => {
         const rand = Math.random().toString(36).slice(2, 8);
@@ -45,7 +45,8 @@
             repeatRules: [],
             exceptionRules: [],
             completedStageOccurrences: [],
-            stageCompletionRecords: []
+            stageCompletionRecords: [],
+            manualStageCompletionOverrides: []
         };
     }
 
@@ -60,6 +61,7 @@
         app.erpData.exceptionRules = app.erpData.exceptionRules || [];
         app.erpData.completedStageOccurrences = app.erpData.completedStageOccurrences || [];
         app.erpData.stageCompletionRecords = app.erpData.stageCompletionRecords || [];
+        app.erpData.manualStageCompletionOverrides = app.erpData.manualStageCompletionOverrides || [];
         return app.erpData;
     }
 
@@ -141,11 +143,23 @@
         return null;
     }
 
-    function isVersionWithinItsSchedulingStage(app, version, requestedWeekStart) {
-        if (!app || !app.settings || !app.settings.segmentedScheduling) return true;
+    function getVersionStageOccurrence(app, version) {
+        if (!version) return null;
+        if (version.schedulingMode === 'continuous') return null;
+        if (version.schedulingMode === 'segmented') {
+            const start = parseLocalDate(version.stageStartDate);
+            const end = parseLocalDate(version.stageEndDate);
+            if (!start || !end) return null;
+            return { stage: { id: version.stageId || 'stage' }, start, end };
+        }
         const firstOccurrence = getCellOccurrenceDate(version.cellKey, version.weekStart);
+        return getStageOccurrenceForDate(app, firstOccurrence);
+    }
+
+    function isVersionWithinItsSchedulingStage(app, version, requestedWeekStart) {
+        if (!version) return true;
         const requestedOccurrence = getCellOccurrenceDate(version.cellKey, requestedWeekStart);
-        const stageOccurrence = getStageOccurrenceForDate(app, firstOccurrence);
+        const stageOccurrence = getVersionStageOccurrence(app, version);
         // Only courses newly created inside a configured stage are bounded.
         if (!stageOccurrence || !requestedOccurrence) return true;
         return requestedOccurrence >= stageOccurrence.start && requestedOccurrence <= stageOccurrence.end;
@@ -162,10 +176,9 @@
     }
 
     function isStageFinalOccurrence(app, version, requestedWeekStart) {
-        if (!version || !app || !app.settings || !app.settings.segmentedScheduling) return false;
-        const firstOccurrence = getCellOccurrenceDate(version.cellKey, version.weekStart);
+        if (!version) return false;
         const requestedOccurrence = getCellOccurrenceDate(version.cellKey, requestedWeekStart);
-        const stageOccurrence = getStageOccurrenceForDate(app, firstOccurrence);
+        const stageOccurrence = getVersionStageOccurrence(app, version);
         if (!stageOccurrence || !requestedOccurrence) return false;
         const lastOccurrence = getLastOccurrenceInStage(version.cellKey, stageOccurrence.end);
         return !!lastOccurrence && requestedOccurrence.getTime() === lastOccurrence.getTime();
@@ -178,6 +191,24 @@
         );
     }
 
+    function hydrateLegacySchedulingModes(app) {
+        const erp = ensureErpData(app);
+        let changed = false;
+        erp.courseInstances.forEach(instance => {
+            if (instance.schedulingMode) return;
+            const firstOccurrence = getCellOccurrenceDate(instance.cellKey, instance.weekStart);
+            const stageOccurrence = app.settings && app.settings.segmentedScheduling
+                ? getStageOccurrenceForDate(app, firstOccurrence)
+                : null;
+            instance.schedulingMode = stageOccurrence ? 'segmented' : 'continuous';
+            instance.stageId = stageOccurrence ? (stageOccurrence.stage.id || stageOccurrence.stage.name || null) : null;
+            instance.stageStartDate = stageOccurrence ? formatLocalDate(stageOccurrence.start) : null;
+            instance.stageEndDate = stageOccurrence ? formatLocalDate(stageOccurrence.end) : null;
+            changed = true;
+        });
+        return changed;
+    }
+
     function formatLocalDate(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -186,19 +217,22 @@
     }
 
     function completeStudentsForEndedStages(app, asOfDate = new Date()) {
-        if (!app || !app.settings || !app.settings.segmentedScheduling) return false;
+        if (!app) return false;
         const cutoff = asOfDate instanceof Date ? new Date(asOfDate) : parseLocalDate(asOfDate);
         if (!cutoff || Number.isNaN(cutoff.getTime())) return false;
         cutoff.setHours(23, 59, 59, 999);
 
         const erp = ensureErpData(app);
-        const processed = new Set(erp.completedStageOccurrences || []);
+        const metadataChanged = hydrateLegacySchedulingModes(app);
+        const previousAutoIds = new Set((erp.stageCompletionRecords || [])
+            .flatMap(record => Array.isArray(record.studentIds) ? record.studentIds : [])
+            .map(String));
+        const manualOverrideIds = new Set((erp.manualStageCompletionOverrides || []).map(String));
         const endedOccurrences = new Map();
 
         erp.courseInstances.forEach(instance => {
             if (!instance || instance.isDeleted || !instance.cellKey || !instance.weekStart) return;
-            const firstOccurrence = getCellOccurrenceDate(instance.cellKey, instance.weekStart);
-            const stageOccurrence = getStageOccurrenceForDate(app, firstOccurrence);
+            const stageOccurrence = getVersionStageOccurrence(app, instance);
             if (!stageOccurrence || cutoff < stageOccurrence.end) return;
             const stageId = stageOccurrence.stage.id || stageOccurrence.stage.name || 'stage';
             const occurrenceKey = `${stageId}|${formatLocalDate(stageOccurrence.end)}`;
@@ -212,23 +246,17 @@
             studentIds.forEach(studentId => endedOccurrences.get(occurrenceKey).studentIds.add(studentId));
         });
 
-        let changed = false;
+        const nextRecords = [];
+        const desiredAutoIds = new Set();
         endedOccurrences.forEach((occurrence, occurrenceKey) => {
-            const existingRecord = erp.stageCompletionRecords.find(record => record.key === occurrenceKey);
-            const automaticallyCompletedIds = new Set(existingRecord && Array.isArray(existingRecord.studentIds)
-                ? existingRecord.studentIds.map(String)
-                : []);
-            const processedStudentIds = new Set(existingRecord && Array.isArray(existingRecord.processedStudentIds)
-                ? existingRecord.processedStudentIds.map(String)
-                : automaticallyCompletedIds);
-            const newStudentIds = [...occurrence.studentIds].filter(studentId => !processedStudentIds.has(studentId));
-
-            newStudentIds.forEach(studentId => {
+            const automaticallyCompletedIds = [];
+            const processedStudentIds = [];
+            occurrence.studentIds.forEach(studentId => {
                 const student = Array.isArray(app.students)
                     ? app.students.find(item => String(item.id) === studentId)
                     : null;
                 if (!student || student.isAudition) return;
-                processedStudentIds.add(studentId);
+                processedStudentIds.push(studentId);
                 const hasLaterCourse = erp.courseInstances.some(instance => {
                     if (!instance || instance.isDeleted) return false;
                     const occurrenceDate = getCellOccurrenceDate(instance.cellKey, instance.weekStart);
@@ -240,31 +268,42 @@
                     return ids.includes(studentId);
                 });
                 if (hasLaterCourse) return;
-                if (!student.completed || student.accountStatus !== 'completed') {
-                    automaticallyCompletedIds.add(studentId);
-                    changed = true;
-                }
+                if (manualOverrideIds.has(studentId)) return;
+                const isManuallyCompleted = !!student.completed && !previousAutoIds.has(studentId);
+                if (isManuallyCompleted) return;
+                desiredAutoIds.add(studentId);
+                automaticallyCompletedIds.push(studentId);
+            });
+            nextRecords.push({ key: occurrenceKey, studentIds: automaticallyCompletedIds, processedStudentIds });
+        });
+
+        let changed = metadataChanged || JSON.stringify(erp.stageCompletionRecords || []) !== JSON.stringify(nextRecords);
+        (app.students || []).forEach(student => {
+            if (!student || student.isAudition) return;
+            const studentId = String(student.id);
+            const wasAutoCompleted = previousAutoIds.has(studentId);
+            const shouldAutoComplete = desiredAutoIds.has(studentId);
+            if (wasAutoCompleted && !shouldAutoComplete) {
+                student.completed = false;
+                student.accountStatus = 'normal';
+                changed = true;
+            } else if (shouldAutoComplete && (!student.completed || student.accountStatus !== 'completed')) {
                 student.completed = true;
                 student.accountStatus = 'completed';
-                erp.studentCourseRelations
-                    .filter(relation => String(relation.studentId) === studentId)
-                    .forEach(relation => {
-                        relation.accountStatus = 'completed';
-                        relation.updatedAt = new Date().toISOString();
-                    });
-            });
-            if (newStudentIds.length > 0 || !existingRecord) {
-                erp.stageCompletionRecords = erp.stageCompletionRecords.filter(record => record.key !== occurrenceKey);
-                erp.stageCompletionRecords.push({
-                    key: occurrenceKey,
-                    studentIds: [...automaticallyCompletedIds],
-                    processedStudentIds: [...processedStudentIds]
-                });
                 changed = true;
             }
-            processed.add(occurrenceKey);
         });
-        erp.completedStageOccurrences = [...processed];
+        erp.studentCourseRelations.forEach(relation => {
+            const student = (app.students || []).find(item => String(item.id) === String(relation.studentId));
+            const nextStatus = student && student.completed ? 'completed' : 'normal';
+            if (relation.accountStatus !== nextStatus) {
+                relation.accountStatus = nextStatus;
+                relation.updatedAt = new Date().toISOString();
+                changed = true;
+            }
+        });
+        erp.stageCompletionRecords = nextRecords;
+        erp.completedStageOccurrences = nextRecords.map(record => record.key);
         return changed;
     }
 
@@ -320,9 +359,7 @@
     }
 
     function reactivateStudentsForOpenStage(app, instance, studentIds) {
-        if (!app.settings || !app.settings.segmentedScheduling) return;
-        const firstOccurrence = getCellOccurrenceDate(instance.cellKey, instance.weekStart);
-        const stageOccurrence = getStageOccurrenceForDate(app, firstOccurrence);
+        const stageOccurrence = getVersionStageOccurrence(app, instance);
         if (!stageOccurrence) return;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -333,7 +370,10 @@
             if (!student || student.isAudition || !student.completed) return;
             student.completed = false;
             student.accountStatus = 'normal';
-            const relation = ensureErpData(app).studentCourseRelations.find(item =>
+            const erp = ensureErpData(app);
+            erp.manualStageCompletionOverrides = erp.manualStageCompletionOverrides
+                .filter(id => String(id) !== studentId);
+            const relation = erp.studentCourseRelations.find(item =>
                 item.courseInstanceId === instance.id && String(item.studentId) === studentId
             );
             if (relation) relation.accountStatus = 'normal';
@@ -516,6 +556,10 @@
             cellKey: instance.cellKey,
             courseInstanceId: instance.id,
             courseTemplateId: instance.courseTemplateId || null,
+            schedulingMode: instance.schedulingMode,
+            stageId: instance.stageId,
+            stageStartDate: instance.stageStartDate,
+            stageEndDate: instance.stageEndDate,
             actualMinutesByDate: instance.actualMinutesByDate ? { ...instance.actualMinutesByDate } : undefined
         };
     }
@@ -740,6 +784,10 @@
                 cellKey: instance.cellKey,
                 courseInstanceId: instance.id,
                 courseTemplateId: instance.courseTemplateId || null,
+                schedulingMode: instance.schedulingMode,
+                stageId: instance.stageId,
+                stageStartDate: instance.stageStartDate,
+                stageEndDate: instance.stageEndDate,
                 actualMinutesByDate: instance.actualMinutesByDate ? { ...instance.actualMinutesByDate } : undefined
             });
         });
@@ -794,6 +842,13 @@
             const template = hasContent
                 ? makeTemplate(app, normalizedSubjectId, normalizedStudents, options.source || 'schedule')
                 : null;
+            const firstOccurrence = getCellOccurrenceDate(key, weekStartStr);
+            const configuredStage = app.settings && app.settings.segmentedScheduling
+                ? getStageOccurrenceForDate(app, firstOccurrence)
+                : null;
+            const schedulingMode = existing && existing.schedulingMode
+                ? existing.schedulingMode
+                : (configuredStage ? 'segmented' : 'continuous');
             erp.courseInstances = erp.courseInstances.filter(instance => instance !== existing);
             if (hasContent || options.cutoff) {
                 const instanceId = existing ? existing.id : makeId('ci');
@@ -807,6 +862,10 @@
                     status: options.cutoff ? 'deleted' : 'recurring',
                     isDeleted: !!options.cutoff,
                     source: options.source || 'schedule',
+                    schedulingMode,
+                    stageId: existing && existing.stageId || (configuredStage && (configuredStage.stage.id || configuredStage.stage.name)) || null,
+                    stageStartDate: existing && existing.stageStartDate || (configuredStage ? formatLocalDate(configuredStage.start) : null),
+                    stageEndDate: existing && existing.stageEndDate || (configuredStage ? formatLocalDate(configuredStage.end) : null),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };

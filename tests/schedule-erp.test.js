@@ -129,10 +129,12 @@ assert.deepStrictEqual(
 );
 stageEndDayApp.students[0].completed = false;
 stageEndDayApp.students[0].accountStatus = 'normal';
+stageEndDayApp.erpData.stageCompletionRecords[0].studentIds = [];
+stageEndDayApp.erpData.manualStageCompletionOverrides = ['s1'];
 assert.strictEqual(
     ScheduleErpService.completeStudentsForEndedStages(stageEndDayApp, new Date(2026, 3, 1)),
-    false,
-    'an already processed stage ending should not repeatedly complete reactivated students'
+    true,
+    'manual reactivation should synchronize relation accounts without re-completing the student'
 );
 assert.strictEqual(stageEndDayApp.students[0].completed, false);
 
@@ -182,6 +184,33 @@ ScheduleErpService.setCellVersion(laterStageApp, '1-afternoon-0', '2026-03-02', 
 ScheduleErpService.setCellVersion(laterStageApp, '2-afternoon-0', '2026-04-06', 'math', ['s1']);
 ScheduleErpService.completeStudentsForEndedStages(laterStageApp, new Date(2026, 2, 31));
 assert.notStrictEqual(laterStageApp.students[0].completed, true, 'a later-stage course should keep the student in the ongoing pool');
+laterStageApp.erpData.courseInstances = laterStageApp.erpData.courseInstances.filter(instance => instance.weekStart !== '2026-04-06');
+ScheduleErpService.completeStudentsForEndedStages(laterStageApp, new Date(2026, 2, 31));
+assert.strictEqual(laterStageApp.students[0].completed, true, 'removing the later-stage course should recalculate the student as completed');
+
+const modeSnapshotApp = makeApp();
+modeSnapshotApp.settings = {
+    segmentedScheduling: true,
+    stages: [{ id: 'snapshot-stage', startDate: '2026-03-01', endDate: '2026-03-31' }]
+};
+ScheduleErpService.setCellVersion(modeSnapshotApp, '1-afternoon-0', '2026-03-02', 'math', ['s1']);
+modeSnapshotApp.settings.segmentedScheduling = false;
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(modeSnapshotApp, '1-afternoon-0', '2026-04-06'),
+    null,
+    'a segmented course should retain its stage boundary after the global setting is disabled'
+);
+const continuousSnapshotApp = makeApp();
+continuousSnapshotApp.settings = { segmentedScheduling: false, stages: [] };
+ScheduleErpService.setCellVersion(continuousSnapshotApp, '1-afternoon-0', '2026-03-02', 'math', ['s1']);
+continuousSnapshotApp.settings = {
+    segmentedScheduling: true,
+    stages: [{ id: 'later-setting', startDate: '2026-03-01', endDate: '2026-03-31' }]
+};
+assert.ok(
+    ScheduleErpService.getCellVersion(continuousSnapshotApp, '1-afternoon-0', '2026-04-06'),
+    'a continuous course should not be retroactively segmented when the setting is enabled later'
+);
 
 const app = makeApp();
 ScheduleErpService.setCellVersion(app, '3-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);

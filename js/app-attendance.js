@@ -589,10 +589,19 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
                 record.studentIds = record.studentIds.filter(id => String(id) !== String(studentId));
             });
         }
+        if (this.erpData) {
+            if (!Array.isArray(this.erpData.manualStageCompletionOverrides)) {
+                this.erpData.manualStageCompletionOverrides = [];
+            }
+            if (!this.erpData.manualStageCompletionOverrides.some(id => String(id) === String(studentId))) {
+                this.erpData.manualStageCompletionOverrides.push(String(studentId));
+            }
+        }
 
         if (isCompleted) {
             student.completed = true;
             student.accountStatus = 'completed';
+            student.manualCompletionDate = this.formatLocalDate(new Date(this._attModalClassDate || this.currentDate));
             if (cellKey) {
                 this.setStudentRecurrence(cellKey, studentId, 'stopped', this._attModalClassDate);
                 this.completeStudentAfterLesson(studentId, this._attModalClassDate, cellKey);
@@ -602,6 +611,7 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
         } else {
             student.completed = false;
             student.accountStatus = 'normal';
+            delete student.manualCompletionDate;
             if (this._attModalRecurrence && cellKey) {
                 this._attModalRecurrence[studentId] = this.getStudentRecurrenceType(cellKey, studentId);
             }

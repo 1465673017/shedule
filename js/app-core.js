@@ -483,6 +483,7 @@ class TimetableApp {
     }
     syncRealtime(options = {}) {
         window.ScheduleErpService.ensureErpData(this);
+        window.ScheduleErpService.completeStudentsForEndedStages(this);
         window.ScheduleErpService.buildTimetableProjection(this);
         this.saveData();
         if (options.timetable !== false) {
