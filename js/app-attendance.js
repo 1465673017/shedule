@@ -575,6 +575,15 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
         const isCompleted = !student.completed;
         const cellKey = this._attModalCellKey;
 
+        // A manual status change takes ownership of this student's completion
+        // state. Do not let a later schedule reset treat it as stage-generated.
+        if (this.erpData && Array.isArray(this.erpData.stageCompletionRecords)) {
+            this.erpData.stageCompletionRecords.forEach(record => {
+                if (!Array.isArray(record.studentIds)) return;
+                record.studentIds = record.studentIds.filter(id => String(id) !== String(studentId));
+            });
+        }
+
         if (isCompleted) {
             student.completed = true;
             student.accountStatus = 'completed';

@@ -38,6 +38,11 @@ function createDefaultSettings() {
         showSaturday: true,
         showSunday: true,
         showPeriodTime: true,
+        segmentedStatistics: false,
+        segmentedScheduling: false,
+        stageRangeSettingsVersion: 1,
+        stageMonthRanges: [],
+        stages: [],
         theme: 'default',
         menuColor: '#ffffff',
         scheduleColor: '#ffffff',
@@ -105,6 +110,7 @@ class TimetableApp {
         this.editingGrade = null;
         this.quickSettingsState = createDefaultQuickSettings();
         this.editingSubject = null;
+        this.editingEntityType = null;
         this.editingCell = null;
         this.editingPeriod = null;
         this.isTemporaryCourseEdit = false;
@@ -121,6 +127,9 @@ class TimetableApp {
     init() {
         this.loadData();
         this.loadSettings();
+        if (window.ScheduleErpService.completeStudentsForEndedStages(this)) {
+            this.saveData();
+        }
         this.loadGrades();
         this.bindEvents();
         this.renderSubjects();
@@ -926,6 +935,17 @@ class TimetableApp {
             return;
         }
 
+        const automaticallyCompletedStudentIds = new Set(
+            ((this.erpData && this.erpData.stageCompletionRecords) || [])
+                .flatMap(record => Array.isArray(record.studentIds) ? record.studentIds : [])
+                .map(String)
+        );
+        this.students.forEach(student => {
+            if (!automaticallyCompletedStudentIds.has(String(student.id))) return;
+            student.completed = false;
+            student.accountStatus = 'normal';
+        });
+
         this.timetable = {};
         this.erpData = window.createEmptyErpData ? window.createEmptyErpData() : null;
         this.currentPool = 'subject';
@@ -933,6 +953,7 @@ class TimetableApp {
         this.draggedItem = null;
         this.editingCell = null;
         this.selectedCell = null;
+        this.editingEntityType = null;
         this._attModalStudents = null;
         this._attModalKey = null;
         this._attModalCellKey = null;
@@ -971,6 +992,7 @@ class TimetableApp {
         this.draggedItem = null;
         this.editingCell = null;
         this.editingSubject = null;
+        this.editingEntityType = null;
         this.editingGrade = null;
         this.editingPeriod = null;
         this.selectedCell = null;

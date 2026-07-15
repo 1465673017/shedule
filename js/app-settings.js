@@ -495,7 +495,9 @@ TimetableApp.prototype.recalculateStageRanges = function(shouldRender = true, us
 TimetableApp.prototype.applyStageQuickSettings = function() {
     if (!this.recalculateStageRanges(false)) return;
     this.saveSettings();
+    if (window.ScheduleErpService.completeStudentsForEndedStages(this)) this.saveData();
     this.renderStageSettings();
+    this.renderSubjects();
 }
 
 TimetableApp.prototype.getStageMonthRangesFromInputs = function() {
@@ -612,7 +614,9 @@ TimetableApp.prototype.updateStage = function(id, field, value) {
 TimetableApp.prototype.toggleSegmentedScheduling = function() {
     this.settings.segmentedScheduling = !this.settings.segmentedScheduling;
     this.saveSettings();
+    if (window.ScheduleErpService.completeStudentsForEndedStages(this)) this.saveData();
     this.renderStageSettings();
+    this.renderSubjects();
 }
 
 TimetableApp.prototype.saveStageSettings = function() {
@@ -631,7 +635,9 @@ TimetableApp.prototype.saveStageSettings = function() {
     }
     this.settings.stages = stages;
     this.saveSettings();
+    if (window.ScheduleErpService.completeStudentsForEndedStages(this)) this.saveData();
     this.renderStageSettings();
+    this.renderSubjects();
     message.textContent = '阶段设置已保存。';
     message.className = 'stage-settings-message success';
 }

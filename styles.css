@@ -1763,6 +1763,16 @@ body {
     overflow-x: hidden;
 }
 
+.student-picker-empty {
+    flex: 1 0 100%;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 20px;
+    color: #999;
+    text-align: center;
+    white-space: nowrap;
+}
+
 /* 学生选择器滚动条 */
 .student-picker::-webkit-scrollbar {
     width: 6px;

@@ -412,6 +412,10 @@ TimetableApp.prototype.pasteCopiedCourseToCell = function(cell) {
     }
 
 TimetableApp.prototype.renderTimetable = function() {
+        if (window.ScheduleErpService.completeStudentsForEndedStages(this)) {
+            this.saveData();
+            this.renderSubjects();
+        }
         const tbody = document.getElementById('timetableBody');
         tbody.innerHTML = '';
         

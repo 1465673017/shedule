@@ -313,7 +313,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
         if (this.students.length === 0) {
 
-            picker.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">暂无学生，请先添加学生</div>';
+            picker.innerHTML = '<div class="student-picker-empty">暂无学生，请先添加学生</div>';
 
             countTag.textContent = '';
 

@@ -58,6 +58,73 @@ function studentIds(version) {
     return version ? version.student.slice().sort() : [];
 }
 
+const segmentedApp = makeApp();
+segmentedApp.settings = {
+    segmentedScheduling: true,
+    stages: [
+        { id: 'stage-1', startDate: '2026-01-01', endDate: '2026-03-31' },
+        { id: 'stage-2', startDate: '2026-04-01', endDate: '2026-06-30' }
+    ]
+};
+ScheduleErpService.setCellVersion(segmentedApp, '2-afternoon-0', '2026-03-23', 'math', ['s1']);
+assert.ok(
+    ScheduleErpService.getCellVersion(segmentedApp, '2-afternoon-0', '2026-03-23'),
+    'a recurring course should remain visible through its stage end date'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(segmentedApp, '2-afternoon-0', '2026-04-06'),
+    null,
+    'a recurring course should automatically end when its next occurrence is after the stage end date'
+);
+ScheduleErpService.setCellVersion(segmentedApp, '2-afternoon-0', '2026-04-06', 'math', ['s2']);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(segmentedApp, '2-afternoon-0', '2026-04-13')),
+    ['s2'],
+    'an explicitly added course in the next stage should start a new stage-bounded recurrence'
+);
+
+const stageEndDayApp = makeApp();
+stageEndDayApp.settings = {
+    segmentedScheduling: true,
+    stages: [{ id: 'stage-1', startDate: '2026-03-01', endDate: '2026-03-31' }]
+};
+ScheduleErpService.setCellVersion(stageEndDayApp, '2-afternoon-0', '2026-03-23', 'math', ['s1']);
+assert.ok(
+    ScheduleErpService.getCellVersion(stageEndDayApp, '2-afternoon-0', '2026-03-30'),
+    'a course occurring exactly on the final stage day should still be included'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(stageEndDayApp, '2-afternoon-0', '2026-04-06'),
+    null,
+    'the same course should be completed after the final stage day'
+);
+assert.strictEqual(
+    ScheduleErpService.completeStudentsForEndedStages(stageEndDayApp, new Date(2026, 2, 30)),
+    false,
+    'students should remain stopped rather than completed before the stage end date'
+);
+assert.strictEqual(stageEndDayApp.students[0].completed, undefined);
+assert.strictEqual(
+    ScheduleErpService.completeStudentsForEndedStages(stageEndDayApp, new Date(2026, 2, 31)),
+    true,
+    'all regular students in the stage should become completed on its final day'
+);
+assert.strictEqual(stageEndDayApp.students[0].completed, true);
+assert.strictEqual(stageEndDayApp.students[0].accountStatus, 'completed');
+assert.deepStrictEqual(
+    stageEndDayApp.erpData.stageCompletionRecords,
+    [{ key: 'stage-1|2026-03-31', studentIds: ['s1'] }],
+    'stage completion should record only students completed automatically'
+);
+stageEndDayApp.students[0].completed = false;
+stageEndDayApp.students[0].accountStatus = 'normal';
+assert.strictEqual(
+    ScheduleErpService.completeStudentsForEndedStages(stageEndDayApp, new Date(2026, 3, 1)),
+    false,
+    'an already processed stage ending should not repeatedly complete reactivated students'
+);
+assert.strictEqual(stageEndDayApp.students[0].completed, false);
+
 const app = makeApp();
 ScheduleErpService.setCellVersion(app, '3-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);
 

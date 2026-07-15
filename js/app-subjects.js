@@ -2,6 +2,7 @@
 // Auto-split from script.js
 
 TimetableApp.prototype.openSubjectModal = function (subject = null) {
+    this.editingEntityType = 'subject';
     this.editingSubject = subject;
     const modal = document.getElementById('subjectModal');
     const modalPanel = modal.querySelector('.entity-editor-modal');
@@ -52,6 +53,7 @@ TimetableApp.prototype.openSubjectModal = function (subject = null) {
 TimetableApp.prototype.closeSubjectModal = function () {
     document.getElementById('subjectModal').style.display = 'none';
     this.editingSubject = null;
+    this.editingEntityType = null;
     document.getElementById('oneV1Btn').classList.remove('active');
     document.getElementById('auditionBtn').classList.remove('active');
 }
@@ -83,7 +85,9 @@ TimetableApp.prototype.saveSubject = function (e) {
 
     if (!name) return;
 
-    if (this.currentPool === 'subject') {
+    const entityType = this.editingEntityType || (this.currentPool === 'student' ? 'student' : 'subject');
+
+    if (entityType === 'subject') {
         if (this.editingSubject) {
             this.editingSubject.name = name;
             this.editingSubject.teacher = extra;
@@ -97,7 +101,7 @@ TimetableApp.prototype.saveSubject = function (e) {
             };
             this.subjects.push(subject);
         }
-    } else if (this.currentPool === 'student') {
+    } else if (entityType === 'student') {
         const selectedGradeChip = document.querySelector('.grade-chip.selected');
         const grade = selectedGradeChip ? selectedGradeChip.dataset.gradeName : '';
         const gradeId = selectedGradeChip ? selectedGradeChip.dataset.gradeId : '';
@@ -130,7 +134,7 @@ TimetableApp.prototype.saveSubject = function (e) {
 
 TimetableApp.prototype.deleteSubject = function () {
     if (this.editingSubject) {
-        if (this.currentPool === 'subject') {
+        if (this.editingEntityType === 'subject') {
             this.deleteSubjectFromPool(this.editingSubject.id);
         } else {
             this.deleteStudentFromPool(this.editingSubject.id);
@@ -149,6 +153,7 @@ TimetableApp.prototype.deleteSubjectFromPool = function (subjectId) {
 }
 
 TimetableApp.prototype.openStudentModal = function (student = null) {
+    this.editingEntityType = 'student';
     this.editingSubject = student;
     const modal = document.getElementById('subjectModal');
     const modalPanel = modal.querySelector('.entity-editor-modal');
