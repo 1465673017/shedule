@@ -256,7 +256,8 @@ TimetableApp.prototype.renderAttendanceStudentList = function(students, key) {
             if (student.isAudition) {
                 recType = 'temporary';
             }
-            const isCompleted = !!student.completed;
+            const isStageAutoCompleted = window.ScheduleErpService.isStudentStageAutoCompleted(this, student.id);
+            const isCompleted = recType === 'completed' || (!!student.completed && !isStageAutoCompleted);
             const auditionDisabled = student.isAudition ? 'disabled disabled-btn' : '';
             const completedDisabled = isCompleted ? 'disabled disabled-btn' : '';
             html += `
@@ -413,10 +414,17 @@ TimetableApp.prototype.getStudentAttendance = function(studentId, startDate = nu
     // ========== 学生课程重复类型（循环/中止循环/临时）——基于版本操作 ==========
 
 TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
+        const weekRange = this.getWeekRange(this.currentDate);
+        const currentWeekStr = this.formatLocalDate(weekRange.start);
+        const currentVersion = this.getCellVersion(cellKey, currentWeekStr);
+        const isInCurrentVersion = currentVersion && Array.isArray(currentVersion.student) &&
+            currentVersion.student.includes(String(studentId));
+        if (isInCurrentVersion && window.ScheduleErpService.isStageFinalOccurrence(this, currentVersion, currentWeekStr)) {
+            return 'completed';
+        }
+
         if (this.erpData && Array.isArray(this.erpData.studentCourseRelations)) {
-            const weekRange = this.getWeekRange(this.currentDate);
-            const currentWeekStr = this.formatLocalDate(weekRange.start);
-            const version = this.getCellVersion(cellKey, currentWeekStr);
+            const version = currentVersion;
             const relation = version ? this.erpData.studentCourseRelations.find(rel =>
                 rel.courseInstanceId === version.courseInstanceId && rel.studentId === String(studentId)
             ) : null;
@@ -428,9 +436,7 @@ TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
 
         // 通过版本传播判断：找到当前有效版本和下一个版本。
         // 如果下一个版本科目不同或不包含该学生，则中止循环。
-        const weekRange = this.getWeekRange(this.currentDate);
-        const currentWeekStr = this.formatLocalDate(weekRange.start);
-        const curVersion = this.getCellVersion(cellKey, currentWeekStr);
+        const curVersion = currentVersion;
 
         const inCurrent = curVersion && curVersion.student && curVersion.student.includes(studentId);
         if (!inCurrent) {

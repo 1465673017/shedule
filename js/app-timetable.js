@@ -68,7 +68,7 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
         if (item.type === 'student') {
             this.ensureAuditionStudentsTemporary(key, [item.id]);
             const draggedStudent = this.students.find(s => s.id === item.id);
-            if (draggedStudent && draggedStudent.completed) {
+            if (draggedStudent && draggedStudent.completed && !(this.settings && this.settings.segmentedScheduling)) {
                 this.setStudentRecurrence(key, item.id, 'temporary');
             }
         }
@@ -122,7 +122,7 @@ TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
 
         for (const studentId of studentIds) {
             const s = this.students.find(st => st.id === studentId);
-            if (s && s.completed) {
+            if (s && s.completed && !(this.settings && this.settings.segmentedScheduling)) {
                 this.setStudentRecurrence(key, studentId, 'temporary');
             }
         }
@@ -252,7 +252,7 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         if (draggedStudent && draggedStudent.isAudition) {
             this.ensureAuditionStudentsTemporary(targetKey, [studentId]);
         }
-        if (draggedStudent && draggedStudent.completed) {
+        if (draggedStudent && draggedStudent.completed && !(this.settings && this.settings.segmentedScheduling)) {
             this.setStudentRecurrence(targetKey, studentId, 'temporary');
         }
 
@@ -401,7 +401,7 @@ TimetableApp.prototype.pasteCopiedCourseToCell = function(cell) {
 
         for (const studentId of studentIds) {
             const student = this.students.find(st => st.id === studentId);
-            if (student && student.completed) {
+            if (student && student.completed && !(this.settings && this.settings.segmentedScheduling)) {
                 this.setStudentRecurrence(key, studentId, 'temporary');
             }
         }

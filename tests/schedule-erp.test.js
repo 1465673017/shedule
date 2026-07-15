@@ -111,9 +111,20 @@ assert.strictEqual(
 );
 assert.strictEqual(stageEndDayApp.students[0].completed, true);
 assert.strictEqual(stageEndDayApp.students[0].accountStatus, 'completed');
+const finalStageVersion = ScheduleErpService.getCellVersion(stageEndDayApp, '2-afternoon-0', '2026-03-30');
+assert.strictEqual(
+    ScheduleErpService.isStageFinalOccurrence(stageEndDayApp, finalStageVersion, '2026-03-30'),
+    true,
+    'the last actual weekly occurrence before the stage boundary should be the completed lesson'
+);
+assert.strictEqual(
+    ScheduleErpService.isStageFinalOccurrence(stageEndDayApp, finalStageVersion, '2026-03-23'),
+    false,
+    'earlier backfilled lessons in the same stage should remain recurring'
+);
 assert.deepStrictEqual(
     stageEndDayApp.erpData.stageCompletionRecords,
-    [{ key: 'stage-1|2026-03-31', studentIds: ['s1'] }],
+    [{ key: 'stage-1|2026-03-31', studentIds: ['s1'], processedStudentIds: ['s1'] }],
     'stage completion should record only students completed automatically'
 );
 stageEndDayApp.students[0].completed = false;
@@ -124,6 +135,53 @@ assert.strictEqual(
     'an already processed stage ending should not repeatedly complete reactivated students'
 );
 assert.strictEqual(stageEndDayApp.students[0].completed, false);
+
+const nonSegmentedCompletedApp = makeApp();
+nonSegmentedCompletedApp.settings = { segmentedScheduling: false, stages: [] };
+nonSegmentedCompletedApp.students[0].completed = true;
+ScheduleErpService.setCellVersion(nonSegmentedCompletedApp, '1-afternoon-0', '2026-03-02', 'math', ['s1']);
+assert.strictEqual(
+    nonSegmentedCompletedApp.erpData.studentCourseRelations[0].relationStatus,
+    'temporary',
+    'without segmented scheduling, adding a completed student should keep the original temporary-course behavior'
+);
+
+const segmentedCompletedApp = makeApp();
+segmentedCompletedApp.settings = {
+    segmentedScheduling: true,
+    stages: [{ id: 'past-stage', startDate: '2026-03-01', endDate: '2026-03-31' }]
+};
+segmentedCompletedApp.students[0].completed = true;
+ScheduleErpService.setCellVersion(segmentedCompletedApp, '1-afternoon-0', '2026-03-02', 'math', ['s1']);
+assert.strictEqual(
+    segmentedCompletedApp.erpData.studentCourseRelations[0].relationStatus,
+    'recurring',
+    'with segmented scheduling, a completed student added to a past stage should be backfilled as recurring'
+);
+
+const lateBackfillApp = makeApp();
+lateBackfillApp.settings = {
+    segmentedScheduling: true,
+    stages: [{ id: 'past-stage', startDate: '2026-03-01', endDate: '2026-03-31' }]
+};
+ScheduleErpService.setCellVersion(lateBackfillApp, '1-afternoon-0', '2026-03-02', 'math', ['s1']);
+ScheduleErpService.completeStudentsForEndedStages(lateBackfillApp, new Date(2026, 2, 31));
+ScheduleErpService.setCellVersion(lateBackfillApp, '2-afternoon-0', '2026-03-02', 'math', ['s2']);
+ScheduleErpService.completeStudentsForEndedStages(lateBackfillApp, new Date(2026, 3, 1));
+assert.strictEqual(lateBackfillApp.students[1].completed, true, 'a student backfilled after the stage was processed should also complete');
+
+const laterStageApp = makeApp();
+laterStageApp.settings = {
+    segmentedScheduling: true,
+    stages: [
+        { id: 'stage-1', startDate: '2026-03-01', endDate: '2026-03-31' },
+        { id: 'stage-2', startDate: '2026-04-01', endDate: '2026-04-30' }
+    ]
+};
+ScheduleErpService.setCellVersion(laterStageApp, '1-afternoon-0', '2026-03-02', 'math', ['s1']);
+ScheduleErpService.setCellVersion(laterStageApp, '2-afternoon-0', '2026-04-06', 'math', ['s1']);
+ScheduleErpService.completeStudentsForEndedStages(laterStageApp, new Date(2026, 2, 31));
+assert.notStrictEqual(laterStageApp.students[0].completed, true, 'a later-stage course should keep the student in the ongoing pool');
 
 const app = makeApp();
 ScheduleErpService.setCellVersion(app, '3-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);

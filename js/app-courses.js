@@ -345,7 +345,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
             const isSelected = selectedIds.includes(student.id);
 
-            if (student.completed && !isSelected) {
+            if (student.completed && !isSelected && !(this.settings && this.settings.segmentedScheduling)) {
 
                 return;
 

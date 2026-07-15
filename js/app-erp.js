@@ -151,6 +151,33 @@
         return requestedOccurrence >= stageOccurrence.start && requestedOccurrence <= stageOccurrence.end;
     }
 
+    function getLastOccurrenceInStage(cellKey, stageEnd) {
+        const day = cellKeyParts(cellKey).day;
+        if (!stageEnd || !Number.isInteger(day) || day < 1 || day > 7) return null;
+        const endDay = stageEnd.getDay() === 0 ? 7 : stageEnd.getDay();
+        const lastOccurrence = new Date(stageEnd);
+        lastOccurrence.setDate(stageEnd.getDate() - ((endDay - day + 7) % 7));
+        lastOccurrence.setHours(0, 0, 0, 0);
+        return lastOccurrence;
+    }
+
+    function isStageFinalOccurrence(app, version, requestedWeekStart) {
+        if (!version || !app || !app.settings || !app.settings.segmentedScheduling) return false;
+        const firstOccurrence = getCellOccurrenceDate(version.cellKey, version.weekStart);
+        const requestedOccurrence = getCellOccurrenceDate(version.cellKey, requestedWeekStart);
+        const stageOccurrence = getStageOccurrenceForDate(app, firstOccurrence);
+        if (!stageOccurrence || !requestedOccurrence) return false;
+        const lastOccurrence = getLastOccurrenceInStage(version.cellKey, stageOccurrence.end);
+        return !!lastOccurrence && requestedOccurrence.getTime() === lastOccurrence.getTime();
+    }
+
+    function isStudentStageAutoCompleted(app, studentId) {
+        const erp = ensureErpData(app);
+        return (erp.stageCompletionRecords || []).some(record =>
+            Array.isArray(record.studentIds) && record.studentIds.some(id => String(id) === String(studentId))
+        );
+    }
+
     function formatLocalDate(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -175,25 +202,46 @@
             if (!stageOccurrence || cutoff < stageOccurrence.end) return;
             const stageId = stageOccurrence.stage.id || stageOccurrence.stage.name || 'stage';
             const occurrenceKey = `${stageId}|${formatLocalDate(stageOccurrence.end)}`;
-            if (processed.has(occurrenceKey)) return;
-            if (!endedOccurrences.has(occurrenceKey)) endedOccurrences.set(occurrenceKey, new Set());
+            if (!endedOccurrences.has(occurrenceKey)) {
+                endedOccurrences.set(occurrenceKey, { end: stageOccurrence.end, studentIds: new Set() });
+            }
             const relationIds = erp.studentCourseRelations
                 .filter(relation => relation.courseInstanceId === instance.id)
                 .map(relation => String(relation.studentId));
             const studentIds = relationIds.length ? relationIds : normalizeIds(instance.studentIds);
-            studentIds.forEach(studentId => endedOccurrences.get(occurrenceKey).add(studentId));
+            studentIds.forEach(studentId => endedOccurrences.get(occurrenceKey).studentIds.add(studentId));
         });
 
         let changed = false;
-        endedOccurrences.forEach((studentIds, occurrenceKey) => {
-            const automaticallyCompletedIds = [];
-            studentIds.forEach(studentId => {
+        endedOccurrences.forEach((occurrence, occurrenceKey) => {
+            const existingRecord = erp.stageCompletionRecords.find(record => record.key === occurrenceKey);
+            const automaticallyCompletedIds = new Set(existingRecord && Array.isArray(existingRecord.studentIds)
+                ? existingRecord.studentIds.map(String)
+                : []);
+            const processedStudentIds = new Set(existingRecord && Array.isArray(existingRecord.processedStudentIds)
+                ? existingRecord.processedStudentIds.map(String)
+                : automaticallyCompletedIds);
+            const newStudentIds = [...occurrence.studentIds].filter(studentId => !processedStudentIds.has(studentId));
+
+            newStudentIds.forEach(studentId => {
                 const student = Array.isArray(app.students)
                     ? app.students.find(item => String(item.id) === studentId)
                     : null;
                 if (!student || student.isAudition) return;
+                processedStudentIds.add(studentId);
+                const hasLaterCourse = erp.courseInstances.some(instance => {
+                    if (!instance || instance.isDeleted) return false;
+                    const occurrenceDate = getCellOccurrenceDate(instance.cellKey, instance.weekStart);
+                    if (!occurrenceDate || occurrenceDate <= occurrence.end) return false;
+                    const relationIds = erp.studentCourseRelations
+                        .filter(relation => relation.courseInstanceId === instance.id)
+                        .map(relation => String(relation.studentId));
+                    const ids = relationIds.length ? relationIds : normalizeIds(instance.studentIds);
+                    return ids.includes(studentId);
+                });
+                if (hasLaterCourse) return;
                 if (!student.completed || student.accountStatus !== 'completed') {
-                    automaticallyCompletedIds.push(studentId);
+                    automaticallyCompletedIds.add(studentId);
                     changed = true;
                 }
                 student.completed = true;
@@ -205,10 +253,16 @@
                         relation.updatedAt = new Date().toISOString();
                     });
             });
-            erp.stageCompletionRecords = erp.stageCompletionRecords.filter(record => record.key !== occurrenceKey);
-            erp.stageCompletionRecords.push({ key: occurrenceKey, studentIds: automaticallyCompletedIds });
+            if (newStudentIds.length > 0 || !existingRecord) {
+                erp.stageCompletionRecords = erp.stageCompletionRecords.filter(record => record.key !== occurrenceKey);
+                erp.stageCompletionRecords.push({
+                    key: occurrenceKey,
+                    studentIds: [...automaticallyCompletedIds],
+                    processedStudentIds: [...processedStudentIds]
+                });
+                changed = true;
+            }
             processed.add(occurrenceKey);
-            changed = true;
         });
         erp.completedStageOccurrences = [...processed];
         return changed;
@@ -256,12 +310,33 @@
                     courseInstanceId: instance.id,
                     studentId,
                     studentType: student && student.isAudition ? 'audition' : student && student.is1v1 ? '1v1' : '1vN',
-                    relationStatus: student && (student.isAudition || student.completed) ? 'temporary' : 'recurring',
+                    relationStatus: student && (student.isAudition || (student.completed && !(app.settings && app.settings.segmentedScheduling))) ? 'temporary' : 'recurring',
                     accountStatus: student && student.completed ? 'completed' : 'normal',
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 });
             }
+        });
+    }
+
+    function reactivateStudentsForOpenStage(app, instance, studentIds) {
+        if (!app.settings || !app.settings.segmentedScheduling) return;
+        const firstOccurrence = getCellOccurrenceDate(instance.cellKey, instance.weekStart);
+        const stageOccurrence = getStageOccurrenceForDate(app, firstOccurrence);
+        if (!stageOccurrence) return;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (stageOccurrence.end <= today) return;
+
+        normalizeIds(studentIds).forEach(studentId => {
+            const student = app.students.find(item => String(item.id) === studentId);
+            if (!student || student.isAudition || !student.completed) return;
+            student.completed = false;
+            student.accountStatus = 'normal';
+            const relation = ensureErpData(app).studentCourseRelations.find(item =>
+                item.courseInstanceId === instance.id && String(item.studentId) === studentId
+            );
+            if (relation) relation.accountStatus = 'normal';
         });
     }
 
@@ -684,6 +759,8 @@
         buildTimetableProjection,
         pruneOrphanedErpData,
         completeStudentsForEndedStages,
+        isStageFinalOccurrence,
+        isStudentStageAutoCompleted,
 
         restoreCellSnapshot(app, cellKey, weekStart, snapshot) {
             return restoreCellSnapshot(app, cellKey, weekStart, snapshot);
@@ -735,6 +812,7 @@
                 };
                 erp.courseInstances.push(instance);
                 syncRelations(app, instance, normalizedStudents);
+                reactivateStudentsForOpenStage(app, instance, normalizedStudents);
                 if (options.cutoff) {
                     erp.repeatRules = erp.repeatRules.filter(rule => rule.courseInstanceId !== instance.id);
                 } else {
