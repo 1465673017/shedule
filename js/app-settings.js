@@ -696,6 +696,8 @@ TimetableApp.prototype.applyThemeSettings = function() {
     root.style.setProperty('--primary-hover-rgb', hoverRgb);
 
     // Toggle dark theme class based on selected theme
+    document.body.classList.toggle('mint-theme-active', this.settings.theme === 'mint');
+
     if (this.settings.theme === 'dark') {
         document.body.classList.add('dark-theme-active');
         document.body.classList.remove('light-sidebar');
@@ -745,6 +747,11 @@ TimetableApp.prototype.getThemeDefinitions = function() {
             menu: '#1e293b', schedule: '#1a1a2e', bg: '#0f172a',
             primary: '#818cf8', primaryHover: '#6366f1', primaryPressed: '#4f46e5',
             primaryBg: 'rgba(99, 102, 241, 0.2)', shadowColor: 'rgba(99, 102, 241, 0.3)'
+        },
+        'mint': {
+            menu: '#f8fbf8', schedule: '#ffffff', bg: '#eef6f1',
+            primary: '#367a59', primaryHover: '#5f9f79', primaryPressed: '#285f45',
+            primaryBg: '#dcefe3', shadowColor: 'rgba(47, 111, 82, 0.18)'
         },
     };
 }

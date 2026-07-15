@@ -31,7 +31,6 @@ TimetableApp.prototype.openExportModal = function () {
     const modal = document.getElementById('exportModal');
     if (modal) {
         this.initLessonSheetExportRange(true);
-        this.switchExportTab('lessonSheet');
         modal.style.display = 'block';
     }
 }
@@ -52,43 +51,13 @@ TimetableApp.prototype.handleExportOption = async function (type) {
         return;
     }
 
-    if (type === 'word') {
-        await this.exportToWord();
-        return;
-    }
-
     if (type === 'excel') {
         await this.exportToExcel();
         return;
     }
 
-    if (type === 'lessonSheetWord') {
-        await this.exportLessonSheetToWord();
-        return;
-    }
-
     if (type === 'lessonSheetExcel') {
         await this.exportLessonSheetToExcel();
-    }
-}
-
-TimetableApp.prototype.switchExportTab = function (tab) {
-    const tabs = {
-        schedule: document.getElementById('exportTabSchedule'),
-        lessonSheet: document.getElementById('exportTabLessonSheet')
-    };
-    const panels = {
-        schedule: document.getElementById('exportPanelSchedule'),
-        lessonSheet: document.getElementById('exportPanelLessonSheet')
-    };
-
-    Object.keys(tabs).forEach(key => {
-        if (tabs[key]) tabs[key].classList.toggle('active', key === tab);
-        if (panels[key]) panels[key].classList.toggle('active', key === tab);
-    });
-
-    if (tab === 'lessonSheet') {
-        this.initLessonSheetExportRange();
     }
 }
 

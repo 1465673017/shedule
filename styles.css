@@ -3459,6 +3459,76 @@ body {
     width: 560px;
 }
 
+.export-page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 8px;
+}
+
+.export-section {
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: #f8fbff;
+}
+
+.export-section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.export-section-heading h4 {
+    margin: 0;
+    color: var(--text-1);
+    font-size: 15px;
+}
+
+.export-section-heading span {
+    color: var(--text-3);
+    font-size: 12px;
+    text-align: right;
+}
+
+.export-page .export-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding-top: 0;
+}
+
+.export-page .export-option-card {
+    min-height: 104px;
+    padding: 14px 16px;
+}
+
+.export-lesson-sheet-action {
+    min-height: 88px;
+    margin-top: 10px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+#exportModal .export-lesson-sheet-action {
+    border-color: rgba(79, 143, 247, .38);
+    background: linear-gradient(135deg, #4f8ff7, #73a9ff);
+    box-shadow: 0 8px 18px rgba(72, 137, 238, .24);
+}
+
+#exportModal .export-lesson-sheet-action .export-option-title,
+#exportModal .export-lesson-sheet-action .export-option-desc {
+    color: #fff;
+}
+
+#exportModal .export-lesson-sheet-action:hover {
+    border-color: #367df0;
+    background: linear-gradient(135deg, #367df0, #619bfa);
+    box-shadow: 0 10px 22px rgba(55, 124, 230, .3);
+}
+
 /* 导出弹窗标题区保持紧凑，避免顶部出现过多空白 */
 #exportModal .modal-header {
     margin: -24px -24px 5px;
@@ -3470,6 +3540,21 @@ body {
         padding-top: 14px;
         padding-bottom: 12px;
     }
+
+    .export-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .export-section-heading span {
+        text-align: left;
+    }
+
+    .export-page .export-options {
+        grid-template-columns: 1fr;
+    }
+
 }
 
 .export-tabs {
@@ -4119,25 +4204,25 @@ body {
 /* Predefined Themes Grid */
 .predefined-themes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     margin-top: 15px;
 }
 
 .theme-option {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
-    padding: 10px;
+    padding: 12px 14px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 10px;
     background-color: white;
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 13px;
     color: var(--text-2);
-    gap: 5px;
+    gap: 14px;
+    text-align: left;
 }
 
 .theme-option:hover {
@@ -4151,11 +4236,36 @@ body {
     box-shadow: 0 0 0 2px var(--primary-color);
 }
 
+.theme-option-name {
+    font-size: 14px;
+    font-weight: 650;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.theme-color-palette {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(26px, 1fr));
+    gap: 7px;
+    min-width: 0;
+}
+
 .theme-color-block {
-    width: 40px;
-    height: 20px;
-    border-radius: 4px;
+    width: 100%;
+    height: 26px;
+    border-radius: 6px;
     border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+}
+
+@media (max-width: 560px) {
+    .theme-option {
+        gap: 9px;
+    }
+
+    .theme-color-palette {
+        gap: 5px;
+    }
 }
 
 
@@ -8173,44 +8283,57 @@ body.reference-main-ui .left-sidebar {
 }
 
 body.reference-main-ui .left-sidebar.drag-over-recycle {
-    outline: 2px dashed rgba(239, 68, 68, .62);
-    outline-offset: -7px;
-    box-shadow:
-        inset 0 0 40px rgba(239, 68, 68, .24),
-        6px 0 24px rgba(239, 68, 68, .2);
+    border: 0;
+    outline: 1.5px dashed rgba(220, 75, 75, .46);
+    outline-offset: -8px;
+    box-shadow: none;
 }
 
 body.reference-main-ui .left-sidebar.drag-over-recycle::after {
     content: "拖到此处删除";
-    position: fixed;
-    left: 52px;
-    bottom: 24px;
+    position: absolute;
+    inset: 0;
     z-index: 1000;
-    width: 200px;
-    padding: 12px 16px;
-    box-sizing: border-box;
-    border: 1px solid rgba(239, 68, 68, .35);
-    border-radius: 12px;
-    background: rgba(254, 242, 242, .96);
-    color: #dc2626;
-    box-shadow: 0 10px 26px rgba(185, 28, 28, .18);
-    font-size: 14px;
-    font-weight: 650;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(255, 255, 255, .04) 0%,
+        rgba(255, 255, 255, .07) 38%,
+        rgba(254, 242, 242, .1) 58%,
+        rgba(248, 113, 113, .13) 80%,
+        rgba(220, 75, 75, .23) 100%
+    );
+    color: #c93f3f;
+    box-shadow: none;
+    font-size: 17px;
+    font-weight: 750;
     text-align: center;
+    text-shadow: 0 1px 10px rgba(255, 255, 255, .9);
     pointer-events: none;
 }
 
 body.reference-main-ui.dark-theme-active .left-sidebar.drag-over-recycle {
-    outline-color: rgba(248, 113, 113, .72);
-    box-shadow:
-        inset 0 0 44px rgba(239, 68, 68, .3),
-        6px 0 26px rgba(239, 68, 68, .24);
+    border: 0;
+    outline: 1.5px dashed rgba(248, 113, 113, .58);
+    outline-offset: -8px;
+    box-shadow: none;
 }
 
 body.reference-main-ui.dark-theme-active .left-sidebar.drag-over-recycle::after {
-    border-color: rgba(248, 113, 113, .38);
-    background: rgba(69, 10, 10, .94);
+    border: 0;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(15, 23, 42, .06) 0%,
+        rgba(15, 23, 42, .1) 40%,
+        rgba(69, 10, 10, .18) 64%,
+        rgba(127, 29, 29, .28) 82%,
+        rgba(239, 68, 68, .34) 100%
+    );
     color: #fca5a5;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .75);
 }
 
 body.reference-main-ui .container {
@@ -11040,6 +11163,36 @@ body.reference-main-ui.dark-theme-active #exportModal .export-option-card:hover 
     box-shadow: 0 10px 24px rgba(0, 0, 0, .24);
 }
 
+body.reference-main-ui.dark-theme-active #exportModal .export-lesson-sheet-action {
+    border-color: rgba(129, 140, 248, .38);
+    background: linear-gradient(135deg, #35466f, #465b88);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .28);
+}
+
+body.reference-main-ui.dark-theme-active #exportModal .export-lesson-sheet-action:hover {
+    border-color: rgba(165, 180, 252, .58);
+    background: linear-gradient(135deg, #405481, #53699a);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .34);
+}
+
+body.reference-main-ui.dark-theme-active #exportModal .export-lesson-sheet-action .export-option-title,
+body.reference-main-ui.dark-theme-active #exportModal .export-lesson-sheet-action .export-option-desc {
+    color: #eef2ff;
+}
+
+body.reference-main-ui.dark-theme-active #exportModal .export-section {
+    border-color: var(--modal-border);
+    background: var(--modal-footer-bg);
+}
+
+body.reference-main-ui.dark-theme-active #exportModal .export-section-heading h4 {
+    color: var(--modal-text);
+}
+
+body.reference-main-ui.dark-theme-active #exportModal .export-section-heading span {
+    color: var(--modal-text-muted);
+}
+
 body.reference-main-ui.dark-theme-active #exportModal .export-option-title {
     color: var(--modal-text);
 }
@@ -11302,6 +11455,351 @@ body.dark-theme-active #exportBtn:hover {
 body.dark-theme-active #exportBtn:active {
     background: linear-gradient(135deg, #314163, #405278);
     box-shadow: 0 5px 12px rgba(2, 6, 23, .3);
+}
+
+/* 浅绿色主题：覆盖参考界面中遗留的固定蓝色强调样式。 */
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.primary,
+body.mint-theme-active.reference-main-ui .modal .form-actions .btn.primary,
+body.mint-theme-active.reference-main-ui #exportModal .export-lesson-sheet-action,
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .one-v1-btn.active,
+body.mint-theme-active.reference-main-ui .chart-category-tab.active {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-pressed), var(--primary-color));
+    color: #fff;
+    box-shadow: 0 8px 18px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.primary:hover,
+body.mint-theme-active.reference-main-ui .modal .form-actions .btn.primary:hover,
+body.mint-theme-active.reference-main-ui #exportModal .export-lesson-sheet-action:hover,
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .one-v1-btn.active:hover,
+body.mint-theme-active.reference-main-ui .chart-category-tab.active:hover {
+    border-color: var(--primary-pressed);
+    background: linear-gradient(135deg, var(--primary-pressed), var(--primary-hover));
+    box-shadow: 0 10px 22px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.secondary:hover,
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.tertiary:hover,
+body.mint-theme-active.reference-main-ui .modal .modal-close:hover,
+body.mint-theme-active.reference-main-ui .modal .modal-close:focus-visible,
+body.mint-theme-active.reference-main-ui .text-stats-header-tools .text-stats-nav-btn:hover,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab:hover,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui #statsTabs .stats-tab:hover,
+body.mint-theme-active.reference-main-ui #statsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui .stats-date-range-picker:hover,
+body.mint-theme-active.reference-main-ui .chart-category-tab:hover,
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .one-v1-btn:hover {
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.secondary:hover,
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.tertiary:hover,
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .one-v1-btn:hover {
+    border-color: var(--primary-hover);
+    background: var(--primary-bg);
+    box-shadow: 0 7px 16px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .grade-chip:hover,
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .grade-chip.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .paste-indicator {
+    border-color: rgba(var(--primary-rgb), .2);
+    background: var(--primary-bg);
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active .student-count-tag,
+body.mint-theme-active .stats-week-mode-badge {
+    border-color: rgba(var(--primary-rgb), .22);
+    background: var(--primary-bg);
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active .text-stats-nav-btn {
+    border-color: rgba(var(--primary-rgb), .24);
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active .text-stats-nav-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: #fff;
+}
+
+body.mint-theme-active .recurrence-btn.active.recurring {
+    border-color: var(--primary-hover);
+    background: var(--primary-bg);
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active .stats-tab:hover,
+body.mint-theme-active .chart-category-tab:hover {
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active.reference-main-ui .pool-tab.active {
+    color: var(--primary-pressed);
+    box-shadow: 0 3px 12px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui {
+    background: radial-gradient(circle at 55% 0%, #fbfdfb 0, #f1f8f3 46%, #e9f3ed 100%);
+}
+
+body.mint-theme-active.reference-main-ui .left-sidebar {
+    border-right-color: #dfeae3;
+    box-shadow: 6px 0 28px rgba(47, 111, 82, .07);
+}
+
+body.mint-theme-active.reference-main-ui .left-sidebar.drag-over-recycle {
+    outline-color: rgba(201, 63, 63, .4);
+}
+
+body.mint-theme-active.reference-main-ui .left-sidebar.drag-over-recycle::after {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(220, 239, 227, .03) 0%,
+        rgba(220, 239, 227, .06) 40%,
+        rgba(250, 232, 228, .09) 62%,
+        rgba(232, 120, 105, .11) 82%,
+        rgba(201, 63, 63, .19) 100%
+    );
+    color: #b93838;
+}
+
+body.mint-theme-active.reference-main-ui .subject-pool,
+body.mint-theme-active.reference-main-ui .timetable-container {
+    border-color: #dfeae3;
+    box-shadow: 0 12px 38px rgba(47, 111, 82, .08);
+}
+
+body.mint-theme-active.reference-main-ui .entity-editor-modal.subject-mode .optional-label {
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active.reference-main-ui .today-header {
+    color: var(--primary-pressed) !important;
+    background: rgba(var(--primary-rgb), .09) !important;
+}
+
+body.mint-theme-active.reference-main-ui .today-header::after {
+    background: var(--primary-hover);
+    box-shadow: 0 0 8px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .today-col::before {
+    background: rgba(var(--primary-rgb), .07);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content,
+body.mint-theme-active.reference-main-ui .stats-modal-content {
+    border-color: rgba(var(--primary-rgb), .18);
+    background:
+        radial-gradient(circle at 92% 0, rgba(var(--primary-rgb), .12), transparent 30%),
+        linear-gradient(180deg, #f8fcf9 0, var(--app-bg-color) 100%);
+    box-shadow: 0 26px 70px rgba(47, 111, 82, .17);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs,
+body.mint-theme-active.reference-main-ui #statsTabs {
+    background: #e4efe8;
+}
+
+body.mint-theme-active.reference-main-ui .chart-category-tabs {
+    background: #e4efe8;
+}
+
+body.mint-theme-active.reference-main-ui .chart-category-label,
+body.mint-theme-active.reference-main-ui .chart-category-tab,
+body.mint-theme-active.reference-main-ui .chart-category-tab:first-of-type,
+body.mint-theme-active.reference-main-ui .chart-category-tab:last-child {
+    color: #667a6d;
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .text-stats-subtitle,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card .st-label,
+body.mint-theme-active.reference-main-ui .text-stats-summary-note,
+body.mint-theme-active.reference-main-ui .stats-modal-content .stats-subtitle,
+body.mint-theme-active.reference-main-ui .stats-modal-content .stats-card .st-label {
+    color: #667a6d;
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui #statsTabs .stats-tab.active {
+    color: var(--primary-pressed);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card:hover,
+body.mint-theme-active.reference-main-ui .stats-grid#statsCards .stats-card:hover,
+body.mint-theme-active.reference-main-ui .duration-breakdown-row:hover,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .grade-row:hover {
+    border-color: rgba(var(--primary-rgb), .24);
+    background: rgba(var(--primary-rgb), .07);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-summary-panel,
+body.mint-theme-active.reference-main-ui .text-stats-detail-panel,
+body.mint-theme-active.reference-main-ui .chart-panel {
+    border-color: rgba(var(--primary-rgb), .16);
+    box-shadow: 0 10px 28px rgba(47, 111, 82, .07);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card:nth-child(-n+6),
+body.mint-theme-active.reference-main-ui .stats-grid#statsCards .stats-card {
+    border-color: rgba(var(--primary-rgb), .15);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card:not(:nth-child(3n))::after {
+    background: rgba(var(--primary-rgb), .16);
+}
+
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .modal-close:hover,
+body.mint-theme-active.reference-main-ui .stats-modal-content .modal-close:hover {
+    border-color: rgba(var(--primary-rgb), .35);
+    color: var(--primary-pressed);
+    box-shadow: 0 7px 18px var(--shadow-color);
+}
+
+body.mint-theme-active .actual-duration-display {
+    border-color: rgba(var(--primary-rgb), .38);
+    background: var(--primary-bg);
+}
+
+body.mint-theme-active .actual-duration-display:hover {
+    border-color: var(--primary-hover);
+    background: rgba(var(--primary-rgb), .16);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+body.mint-theme-active .actual-duration-label,
+body.mint-theme-active .actual-duration-value,
+body.mint-theme-active .actual-duration-edit-icon,
+body.mint-theme-active .duration-slider-val {
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active .duration-editor-dropdown {
+    border-color: rgba(var(--primary-rgb), .24);
+    box-shadow: 0 12px 32px rgba(47, 111, 82, .16);
+}
+
+body.mint-theme-active .duration-editor-header {
+    border-bottom-color: rgba(var(--primary-rgb), .14);
+    background: #f7fbf8;
+}
+
+body.mint-theme-active .duration-range::-webkit-slider-runnable-track {
+    background: #d8e9de;
+    box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .16);
+}
+
+body.mint-theme-active .duration-range::-webkit-slider-thumb {
+    background: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .12), 0 2px 6px rgba(47, 111, 82, .24);
+}
+
+body.mint-theme-active .duration-range::-moz-range-track {
+    background: #d8e9de;
+    box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), .16);
+}
+
+body.mint-theme-active .duration-range::-moz-range-thumb {
+    background: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), .12), 0 2px 6px rgba(47, 111, 82, .24);
+}
+
+body.mint-theme-active.reference-main-ui .lesson-editor-modal .subject-chip:hover,
+body.mint-theme-active.reference-main-ui .lesson-editor-modal .student-chip:hover {
+    border-color: var(--primary-hover);
+    background: #f7fbf8;
+    box-shadow: 0 8px 18px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .lesson-editor-modal .subject-chip.selected,
+body.mint-theme-active.reference-main-ui .lesson-editor-modal .student-chip.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-bg) !important;
+    box-shadow: 0 0 0 2px var(--shadow-color);
+}
+
+body.mint-theme-active.reference-main-ui .lesson-editor-modal .student-count-tag:not(:empty) {
+    background: transparent;
+    color: var(--primary-pressed);
+}
+
+body.mint-theme-active.reference-main-ui .student-card-light,
+body.mint-theme-active.reference-main-ui .student-card-light.vertical {
+    border-color: rgba(var(--primary-rgb), .2) !important;
+    background: rgba(var(--primary-rgb), .14) !important;
+    color: var(--primary-pressed) !important;
+    box-shadow: none !important;
+}
+
+body.mint-theme-active.reference-main-ui .student-card-light:hover,
+body.mint-theme-active.reference-main-ui .student-card-light.vertical:hover {
+    border-color: rgba(var(--primary-rgb), .32) !important;
+    background: rgba(var(--primary-rgb), .21) !important;
+    color: var(--primary-pressed) !important;
+    box-shadow: 0 3px 8px var(--shadow-color) !important;
+}
+
+body.mint-theme-active.reference-main-ui .student-card-light .student-name,
+body.mint-theme-active.reference-main-ui .student-card-light .student-name.vertical {
+    color: inherit !important;
+}
+
+body.mint-theme-active.reference-main-ui .student-card-light .delete-cell-btn-light {
+    background: rgba(var(--primary-rgb), .16) !important;
+    color: var(--primary-pressed) !important;
+}
+
+body.mint-theme-active.reference-main-ui .subject-card.student-type .grade-label {
+    border: 1px solid rgba(var(--primary-rgb), .14);
+    background: #e5f0e9;
+    color: var(--primary-pressed);
+}
+
+/* 浅绿色主题文字对比度：深色实底统一白字，浅色实底统一深绿字。 */
+body.mint-theme-active .btn.primary,
+body.mint-theme-active.reference-main-ui .sidebar-actions .btn.primary,
+body.mint-theme-active.reference-main-ui .modal .form-actions .btn.primary,
+body.mint-theme-active.reference-main-ui #exportModal .export-lesson-sheet-action,
+body.mint-theme-active.reference-main-ui .entity-editor-modal.student-mode .one-v1-btn.active,
+body.mint-theme-active.reference-main-ui .chart-category-tab.active,
+body.mint-theme-active.reference-main-ui .chart-category-tab.active:first-of-type,
+body.mint-theme-active.reference-main-ui .chart-category-tab.active:last-child {
+    color: #fff !important;
+    text-shadow: none;
+}
+
+body.mint-theme-active .settings-tab.active,
+body.mint-theme-active .settings-tab:hover,
+body.mint-theme-active.reference-main-ui .pool-tab.active,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui #statsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui .stats-date-range-picker:hover,
+body.mint-theme-active.reference-main-ui .modal .modal-close:hover,
+body.mint-theme-active.reference-main-ui .modal .modal-close:focus-visible {
+    color: var(--primary-pressed) !important;
+}
+
+body.mint-theme-active.reference-main-ui .chart-category-label,
+body.mint-theme-active.reference-main-ui .chart-category-tab:not(.active),
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .text-stats-subtitle,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab:not(.active),
+body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card .st-label,
+body.mint-theme-active.reference-main-ui .text-stats-summary-note,
+body.mint-theme-active.reference-main-ui .stats-modal-content .stats-subtitle,
+body.mint-theme-active.reference-main-ui .stats-modal-content .stats-card .st-label {
+    color: #52675a;
 }
 
 @media (max-width: 640px) {

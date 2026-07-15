@@ -44,6 +44,16 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
         const timetable = document.getElementById('timetable');
         const leftSidebar = document.querySelector('.left-sidebar');
+        const clearRecycleDragState = () => {
+            leftSidebar.classList.remove('drag-over-recycle');
+            document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+            this.draggedItem = null;
+        };
+
+        // 浏览器取消拖拽、拖出窗口或源元素刷新时，确保删除提示不会残留。
+        document.addEventListener('dragend', clearRecycleDragState);
+        document.addEventListener('drop', () => setTimeout(clearRecycleDragState, 0));
+        window.addEventListener('blur', clearRecycleDragState);
 
         timetable.addEventListener('dragstart', (e) => {
 
@@ -125,8 +135,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
             }
 
-            leftSidebar.classList.remove('drag-over-recycle');
-            this.draggedItem = null;
+            clearRecycleDragState();
 
         });
 
@@ -376,6 +385,8 @@ TimetableApp.prototype.setupDragAndDrop = function() {
                 this.syncRealtime();
 
             }
+
+            setTimeout(clearRecycleDragState, 0);
 
         });
 

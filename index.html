@@ -646,16 +646,40 @@
                             </div>
                             <div class="predefined-themes-grid">
                                 <button class="theme-option" data-theme="default">
-                                    <span class="theme-color-block" style="background-color: #ffffff;"></span>
-                                    <span class="theme-color-block" style="background-color: #f0f2f5;"></span>
-                                    <span class="theme-color-block" style="background-color: #60a5fa;"></span>
-                                    默认主题
+                                    <span class="theme-color-palette" aria-label="默认主题配色">
+                                        <span class="theme-color-block" style="background-color: #ffffff;" title="菜单背景"></span>
+                                        <span class="theme-color-block" style="background-color: #ffffff;" title="课表背景"></span>
+                                        <span class="theme-color-block" style="background-color: #f0f7ff;" title="页面背景"></span>
+                                        <span class="theme-color-block" style="background-color: #e0f2fe;" title="主题浅色背景"></span>
+                                        <span class="theme-color-block" style="background-color: #93c5fd;" title="悬停色"></span>
+                                        <span class="theme-color-block" style="background-color: #60a5fa;" title="主题色"></span>
+                                        <span class="theme-color-block" style="background-color: #3b82f6;" title="按下色"></span>
+                                    </span>
+                                    <span class="theme-option-name">默认主题</span>
                                 </button>
                                 <button class="theme-option" data-theme="dark">
-                                    <span class="theme-color-block" style="background-color: #1e293b;"></span>
-                                    <span class="theme-color-block" style="background-color: #1a1a2e;"></span>
-                                    <span class="theme-color-block" style="background-color: #818cf8;"></span>
-                                    暗色主题
+                                    <span class="theme-color-palette" aria-label="暗色主题配色">
+                                        <span class="theme-color-block" style="background-color: #818cf8;" title="主题色"></span>
+                                        <span class="theme-color-block" style="background-color: #6366f1;" title="悬停色"></span>
+                                        <span class="theme-color-block" style="background-color: #4f46e5;" title="按下色"></span>
+                                        <span class="theme-color-block" style="background-color: rgba(99, 102, 241, .2);" title="主题浅色背景"></span>
+                                        <span class="theme-color-block" style="background-color: #1e293b;" title="菜单背景"></span>
+                                        <span class="theme-color-block" style="background-color: #1a1a2e;" title="课表背景"></span>
+                                        <span class="theme-color-block" style="background-color: #0f172a;" title="页面背景"></span>
+                                    </span>
+                                    <span class="theme-option-name">暗色主题</span>
+                                </button>
+                                <button class="theme-option" data-theme="mint">
+                                    <span class="theme-color-palette" aria-label="浅绿色主题配色">
+                                        <span class="theme-color-block" style="background-color: #ffffff;" title="课表背景"></span>
+                                        <span class="theme-color-block" style="background-color: #f8fbf8;" title="菜单背景"></span>
+                                        <span class="theme-color-block" style="background-color: #eef6f1;" title="页面背景"></span>
+                                        <span class="theme-color-block" style="background-color: #dcefe3;" title="主题浅色背景"></span>
+                                        <span class="theme-color-block" style="background-color: #5f9f79;" title="悬停色"></span>
+                                        <span class="theme-color-block" style="background-color: #367a59;" title="主题色"></span>
+                                        <span class="theme-color-block" style="background-color: #285f45;" title="按下色"></span>
+                                    </span>
+                                    <span class="theme-option-name">浅绿色主题</span>
                                 </button>
 
                             </div>
@@ -890,56 +914,51 @@
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeExportModal()">×</button>
             </div>
-            <div class="export-tabs">
-                <button type="button" id="exportTabLessonSheet" class="export-tab active" onclick="app.switchExportTab('lessonSheet')">课时单</button>
-                <button type="button" id="exportTabSchedule" class="export-tab" onclick="app.switchExportTab('schedule')">课表</button>
-            </div>
-            <div id="exportPanelSchedule" class="export-panel">
-                <div class="export-options">
-                    <button type="button" class="export-option-card" onclick="app.handleExportOption('image')">
-                        <span class="export-option-title">导出图片</span>
-                        <span class="export-option-desc">保存当前课表为高清 PNG 图片，方便分享和打印。</span>
-                    </button>
-                    <button type="button" class="export-option-card" onclick="app.handleExportOption('word')">
-                        <span class="export-option-title">导出 Word</span>
-                        <span class="export-option-desc">生成当前课表的可编辑 Word 文档，便于继续整理。</span>
-                    </button>
-                    <button type="button" class="export-option-card" onclick="app.handleExportOption('excel')">
-                        <span class="export-option-title">导出 Excel</span>
-                        <span class="export-option-desc">导出当前课表为表格文件，适合统计、归档和二次处理。</span>
-                    </button>
-                </div>
-            </div>
-            <div id="exportPanelLessonSheet" class="export-panel active">
-                <div class="export-panel-tip">课时单支持按日期范围导出，默认范围为当前查看月份，包含日期、学生、出勤和实际上课时长。</div>
-                <div class="shared-date-range-picker" id="lessonSheetDateRangePicker">
-                    <input type="hidden" id="lessonSheetStartDate">
-                    <input type="hidden" id="lessonSheetEndDate">
-                    <button type="button" class="stats-date-range-picker" onclick="app.toggleSharedDateRangePicker('lessonSheet')">
-                        <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-                        <span class="stats-date-range-value" id="lessonSheetDateRangeText">请选择日期范围</span>
-                        <span class="stats-date-range-caret">&#9662;</span>
-                    </button>
-                    <div class="stats-date-popover" id="lessonSheetDatePopover" style="display:none;">
-                        <div class="stats-calendar-header">
-                            <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
-                            <div class="stats-calendar-title" id="lessonSheetCalendarTitle"></div>
-                            <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
-                        </div>
-                        <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
-                        <div class="stats-calendar-grid" id="lessonSheetCalendarGrid"></div>
+            <div class="export-page">
+                <section class="export-section export-date-section">
+                    <div class="export-section-heading">
+                        <h4>导出课时表</h4>
+                        <span>选择需要导出的课时日期范围</span>
                     </div>
-                </div>
-                <div class="export-options">
-                    <button type="button" class="export-option-card" onclick="app.handleExportOption('lessonSheetWord')">
-                        <span class="export-option-title">导出课时单 Word</span>
-                        <span class="export-option-desc">按所选日期范围生成课时单明细，适合打印、汇报和人工补充备注。</span>
+                    <div class="shared-date-range-picker" id="lessonSheetDateRangePicker">
+                        <input type="hidden" id="lessonSheetStartDate">
+                        <input type="hidden" id="lessonSheetEndDate">
+                        <button type="button" class="stats-date-range-picker" onclick="app.toggleSharedDateRangePicker('lessonSheet')">
+                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                            <span class="stats-date-range-value" id="lessonSheetDateRangeText">请选择日期范围</span>
+                            <span class="stats-date-range-caret">&#9662;</span>
+                        </button>
+                        <div class="stats-date-popover" id="lessonSheetDatePopover" style="display:none;">
+                            <div class="stats-calendar-header">
+                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
+                                <div class="stats-calendar-title" id="lessonSheetCalendarTitle"></div>
+                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
+                            </div>
+                            <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                            <div class="stats-calendar-grid" id="lessonSheetCalendarGrid"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="export-option-card export-lesson-sheet-action" onclick="app.handleExportOption('lessonSheetExcel')">
+                        <span class="export-option-title">导出课时表 Excel</span>
+                        <span class="export-option-desc">按所选日期范围导出课时、学生、出勤和实际上课时长。</span>
                     </button>
-                    <button type="button" class="export-option-card" onclick="app.handleExportOption('lessonSheetExcel')">
-                        <span class="export-option-title">导出课时单 Excel</span>
-                        <span class="export-option-desc">默认导出当月课时单，也可修改日期范围后再导出。</span>
-                    </button>
-                </div>
+                </section>
+                <section class="export-section">
+                    <div class="export-section-heading">
+                        <h4>导出课表</h4>
+                        <span>导出当前显示的课表内容</span>
+                    </div>
+                    <div class="export-options">
+                        <button type="button" class="export-option-card" onclick="app.handleExportOption('image')">
+                            <span class="export-option-title">导出课表图片</span>
+                            <span class="export-option-desc">将当前课表保存为高清 PNG 图片，方便分享和打印。</span>
+                        </button>
+                        <button type="button" class="export-option-card" onclick="app.handleExportOption('excel')">
+                            <span class="export-option-title">导出课表 Excel</span>
+                            <span class="export-option-desc">将当前课表导出为表格文件，适合归档和二次处理。</span>
+                        </button>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
@@ -965,7 +984,7 @@
                         <h4>完成基础设置</h4>
                         <p>点击左侧的“基础设置”，先完成下面三项配置：</p>
                         <ul>
-                            <li><strong>主题设置：</strong>在默认主题与暗色主题之间切换。</li>
+                            <li><strong>主题设置：</strong>可在默认、暗色与浅绿色主题之间切换。</li>
                             <li><strong>年级设置：</strong>添加、编辑年级并设置识别颜色，学生资料会使用这些年级。</li>
                             <li><strong>时间设置：</strong>设置每日节数、第一节开始时间、单节时长、课间及休息时段。</li>
                         </ul>
@@ -1044,8 +1063,8 @@
                     <div class="tutorial-step-body">
                         <h4>导出课表和课时单</h4>
                         <ul>
-                            <li>点击“导出数据”，在“课表”标签中导出 PNG 图片、Word 或 Excel。</li>
-                            <li>切换到“课时单”，选择开始与结束日期后，可导出 Word 或 Excel 明细。</li>
+                            <li>点击“导出数据”，可在同一页面导出课表 PNG 图片或 Excel。</li>
+                            <li>选择开始与结束日期后，可导出对应范围的课时单 Excel 明细。</li>
                             <li>导出前先切换到正确的周次或日期范围，并检查课程与出勤数据。</li>
                         </ul>
                     </div>
