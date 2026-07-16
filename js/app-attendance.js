@@ -341,7 +341,7 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
     }
 
 TimetableApp.prototype.setAttendance = function(key, studentId, status, btn) {
-        this.setAttendanceStatus(key, studentId, status);
+        if (!this.setAttendanceStatus(key, studentId, status)) return;
         
         const row = btn.closest('.att-row');
         row.querySelectorAll('.att-btn').forEach(b => b.classList.remove('present', 'leave', 'absent'));
@@ -351,8 +351,13 @@ TimetableApp.prototype.setAttendance = function(key, studentId, status, btn) {
 
 TimetableApp.prototype.setAttendanceStatus = function(key, studentId, status) {
         const dateKey = this.getAttendanceDateKeyForCell(key);
+        if (this.isHistoricalDateProtected(dateKey)) {
+            this.showHistoryProtectionNotice();
+            return false;
+        }
         window.ScheduleErpService.upsertAttendance(this, key, studentId, status, dateKey);
         this.saveData();
+        return true;
     }
 
 TimetableApp.prototype.getAttendanceDateKeyForCell = function(key) {
@@ -458,6 +463,11 @@ TimetableApp.prototype.getStudentRecurrenceType = function(cellKey, studentId) {
     }
 
 TimetableApp.prototype.setStudentRecurrence = function(cellKey, studentId, type, classDate) {
+        const protectedDate = classDate || this.getAttendanceDateKeyForCell(cellKey);
+        if (this.isHistoricalDateProtected(protectedDate)) {
+            this.showHistoryProtectionNotice();
+            return false;
+        }
         const weekRange = this.getWeekRange(classDate || this.currentDate);
         const currentWeekStr = this.formatLocalDate(weekRange.start);
         window.ScheduleErpService.setRecurrenceStatus(this, cellKey, studentId, type, currentWeekStr);
@@ -468,6 +478,11 @@ TimetableApp.prototype.setStudentRecurrenceUI = function(cellKey, studentId, typ
         const student = this.students.find(s => s.id === studentId);
         if (student && student.isAudition && type !== 'temporary') {
             return;
+        }
+        const classDate = this._attModalClassDate || this.getAttendanceDateKeyForCell(cellKey);
+        if (this.isHistoricalDateProtected(classDate)) {
+            this.showHistoryProtectionNotice();
+            return false;
         }
         if (student && student.completed && type !== 'temporary') {
             student.completed = false;
@@ -578,8 +593,16 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
         const student = this.students.find(s => s.id === studentId);
         if (!student || student.isAudition) return; // 试听学生不能结课
 
-        const isCompleted = !student.completed;
         const cellKey = this._attModalCellKey;
+        const classDate = this._attModalClassDate || (cellKey
+            ? this.getAttendanceDateKeyForCell(cellKey)
+            : this.currentDate);
+        if (this.isHistoricalDateProtected(classDate)) {
+            this.showHistoryProtectionNotice();
+            return false;
+        }
+
+        const isCompleted = !student.completed;
 
         // A manual status change takes ownership of this student's completion
         // state. Do not let a later schedule reset treat it as stage-generated.
@@ -633,4 +656,5 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
         if (this._attModalStudents && this._attModalKey) {
             this.renderAttendanceStudentList(this._attModalStudents, this._attModalKey);
         }
+        return true;
     }

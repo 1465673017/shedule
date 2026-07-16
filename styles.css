@@ -4148,6 +4148,103 @@ body *::-webkit-scrollbar-corner {
     margin-bottom: 20px;
 }
 
+.basic-settings-section {
+    display: grid;
+    gap: 0;
+}
+
+.basic-settings-section .settings-header,
+.basic-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 72px;
+    padding: 12px 4px;
+    margin: 0;
+    border-bottom: 1px solid #eee;
+}
+
+.basic-setting-row label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.setting-description {
+    margin: 5px 0 0;
+    color: #7a8494;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.basic-setting-row .setting-input {
+    width: 210px;
+    flex: 0 0 210px;
+}
+
+.zoom-setting-control {
+    width: 230px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.zoom-setting-control input[type="range"] {
+    flex: 1;
+    accent-color: var(--primary-color);
+}
+
+.zoom-setting-control output {
+    width: 44px;
+    color: var(--primary-color);
+    font-weight: 600;
+    text-align: right;
+}
+
+body.dark-theme-active .basic-settings-section .settings-header,
+body.dark-theme-active .basic-setting-row {
+    border-bottom-color: rgba(255, 255, 255, .1);
+}
+
+body.dark-theme-active .basic-setting-row label {
+    color: #e5e7eb;
+}
+
+/* Keep the sidebar pool stretched to the bottom at every page zoom level. */
+body.reference-main-ui .left-sidebar {
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.reference-main-ui .sidebar-actions {
+    flex: 0 0 auto;
+}
+
+body.reference-main-ui .subject-pool {
+    height: 0;
+    min-height: 0;
+    max-height: none;
+    flex: 1 1 0;
+    overflow: hidden;
+}
+
+body.reference-main-ui .pool-tabs,
+body.reference-main-ui .add-buttons,
+body.reference-main-ui .student-filter-buttons {
+    flex: 0 0 auto;
+}
+
+body.reference-main-ui .subjects {
+    height: 0;
+    min-height: 0;
+    flex: 1 1 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 .settings-header {
     display: flex;
     align-items: center;

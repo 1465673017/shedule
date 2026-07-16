@@ -310,6 +310,42 @@
         document.getElementById('courseDataImportModal').style.display = 'block';
     };
     TimetableApp.prototype.closeCourseDataImportModal = function () { document.getElementById('courseDataImportModal').style.display = 'none'; };
+    TimetableApp.prototype.clearCourseDataImportText = function () {
+        const input = document.getElementById('courseDataImportText');
+        const message = document.getElementById('courseDataImportMessage');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        if (message) message.textContent = '';
+    };
+    TimetableApp.prototype.pasteCourseDataImportText = async function () {
+        const input = document.getElementById('courseDataImportText');
+        const message = document.getElementById('courseDataImportMessage');
+        if (!input) return;
+        try {
+            let text;
+            if (window.electronAPI && typeof window.electronAPI.readClipboardText === 'function') {
+                text = await window.electronAPI.readClipboardText();
+            } else if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+                text = await navigator.clipboard.readText();
+            } else {
+                throw new Error('当前环境不支持读取剪贴板');
+            }
+            if (!text) {
+                if (message) message.textContent = '剪贴板中没有可粘贴的文本';
+                input.focus();
+                return;
+            }
+            input.value = text;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+            if (message) message.textContent = '已粘贴剪贴板内容';
+        } catch (error) {
+            if (message) message.textContent = `粘贴失败：${error.message}`;
+        }
+    };
     TimetableApp.prototype.submitCourseDataImport = async function (event) {
         event.preventDefault();
         const message = document.getElementById('courseDataImportMessage');

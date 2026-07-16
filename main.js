@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, clipboard } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const isMac = process.platform === 'darwin';
@@ -61,6 +61,8 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
     return { canceled: false, filePath: result.filePath };
 });
 
+ipcMain.handle('read-clipboard-text', () => clipboard.readText());
+
 ipcMain.on('window-control', (event, action) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
@@ -71,6 +73,15 @@ ipcMain.on('window-control', (event, action) => {
         else win.maximize();
     }
     if (action === 'close') win.close();
+});
+
+ipcMain.on('set-page-zoom', (event, percent) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+    const normalizedPercent = Math.max(75, Math.min(125, Number(percent) || 100));
+    // Preserve the app's original 90% visual baseline while using Chromium's
+    // viewport-aware zoom so fixed 100vh layouts still fill the window.
+    win.webContents.setZoomFactor(0.9 * normalizedPercent / 100);
 });
 
 if (gotSingleInstanceLock) {

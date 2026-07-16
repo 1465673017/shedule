@@ -51,7 +51,10 @@ function createDefaultSettings() {
         primaryHover: '#93c5fd',
         primaryPressed: '#3b82f6',
         primaryBg: '#e0f2fe',
-        shadowColor: 'rgba(96, 165, 250, 0.15)'
+        shadowColor: 'rgba(96, 165, 250, 0.15)',
+        historyDataProtection: false,
+        pageZoom: 100,
+        teacherSubjectId: ''
     };
 }
 
@@ -91,7 +94,10 @@ class TimetableApp {
             stageRangeSettingsVersion: 1,
             stageMonthRanges: [],
             stages: [],
-            theme: 'default'
+            theme: 'default',
+            historyDataProtection: false,
+            pageZoom: 100,
+            teacherSubjectId: ''
         };
         this.grades = [
             { id: 'g1', name: '一年级', color: '#FFE4E1' },
@@ -454,6 +460,11 @@ class TimetableApp {
     }
 
     ensureUncategorizedSubject() {
+        const teacherSubjectId = this.settings && this.settings.teacherSubjectId;
+        if (teacherSubjectId) {
+            const teacherSubject = this.subjects.find(s => String(s.id) === String(teacherSubjectId));
+            if (teacherSubject) return teacherSubject;
+        }
         let subject = this.subjects.find(s => s && s.name === '未分类');
         if (subject) return subject;
 
@@ -1351,7 +1362,36 @@ class TimetableApp {
     }
 
     setCellVersion(key, weekStartStr, subjectId, studentIds, options = {}) {
+        if (this.isHistoricalCellProtected(key, weekStartStr)) {
+            this.showHistoryProtectionNotice();
+            return false;
+        }
         window.ScheduleErpService.setCellVersion(this, key, weekStartStr, subjectId, studentIds, options);
+        return true;
+    }
+
+    isHistoricalDateProtected(dateValue) {
+        if (!this.settings || !this.settings.historyDataProtection) return false;
+        const date = dateValue instanceof Date ? new Date(dateValue) : new Date(`${dateValue}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return false;
+        date.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return date < today;
+    }
+
+    isHistoricalCellProtected(key, weekStartStr) {
+        const day = Number.parseInt(String(key || '').split('-')[0], 10);
+        const date = new Date(`${weekStartStr}T00:00:00`);
+        if (!Number.isNaN(day) && !Number.isNaN(date.getTime())) date.setDate(date.getDate() + day - 1);
+        return this.isHistoricalDateProtected(date);
+    }
+
+    showHistoryProtectionNotice() {
+        const now = Date.now();
+        if (this._lastHistoryProtectionNotice && now - this._lastHistoryProtectionNotice < 800) return;
+        this._lastHistoryProtectionNotice = now;
+        alert('历史数据保护已开启，今天以前的数据无法修改。');
     }
 
     changeWeek(direction) {

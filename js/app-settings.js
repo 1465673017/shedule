@@ -16,6 +16,7 @@ TimetableApp.prototype.openSettingsModal = function(defaultTab = 'theme') {
 
         // Initialize UI with current theme settings
         this.updateThemeSettingsUI();
+        this.updateBasicSettingsUI();
 
         this.switchSettingsTab(defaultTab);
     }
@@ -38,6 +39,8 @@ TimetableApp.prototype.switchSettingsTab = function(tabName) {
             this.updateTimeAdvancedSaveVisibility();
         } else if (tabName === 'stage') {
             this.renderStageSettings();
+        } else if (tabName === 'basic') {
+            this.updateBasicSettingsUI();
         }
     }
 
@@ -311,6 +314,9 @@ TimetableApp.prototype.loadSettings = function() {
             this.settings.segmentedScheduling = Boolean(this.settings.segmentedStatistics);
         }
         if (!Array.isArray(this.settings.stageMonthRanges)) this.settings.stageMonthRanges = [];
+        if (typeof this.settings.historyDataProtection !== 'boolean') this.settings.historyDataProtection = false;
+        this.settings.pageZoom = Math.max(75, Math.min(125, Number(this.settings.pageZoom) || 100));
+        if (typeof this.settings.teacherSubjectId !== 'string') this.settings.teacherSubjectId = '';
         // 旧版阶段数据没有当前配置版本，首次加载时直接采用新版默认值，
         // 避免必须先修改输入框才出现 4 段默认配置。
         if (parsedSettings && parsedSettings.stageRangeSettingsVersion !== 1) {
@@ -318,7 +324,64 @@ TimetableApp.prototype.loadSettings = function() {
             this.settings.stageMonthRanges = [];
         }
         this.ensureThemeSettings();
+        this.applyPageZoom();
     }
+
+TimetableApp.prototype.updateBasicSettingsUI = function() {
+    const toggle = document.getElementById('historyProtectionToggle');
+    if (toggle) {
+        toggle.classList.toggle('active', !!this.settings.historyDataProtection);
+        toggle.textContent = this.settings.historyDataProtection ? '已开启' : '已关闭';
+    }
+    const range = document.getElementById('pageZoomRange');
+    const output = document.getElementById('pageZoomValue');
+    if (range) range.value = String(this.settings.pageZoom || 100);
+    if (output) output.textContent = `${this.settings.pageZoom || 100}%`;
+    const select = document.getElementById('teacherSubjectSelect');
+    if (select) {
+        const selected = String(this.settings.teacherSubjectId || '');
+        select.innerHTML = '<option value="">未选择（未分类）</option>';
+        this.subjects.forEach(subject => {
+            if (!subject || subject.name === '未分类') return;
+            const option = document.createElement('option');
+            option.value = String(subject.id);
+            option.textContent = subject.name;
+            select.appendChild(option);
+        });
+        select.value = this.subjects.some(subject => String(subject.id) === selected) ? selected : '';
+    }
+}
+
+TimetableApp.prototype.toggleHistoryProtection = function() {
+    this.settings.historyDataProtection = !this.settings.historyDataProtection;
+    this.saveSettings();
+    this.updateBasicSettingsUI();
+}
+
+TimetableApp.prototype.applyPageZoom = function() {
+    const zoom = Math.max(75, Math.min(125, Number(this.settings.pageZoom) || 100));
+    if (window.electronAPI && typeof window.electronAPI.setPageZoom === 'function') {
+        document.documentElement.style.zoom = '';
+        window.electronAPI.setPageZoom(zoom);
+    } else {
+        document.documentElement.style.zoom = `${zoom}%`;
+    }
+}
+
+TimetableApp.prototype.setPageZoom = function(value) {
+    this.settings.pageZoom = Math.max(75, Math.min(125, Number(value) || 100));
+    this.applyPageZoom();
+    this.saveSettings();
+    this.updateBasicSettingsUI();
+}
+
+TimetableApp.prototype.setTeacherSubject = function(subjectId) {
+    this.settings.teacherSubjectId = this.subjects.some(subject => String(subject.id) === String(subjectId))
+        ? String(subjectId)
+        : '';
+    this.saveSettings();
+    this.updateBasicSettingsUI();
+}
 
 TimetableApp.prototype.getDefaultStageStartDate = function() {
     const today = new Date();

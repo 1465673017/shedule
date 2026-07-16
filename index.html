@@ -382,7 +382,7 @@
                     </div>
                     <textarea id="courseDataImportText" required rows="14" placeholder="可直接粘贴完整接口返回 JSON，系统会递归识别其中的全部课程"></textarea>
                 </div><div id="courseDataImportMessage" class="modal-subtitle"></div></div>
-                <div class="form-actions"><button type="button" class="btn secondary" onclick="app.closeCourseDataImportModal()">取消</button><button type="submit" class="btn primary">识别并导入</button></div>
+                <div class="form-actions"><button type="button" class="btn secondary" onclick="app.clearCourseDataImportText()">清空</button><button type="button" class="btn secondary" onclick="app.pasteCourseDataImportText()">粘贴</button><button type="submit" class="btn primary">识别并导入</button></div>
             </form>
         </div>
     </div>
@@ -669,10 +669,42 @@
             </div>
             <div class="settings-content">
                 <div class="settings-tabs">
+                    <button class="settings-tab" data-tab="basic">基础设置</button>
                     <button class="settings-tab active" data-tab="theme">主题设置</button>
                     <button class="settings-tab" data-tab="grade">年级设置</button>
                     <button class="settings-tab" data-tab="stage">阶段设置</button>
                     <button class="settings-tab" data-tab="time">时间设置</button>
+                </div>
+
+                <div id="basicSettingsTab" class="settings-tab-pane">
+                    <div class="settings-section basic-settings-section">
+                        <div class="settings-header">
+                            <div>
+                                <h4>历史数据保护</h4>
+                                <p class="setting-description">开启后，今天以前的排课和出勤数据将无法修改。</p>
+                            </div>
+                            <button type="button" id="historyProtectionToggle" class="toggle-switch" onclick="app.toggleHistoryProtection()">已关闭</button>
+                        </div>
+                        <div class="basic-setting-row">
+                            <div>
+                                <label for="pageZoomRange">页面缩放</label>
+                                <p class="setting-description">调节整个应用界面的显示大小。</p>
+                            </div>
+                            <div class="zoom-setting-control">
+                                <input type="range" id="pageZoomRange" min="75" max="125" step="5" value="100" oninput="app.setPageZoom(this.value)">
+                                <output id="pageZoomValue" for="pageZoomRange">100%</output>
+                            </div>
+                        </div>
+                        <div class="basic-setting-row">
+                            <div>
+                                <label for="teacherSubjectSelect">教师类型</label>
+                                <p class="setting-description">无学科背景的课程默认归入所选科目；不选择时归为未分类。</p>
+                            </div>
+                            <select id="teacherSubjectSelect" class="setting-input" onchange="app.setTeacherSubject(this.value)">
+                                <option value="">未选择（未分类）</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="themeSettingsTab" class="settings-tab-pane active">
