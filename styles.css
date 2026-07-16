@@ -2700,7 +2700,7 @@ body.mint-theme-active .app-message-actions {
     background: white;
     border-radius: 10px;
     border: 1px solid var(--border-color);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .grade-row:hover {
@@ -2743,7 +2743,7 @@ body.mint-theme-active .app-message-actions {
     height: 12px;
     border-radius: 50%;
     vertical-align: middle;
-    cursor: default;
+    cursor: pointer;
     margin-left: 6px;
 }
 
@@ -2769,6 +2769,16 @@ body.mint-theme-active .app-message-actions {
 
 .grade-row[data-expanded="true"] {
     background: var(--light-color);
+    transform: none;
+    filter: none;
+    opacity: 1;
+}
+
+.grade-row[data-expanded="true"] .gr-name,
+.grade-row[data-expanded="true"] .gr-hours {
+    transform: none;
+    filter: none;
+    opacity: 1;
 }
 
 .att-inline-row:hover {
@@ -4656,12 +4666,58 @@ body.reference-main-ui .subjects {
     border: 1px solid #b3d4ff;
     border-radius: 8px;
     padding: 6px 12px;
-    cursor: pointer;
+    cursor: default;
     -webkit-user-select: none;
     user-select: none;
     transition: all 0.2s;
     position: relative;
     white-space: nowrap;
+}
+
+.student-duration-editor-body {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.student-duration-row {
+    display: grid;
+    grid-template-columns: minmax(64px, auto) minmax(120px, 1fr) 64px;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid #edf0f3;
+}
+
+.student-duration-row:last-child {
+    border-bottom: 0;
+}
+
+.student-duration-name {
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.student-actual-duration {
+    margin-left: 7px;
+    color: #718096;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+body.dark-theme-active .student-duration-row {
+    border-bottom-color: rgba(148, 163, 184, .16);
+}
+
+body.dark-theme-active .student-duration-name {
+    color: #e2e8f0;
+}
+
+body.dark-theme-active .student-actual-duration {
+    color: #94a3b8;
 }
 
 .attendance-lesson-summary {
@@ -12621,6 +12677,69 @@ body.mint-theme-active.reference-main-ui .student-card-light.vertical:hover {
     background: rgba(var(--primary-rgb), .21) !important;
     color: var(--primary-pressed) !important;
     box-shadow: 0 3px 8px var(--shadow-color) !important;
+}
+
+/* Text rendering stability at fractional Electron zoom levels.
+   Avoid promoting text-bearing controls/cards to transformed bitmap layers. */
+.btn,
+.filter-btn,
+.pool-tab,
+.toggle-switch,
+.subject-card,
+.student-card-light,
+.theme-option,
+.grade-card,
+.grade-chip,
+.subject-chip,
+.student-chip,
+.att-btn,
+.recurrence-btn,
+.week-nav-btn,
+.month-selector-btn,
+.text-stats-nav-btn,
+.chart-category-tab,
+.stats-card,
+.period-add-zone,
+.actual-duration-display,
+.timetable th,
+.timetable td,
+.cell {
+    transition-property: background-color, border-color, color, box-shadow, opacity;
+    transition-duration: .18s;
+    transition-timing-function: ease;
+}
+
+.btn:hover,
+.btn:active,
+.subject-card:hover,
+.student-card-light:hover,
+.theme-option:hover,
+.grade-chip:hover,
+.grade-chip.selected,
+.subject-chip:hover,
+.student-chip:hover,
+.stats-card:hover,
+.period-add-zone:hover,
+.text-stats-nav-btn:hover,
+.text-stats-nav-btn:active,
+.chart-category-tab:hover,
+body.reference-main-ui .sidebar-actions .btn:hover,
+body.reference-main-ui .sidebar-actions .btn:active,
+body.reference-main-ui .lesson-editor-modal .subject-chip:hover,
+body.reference-main-ui .entity-editor-modal.student-mode .grade-chip:hover,
+body.reference-main-ui .copy-course-btn:hover,
+body.reference-main-ui .copy-course-btn:focus-visible {
+    transform: none !important;
+    filter: none;
+}
+
+.grade-row,
+.grade-row[data-expanded="true"],
+.grade-detail,
+.att-inline-row {
+    transform: none;
+    filter: none;
+    backface-visibility: visible;
 }
 
 body.mint-theme-active.reference-main-ui .student-card-light .student-name,

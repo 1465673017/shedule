@@ -55,7 +55,7 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
                     <span class="attendance-lesson-subject">${subject ? subject.name : '无科目'}</span>
                     <span class="attendance-lesson-time">${periodInfo ? periodInfo.time : ''}</span>
                 </div>
-                <div class="actual-duration-display" onclick="app.showDurationEditor(event, '${key}')" title="点击修改实际上课时间">
+                <div class="actual-duration-display" onclick="app.showDurationEditor(event, '${key}')" title="点击设置每个学生的实际上课时长">
                     <span class="actual-duration-label">实上</span>
                     <span class="actual-duration-value">${actualDisplay}</span>
                     <span class="actual-duration-edit-icon" aria-hidden="true">
@@ -115,7 +115,7 @@ TimetableApp.prototype.closeAttendanceModal = function() {
 
 TimetableApp.prototype.showDurationEditor = function(event, key) {
     event.stopPropagation();
-    const displayEl = event.currentTarget;
+    const displayEl = event.currentTarget.closest('.actual-duration-display');
     const existingEditor = document.getElementById('durationEditorDropdown');
     if (existingEditor && existingEditor.parentElement === displayEl) {
         this.hideDurationEditor();
@@ -129,47 +129,35 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
         const currentMin = erpActualMin !== undefined
             ? erpActualMin
             : scheduledMinutes;
-        const currentHours = Math.floor(currentMin / 60);
-        const currentMins = currentMin % 60;
+        const students = this._attModalStudents || [];
 
         const editor = document.createElement('div');
         editor.className = 'duration-editor-dropdown';
         editor.id = 'durationEditorDropdown';
         editor.onclick = (e) => e.stopPropagation();
         editor.innerHTML = `
-            <div class="duration-editor-header">修改实际上课时长</div>
-            <div class="duration-editor-body">
-                <div class="duration-slider-group">
-                    <label>小时</label>
-                    <div class="duration-slider-row">
-                        <input type="range" class="duration-range" id="durationHourSlider" min="0" max="8" value="${currentHours}" oninput="app.syncActualDuration('${key}')">
-                        <span class="duration-slider-val" id="durationHourVal">${currentHours}</span>
-                    </div>
-                </div>
-                <div class="duration-slider-group">
-                    <label>分钟</label>
-                    <div class="duration-slider-row">
-                        <input type="range" class="duration-range" id="durationMinSlider" min="0" max="55" step="5" value="${currentMins}" oninput="app.syncActualDuration('${key}')">
-                        <span class="duration-slider-val" id="durationMinVal">${currentMins}</span>
-                    </div>
-                </div>
+            <div class="duration-editor-header">设置学生实际上课时长</div>
+            <div class="duration-editor-body student-duration-editor-body">
+                ${students.map(student => {
+                    const saved = window.ScheduleErpService.getStudentActualMinutes(this, key, student.id, this._attModalDateKey);
+                    const minutes = Math.min(240, saved !== undefined ? saved : currentMin);
+                    return `<div class="student-duration-row">
+                        <span class="student-duration-name">${student.name}</span>
+                        <input type="range" class="duration-range student-duration-range" data-student-id="${student.id}" min="0" max="240" step="5" value="${minutes}" oninput="app.syncStudentActualDuration('${key}', '${student.id}', this.value)">
+                        <span class="duration-slider-val" id="studentDurationVal-${student.id}">${this.formatDuration(Math.floor(minutes / 60), minutes % 60)}</span>
+                    </div>`;
+                }).join('') || '<div class="text-muted">暂无学生</div>'}
             </div>
         `;
         displayEl.appendChild(editor);
-
-        // Mouse wheel support for sliders
-        const hourSlider = document.getElementById('durationHourSlider');
-        const minSlider = document.getElementById('durationMinSlider');
-        const wheelHandler = (slider, step, cb) => {
-            slider.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? -step : step;
-                slider.value = Math.min(slider.max, Math.max(slider.min, parseInt(slider.value) + delta));
-                cb();
+        editor.querySelectorAll('.student-duration-range').forEach(range => {
+            range.addEventListener('wheel', (wheelEvent) => {
+                wheelEvent.preventDefault();
+                const direction = wheelEvent.deltaY > 0 ? -1 : 1;
+                range.value = String(Math.max(0, Math.min(240, Number(range.value) + direction * 5)));
+                this.syncStudentActualDuration(key, range.dataset.studentId, range.value);
             }, { passive: false });
-        };
-        wheelHandler(hourSlider, 1, () => this.syncActualDuration(key));
-        wheelHandler(minSlider, 5, () => this.syncActualDuration(key));
+        });
 
         this._durationEditorKey = key;
 
@@ -204,6 +192,40 @@ TimetableApp.prototype.syncActualDuration = function(key) {
         const display = this.formatDuration(hours, mins);
         const valueEl = document.querySelector('.actual-duration-value');
         if (valueEl) valueEl.textContent = display;
+    }
+
+TimetableApp.prototype.syncStudentActualDuration = function(key, studentId, value) {
+        if (this.isHistoricalDateProtected(this._attModalDateKey)) {
+            this.showHistoryProtectionNotice();
+            this.hideDurationEditor();
+            return false;
+        }
+        const ranges = Array.from(document.querySelectorAll('.student-duration-range'));
+        ranges.forEach(range => {
+            window.ScheduleErpService.setStudentActualMinutes(this, key, range.dataset.studentId, Number(range.value), this._attModalDateKey);
+        });
+        const totalMinutes = Math.max(0, ...ranges.map(range => Number(range.value) || 0));
+        window.ScheduleErpService.setActualMinutes(this, key, totalMinutes, this._attModalDateKey);
+        this.saveData();
+
+        const minutes = Math.max(0, Number(value) || 0);
+        const studentValue = document.getElementById(`studentDurationVal-${studentId}`);
+        if (studentValue) studentValue.textContent = this.formatDuration(Math.floor(minutes / 60), minutes % 60);
+        const totalValue = document.querySelector('.actual-duration-value');
+        if (totalValue) totalValue.textContent = this.formatDuration(Math.floor(totalMinutes / 60), totalMinutes % 60);
+        this.renderAttendanceStudentList(this._attModalStudents || [], key);
+        this.renderAttendanceRecords(this._attModalStudents || [], key);
+        return true;
+    }
+
+TimetableApp.prototype.getStudentActualDurationDisplay = function(key, studentId) {
+        const status = this.getAttendanceStatusForModal(key, studentId);
+        if (status === 'leave' || status === 'absent') return '0min';
+        const saved = window.ScheduleErpService.getStudentActualMinutes(this, key, studentId, this._attModalDateKey);
+        const total = saved !== undefined
+            ? saved
+            : (window.ScheduleErpService.getActualMinutes(this, key, this._attModalDateKey) ?? this.getScheduledMinutes(key));
+        return this.formatDuration(Math.floor(total / 60), total % 60);
     }
 
 TimetableApp.prototype.formatDuration = function(hours, mins) {
@@ -324,7 +346,7 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
             const status = att[student.id] || defaultStatus;
             html += `
                 <div class="att-row">
-                    <span style="font-size: 13px;">${student.name}</span>
+                    <span style="font-size: 13px;">${student.name}<small class="student-actual-duration">实上 ${this.getStudentActualDurationDisplay(key, student.id)}</small></span>
                     <div class="att-status">
                         <button class="att-btn ${status === 'present' ? 'present' : ''}"
                                 onclick="app.setAttendance('${key}', '${student.id}', 'present', this)">出勤</button>

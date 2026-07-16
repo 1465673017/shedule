@@ -463,6 +463,25 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
         if (!student.completed) return false;
         return !student.manualCompletionDate || student.manualCompletionDate <= dateKey;
     }).length;
+    const courseInstance = this.erpData && Array.isArray(this.erpData.courseInstances)
+        ? this.erpData.courseInstances.find(instance => instance.id === cellData.courseInstanceId)
+        : null;
+    const scheduledMinutes = periodInfo && periodInfo.time
+        ? Math.max(0, this.timeToMinutes(periodInfo.time.split('-')[1]) - this.timeToMinutes(periodInfo.time.split('-')[0]))
+        : 0;
+    const lessonActualMinutes = courseInstance && courseInstance.actualMinutesByDate && courseInstance.actualMinutesByDate[dateKey] !== undefined
+        ? courseInstance.actualMinutesByDate[dateKey]
+        : scheduledMinutes;
+    const studentMinutes = courseInstance && courseInstance.studentActualMinutesByDate
+        ? courseInstance.studentActualMinutesByDate[dateKey]
+        : null;
+    students.forEach(student => {
+        student.actualMinutes = student.status === 'leave' || student.status === 'absent'
+            ? 0
+            : (studentMinutes && studentMinutes[String(student.id)] !== undefined
+                ? studentMinutes[String(student.id)]
+                : lessonActualMinutes);
+    });
 
     return {
         subject: subject ? subject.name : '未分类',
@@ -511,6 +530,35 @@ TimetableApp.prototype.getLessonDurationMinutesForStats = function (lesson) {
         }
     }
     return 0;
+}
+
+TimetableApp.prototype.getLessonSegmentTypeStats = function (lesson) {
+    const presentStudents = (lesson.students || []).filter(student =>
+        student && !student.isAudition && student.status !== 'leave' && student.status !== 'absent'
+    ).map(student => ({
+        student,
+        minutes: Math.max(0, Number(student.actualMinutes !== undefined
+            ? student.actualMinutes
+            : this.getLessonDurationMinutesForStats(lesson)) || 0)
+    }));
+    const boundaries = [...new Set(presentStudents.map(item => item.minutes).filter(minutes => minutes > 0))].sort((a, b) => a - b);
+    const typeStats = {};
+    let previous = 0;
+    boundaries.forEach(boundary => {
+        const active = presentStudents.filter(item => item.minutes > previous);
+        const segmentMinutes = boundary - previous;
+        if (active.length > 0 && segmentMinutes > 0) {
+            const type = active.length === 1
+                ? (active[0].student.is1v1 ? '1v1' : '1v1(0.8)')
+                : `1v${active.length}`;
+            typeStats[type] = (typeStats[type] || 0) + segmentMinutes;
+        }
+        previous = boundary;
+    });
+    return {
+        typeStats,
+        totalMinutes: boundaries.length ? boundaries[boundaries.length - 1] : 0
+    };
 }
 
 TimetableApp.prototype.getLessonTypeKeyForStats = function (lesson) {
@@ -598,10 +646,11 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     }
                 });
             }
-            if (typeKey) {
-                aggregated[aggKey].sessionTypeCounts[typeKey] = (aggregated[aggKey].sessionTypeCounts[typeKey] || 0) + 1;
-                aggregated[aggKey].typeStats[typeKey] = (aggregated[aggKey].typeStats[typeKey] || 0) + this.getLessonDurationMinutesForStats(lesson);
-            }
+            const segmented = this.getLessonSegmentTypeStats(lesson);
+            Object.entries(segmented.typeStats).forEach(([segmentType, minutes]) => {
+                aggregated[aggKey].sessionTypeCounts[segmentType] = (aggregated[aggKey].sessionTypeCounts[segmentType] || 0) + 1;
+                aggregated[aggKey].typeStats[segmentType] = (aggregated[aggKey].typeStats[segmentType] || 0) + minutes;
+            });
             aggregated[aggKey].lessonCount++;
             aggregated[aggKey].dates.push(dateStr);
         });
@@ -830,9 +879,16 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
         const auditionBadge = student && student.isAudition ? this.getInlineAuditionBadge() : '';
         const oneV1Badge = student && student.is1v1 ? this.getInlineOneV1Badge() : '';
         const status = this.getAttendanceStatusForStats(lesson, id) || defaultAttStatus;
+        const detailStudent = (lesson.students || []).find(item => item && String(item.id) === String(id));
+        const detailMinutes = status === 'leave' || status === 'absent'
+            ? 0
+            : (detailStudent && detailStudent.actualMinutes !== undefined
+                ? detailStudent.actualMinutes
+                : this.getLessonDurationMinutesForStats(lesson));
+        const durationBadge = `<small class="student-actual-duration">实上 ${this.formatDuration(Math.floor(detailMinutes / 60), detailMinutes % 60)}</small>`;
         html += `
                 <div class="att-inline-row" style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
-                    <span style="display:inline-flex;align-items:center;">${name}${oneV1Badge}${auditionBadge}</span>
+                    <span style="display:inline-flex;align-items:center;">${name}${oneV1Badge}${auditionBadge}${durationBadge}</span>
                     <div class="att-inline-btns" style="display:flex;gap:4px;">
                         <button class="att-inline-btn ${status === 'present' ? 'active' : ''}"
                             data-key="${key}" data-sid="${id}" data-status="present"
@@ -1162,46 +1218,13 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
             groups[groupKey].absent += lesson.absentCount || 0;
             groups[groupKey].audition += lesson.auditionStudentCount || 0;
 
-            var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
-            var duration;
-            var actualMinutes = self.getLessonActualMinutesForStats(lesson);
-            if (actualMinutes !== undefined) {
-                duration = actualMinutes;
-            } else if (lesson.time) {
-                var parts = lesson.time.split('-');
-                if (parts.length === 2) {
-                    duration = self.timeToMinutes(parts[1]) - self.timeToMinutes(parts[0]);
-                } else {
-                    duration = 0;
-                }
-            } else {
-                duration = 0;
-            }
-            if (duration < 0) duration = 0;
-
             var lessonCount = lesson.lessonCount || 1;
-            var totalDuration = duration * lessonCount;
-
-            if (presentNonAuditionCount > 0) {
-                groups[groupKey].totalMinutes += totalDuration;
-                var typeKey;
-                if (presentNonAuditionCount === 1) {
-                    var presentStudent = lesson.students ? lesson.students.find(function (s) {
-                        return s && !s.isAudition && (!s.status || (s.status !== 'leave' && s.status !== 'absent'));
-                    }) : null;
-                    if (presentStudent && presentStudent.is1v1) {
-                        typeKey = '1v1';
-                    } else {
-                        typeKey = '1v1(0.8)';
-                    }
-                } else {
-                    typeKey = '1v' + presentNonAuditionCount;
-                }
-                if (!groups[groupKey].typeMinutes[typeKey]) {
-                    groups[groupKey].typeMinutes[typeKey] = 0;
-                }
-                groups[groupKey].typeMinutes[typeKey] += totalDuration;
-            }
+            var segmented = self.getLessonSegmentTypeStats(lesson);
+            groups[groupKey].totalMinutes += segmented.totalMinutes * lessonCount;
+            Object.keys(segmented.typeStats).forEach(function (typeKey) {
+                groups[groupKey].typeMinutes[typeKey] = (groups[groupKey].typeMinutes[typeKey] || 0)
+                    + segmented.typeStats[typeKey] * lessonCount;
+            });
         });
 
         current.setDate(current.getDate() + 1);
@@ -2028,35 +2051,12 @@ TimetableApp.prototype.getTypeStatsForRange = function (startDate, endDate) {
     while (current <= end) {
         var lessons = this.collectLessonsForDate(current);
         lessons.forEach(function (lesson) {
-            var presentNonAuditionCount = lesson.presentNonAuditionCount || 0;
-            if (presentNonAuditionCount <= 0) return;
-
-            var duration = 0;
-            var actualMinutes = this.getLessonActualMinutesForStats(lesson);
-            if (actualMinutes !== undefined) {
-                duration = actualMinutes;
-            } else if (lesson.time) {
-                var parts = lesson.time.split('-');
-                if (parts.length === 2) {
-                    duration = this.timeToMinutes(parts[1]) - this.timeToMinutes(parts[0]);
-                }
-            }
-            if (duration < 0) duration = 0;
-
             var lessonCount = lesson.lessonCount || 1;
-            var totalDuration = duration * lessonCount;
-            var type = null;
-            if (presentNonAuditionCount === 1) {
-                var presentStudent = lesson.students ? lesson.students.find(function (student) {
-                    return student && !student.isAudition && (!student.status || (student.status !== 'leave' && student.status !== 'absent'));
-                }) : null;
-                type = presentStudent && presentStudent.is1v1 ? '1v1' : '1v1(0.8)';
-            } else {
-                type = '1v' + presentNonAuditionCount;
-            }
-
-            typeStats[type] = (typeStats[type] || 0) + totalDuration;
-            totalMinutes += totalDuration;
+            var segmented = this.getLessonSegmentTypeStats(lesson);
+            Object.keys(segmented.typeStats).forEach(function (type) {
+                typeStats[type] = (typeStats[type] || 0) + segmented.typeStats[type] * lessonCount;
+            });
+            totalMinutes += segmented.totalMinutes * lessonCount;
         }, this);
 
         current.setDate(current.getDate() + 1);

@@ -217,10 +217,10 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
 
 TimetableApp.prototype.getLessonSheetSummaryMatrix = function (rows) {
     const groups = [
-        { key: 'junior', label: '初中部1.0系数', coefficient: 1.0 },
-        { key: 'high1', label: '高一年级1.2系数', coefficient: 1.2 },
-        { key: 'high2', label: '高二年级1.3系数', coefficient: 1.3 },
-        { key: 'high3', label: '高三年级1.5系数', coefficient: 1.5 }
+        { key: 'junior', label: '初中部1.0系数' },
+        { key: 'high1', label: '高一年级1.2系数' },
+        { key: 'high2', label: '高二年级1.3系数' },
+        { key: 'high3', label: '高三年级1.5系数' }
     ];
     const typeKeys = ['1对1', '1对2', '1对3', '1对4', '请假'];
 
@@ -273,10 +273,9 @@ TimetableApp.prototype.getLessonSheetSummaryMatrix = function (rows) {
         const hours = minutes / 60;
         if (!hours) return;
 
-        const weighted = hours * group.coefficient;
         const dayBucket = ensureBucket(byDate, row.dateKey);
-        dayBucket[group.key][typeKey] += weighted;
-        totals[group.key][typeKey] += weighted;
+        dayBucket[group.key][typeKey] += hours;
+        totals[group.key][typeKey] += hours;
     });
 
     const allDateKeys = rows.length > 0

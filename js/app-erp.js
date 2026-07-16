@@ -1191,6 +1191,33 @@
             instance.updatedAt = new Date().toISOString();
         },
 
+        setStudentActualMinutes(app, cellKey, studentId, minutes, dateKey = null) {
+            const erp = ensureErpData(app);
+            const weekStartStr = app.formatLocalDate(app.getWeekRange(app.currentDate).start);
+            const version = this.getCellVersion(app, cellKey, weekStartStr);
+            const instance = version ? erp.courseInstances.find(ci => ci.id === version.courseInstanceId) : null;
+            if (!instance) return;
+            if (!instance.studentActualMinutesByDate) instance.studentActualMinutesByDate = {};
+            const key = dateKey || weekStartStr;
+            if (!instance.studentActualMinutesByDate[key]) instance.studentActualMinutesByDate[key] = {};
+            instance.studentActualMinutesByDate[key][String(studentId)] = Math.max(0, Number(minutes) || 0);
+            instance.updatedAt = new Date().toISOString();
+        },
+
+        getStudentActualMinutes(app, cellKey, studentId, dateKey = null) {
+            const erp = ensureErpData(app);
+            const weekStartStr = app.formatLocalDate(app.getWeekRange(app.currentDate).start);
+            const version = this.getCellVersion(app, cellKey, weekStartStr);
+            const instance = version ? erp.courseInstances.find(ci => ci.id === version.courseInstanceId) : null;
+            if (!instance || !instance.studentActualMinutesByDate) return undefined;
+            const keys = dateKey ? [dateKey, weekStartStr] : [weekStartStr];
+            for (const key of keys) {
+                const values = instance.studentActualMinutesByDate[key];
+                if (values && values[String(studentId)] !== undefined) return values[String(studentId)];
+            }
+            return undefined;
+        },
+
         getActualMinutes(app, cellKey, dateKey = null) {
             const erp = ensureErpData(app);
             const weekStartStr = app.formatLocalDate(app.getWeekRange(app.currentDate).start);

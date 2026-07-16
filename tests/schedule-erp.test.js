@@ -10,6 +10,10 @@ vm.runInThisContext(erpSource, { filename: 'app-erp.js' });
 global.TimetableApp = function TimetableApp() {};
 const attendanceSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-attendance.js'), 'utf8');
 vm.runInThisContext(attendanceSource, { filename: 'app-attendance.js' });
+const statsSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-stats.js'), 'utf8');
+vm.runInThisContext(statsSource, { filename: 'app-stats.js' });
+const exportSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-export.js'), 'utf8');
+vm.runInThisContext(exportSource, { filename: 'app-export.js' });
 
 function makeApp() {
     return {
@@ -646,5 +650,37 @@ assert.strictEqual(
     false,
     'the timetable should not register a double-click delete handler'
 );
+
+const durationStatsApp = Object.create(TimetableApp.prototype);
+durationStatsApp.getLessonDurationMinutesForStats = () => 120;
+const segmentedDuration = durationStatsApp.getLessonSegmentTypeStats({
+    students: [
+        { id: 'a', actualMinutes: 120 },
+        { id: 'b', actualMinutes: 90 },
+        { id: 'c', actualMinutes: 90 },
+        { id: 'd', actualMinutes: 60 }
+    ]
+});
+assert.deepStrictEqual(
+    segmentedDuration.typeStats,
+    { '1v4': 60, '1v3': 30, '1v1(0.8)': 30 },
+    'student-specific durations should split one lesson across active class sizes'
+);
+assert.strictEqual(segmentedDuration.totalMinutes, 120, 'the lesson total should remain the longest student duration');
+
+const lessonSheetApp = Object.create(TimetableApp.prototype);
+lessonSheetApp.formatLocalDate = makeApp().formatLocalDate;
+const unweightedSummary = lessonSheetApp.getLessonSheetSummaryMatrix([{
+    dateKey: '2026-07-01',
+    durationMinutes: 60,
+    typeLabel: '1v2',
+    studentDetails: [{ name: 'Senior', grade: '高三', status: 'present' }]
+}]);
+assert.strictEqual(
+    unweightedSummary.totalValues[(3 * unweightedSummary.typeKeys.length) + 1],
+    '1',
+    'lesson-sheet Excel totals should preserve raw hours without grade coefficients'
+);
+assert.strictEqual(unweightedSummary.groups[3].label, '高三年级1.5系数', 'lesson-sheet headers should retain coefficient descriptions');
 
 console.log('Schedule ERP tests passed');
