@@ -846,7 +846,8 @@
             const configuredStage = app.settings && app.settings.segmentedScheduling
                 ? getStageOccurrenceForDate(app, firstOccurrence)
                 : null;
-            const schedulingMode = existing && existing.schedulingMode
+            const recalculateStage = !!options.recalculateStage;
+            const schedulingMode = !recalculateStage && existing && existing.schedulingMode
                 ? existing.schedulingMode
                 : (configuredStage ? 'segmented' : 'continuous');
             erp.courseInstances = erp.courseInstances.filter(instance => instance !== existing);
@@ -863,9 +864,9 @@
                     isDeleted: !!options.cutoff,
                     source: options.source || 'schedule',
                     schedulingMode,
-                    stageId: existing && existing.stageId || (configuredStage && (configuredStage.stage.id || configuredStage.stage.name)) || null,
-                    stageStartDate: existing && existing.stageStartDate || (configuredStage ? formatLocalDate(configuredStage.start) : null),
-                    stageEndDate: existing && existing.stageEndDate || (configuredStage ? formatLocalDate(configuredStage.end) : null),
+                    stageId: !recalculateStage && existing && existing.stageId || (configuredStage && (configuredStage.stage.id || configuredStage.stage.name)) || null,
+                    stageStartDate: !recalculateStage && existing && existing.stageStartDate || (configuredStage ? formatLocalDate(configuredStage.start) : null),
+                    stageEndDate: !recalculateStage && existing && existing.stageEndDate || (configuredStage ? formatLocalDate(configuredStage.end) : null),
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };

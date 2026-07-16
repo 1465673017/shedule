@@ -1407,8 +1407,15 @@ body {
 }
 
 @keyframes appMessageEnter {
-    from { opacity: 0; transform: translateY(8px) scale(.985); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .app-message-heading {
@@ -1712,8 +1719,13 @@ body.mint-theme-active .app-message-actions {
 }
 
 @keyframes advancedSettingsReveal {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .time-section {
@@ -3879,9 +3891,8 @@ html.electron-app .electron-app-toolbar {
     align-items: center;
     gap: 20px;
     border-bottom: 1px solid rgba(193, 209, 228, .62);
-    background: rgba(255, 255, 255, .92);
+    background: #fff;
     box-shadow: 0 5px 20px rgba(56, 91, 132, .07);
-    backdrop-filter: blur(18px);
     -webkit-app-region: drag;
 }
 
@@ -3938,7 +3949,7 @@ html.electron-app.macos .electron-window-controls {
     position: absolute;
     top: 0;
     right: 0;
-    height: 32px;
+    height: var(--electron-toolbar-height);
     display: flex;
     align-items: stretch;
     -webkit-app-region: no-drag;
@@ -3946,8 +3957,8 @@ html.electron-app.macos .electron-window-controls {
 
 .electron-window-controls button {
     position: relative;
-    width: 46px;
-    height: 32px;
+    width: 64px;
+    height: var(--electron-toolbar-height);
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -3971,21 +3982,21 @@ html.electron-app.macos .electron-window-controls {
 }
 
 .electron-window-controls button:nth-child(1)::before {
-    width: 10px;
-    height: 1px;
+    width: 12px;
+    height: 1.5px;
     background: currentColor;
 }
 
 .electron-window-controls button:nth-child(2)::before {
-    width: 10px;
-    height: 10px;
-    border: 1px solid currentColor;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid currentColor;
 }
 
 .electron-window-controls .electron-window-close::before,
 .electron-window-controls .electron-window-close::after {
-    width: 12px;
-    height: 1px;
+    width: 15px;
+    height: 1.5px;
     background: currentColor;
 }
 
@@ -4025,7 +4036,7 @@ html.electron-app body.reference-main-ui .timetable-wrapper {
 
 body.dark-theme-active .electron-app-toolbar {
     border-bottom-color: #273449;
-    background: rgba(15, 23, 42, .94);
+    background: #0f172a;
     box-shadow: 0 5px 20px rgba(0, 0, 0, .18);
 }
 
@@ -4057,7 +4068,7 @@ body.dark-theme-active .electron-window-controls .electron-window-close:hover::a
 
 body.mint-theme-active .electron-app-toolbar {
     border-bottom-color: #dfeae3;
-    background: rgba(248, 252, 249, .94);
+    background: #f8fcf9;
 }
 
 
@@ -4184,7 +4195,7 @@ body *::-webkit-scrollbar-corner {
     min-height: 32px;
 }
 
-#timeSettingsTab .quick-settings > .btn {
+#timeSettingsTab .quick-settings>.btn {
     margin-top: 8px !important;
     min-height: 34px;
     padding-top: 7px;
@@ -4735,63 +4746,298 @@ body *::-webkit-scrollbar-corner {
     display: block;
 }
 
-#stageSettingsTab.settings-tab-pane.active { display: block; overflow-y: auto; margin: 0 -6px; padding: 2px 6px 8px; }
-.stage-settings-section { margin-bottom: 0; }
-.stage-quick-settings { margin-bottom: 8px; padding: 12px 14px; }
-.stage-quick-settings .quick-settings-header { margin-bottom: 10px; }
-.stage-quick-control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.stage-quick-control-row .form-group { margin: 0; }
-.stage-quick-control-row label { display: block; margin-bottom: 4px; color: var(--text-3); font-size: 12px; font-weight: 500; }
-.stage-quick-control-row .setting-input { max-width: none; }
-.stage-scheduling-toggle { min-width: 0; padding-left: 10px; padding-right: 10px; }
-.stage-month-ranges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; margin-top: 10px; }
-.stage-month-field { margin: 0; }
-.stage-month-field label { display: block; margin-bottom: 3px; color: var(--text-3); font-size: 12px; }
-.stage-month-range-inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 5px; }
-.stage-month-range-inputs > span { color: var(--text-3); font-size: 12px; }
-.stage-month-field .setting-input { padding: 6px 10px; min-height: 32px; }
-.stage-month-field.invalid { padding: 6px; margin: -6px; border: 1px solid rgba(220, 38, 38, .55); border-radius: 8px; background: rgba(254, 226, 226, .45); }
-.stage-month-field.invalid label, .stage-month-field.invalid .stage-month-range-inputs > span { color: #dc2626; }
-.stage-month-field.invalid .setting-input { border-color: #ef4444; }
-.stage-quick-message { min-height: 16px; margin-top: 6px; color: #dc2626; font-size: 12px; line-height: 1.35; }
-.stage-quick-apply { width: 100%; margin-top: 10px; min-height: 34px; }
-.stage-quick-apply:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
-.stage-advanced-toggle { margin: 0 0 8px; }
-.stage-advanced-settings { padding-top: 2px; }
-.stages-list { display: grid; gap: 8px; margin: 14px 0 10px; }
-.stage-add-zone { width: 100%; min-height: 42px; margin: 0 0 10px; background: transparent; font: inherit; }
-.stage-add-zone:disabled { cursor: not-allowed; opacity: .42; transform: none; }
-.stage-add-zone:disabled:hover { border-color: #d1d5db; background: transparent; transform: none; }
-.stage-setting-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--schedule-bg-color, #fff); }
-.stage-setting-row .setting-input { min-width: 0; padding: 6px 8px; font-size: 12px; }
-.stage-name-input { font-weight: 600; }
-.stage-date-range { position: relative; min-width: 0; }
-.stage-date-range .stats-date-range-picker { min-height: 34px; height: 34px; padding: 0 8px; border-radius: 7px; }
-.stage-date-range .stats-date-range-value { font-size: 11px; }
-.stage-date-range .stats-date-popover { z-index: 1400; }
-.stage-date-popover { z-index: 2200 !important; }
-.stage-order-actions { display: inline-flex; align-items: center; gap: 1px; }
-.stage-order-button { display: grid; place-items: center; width: 19px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer; transition: color .18s ease, background-color .18s ease, transform .18s ease; }
-.stage-order-button:hover:not(:disabled) { background: var(--primary-bg); color: var(--primary-color); transform: translateY(-1px); }
-.stage-order-button:disabled { opacity: .32; cursor: default; }
-.stage-settings-footer,
-.time-settings-footer { display: flex; flex-direction: column; gap: 6px; margin-top: 0; padding-top: 10px; background: var(--schedule-bg-color, #fff); }
-.stage-settings-footer .btn,
-.time-settings-footer .btn { width: 100%; }
-.stage-settings-message { font-size: 13px; }
-.stage-settings-message.error { color: #dc2626; }
-.stage-settings-message.success { color: #16a34a; }
-
-@media (max-width: 760px) {
-    .stage-quick-control-row { grid-template-columns: 1fr; }
-    .stage-month-ranges { grid-template-columns: 1fr; }
-    .stage-quick-control-row .setting-input { max-width: none; }
-    .stage-setting-row { grid-template-columns: minmax(80px, .7fr) minmax(0, 1.3fr) auto; }
+#stageSettingsTab.settings-tab-pane.active {
+    display: block;
+    overflow-y: auto;
+    margin: 0 -6px;
+    padding: 2px 6px 8px;
 }
 
-body.dark-theme-active .stage-order-button { background: transparent; color: var(--modal-text-soft); }
-body.dark-theme-active .stage-order-button:hover:not(:disabled) { background: rgba(129, 140, 248, .16); color: #a5b4fc; }
-body.dark-theme-active .stage-month-field.invalid { border-color: rgba(248, 113, 113, .7); background: rgba(127, 29, 29, .2); }
+.stage-settings-section {
+    margin-bottom: 0;
+}
+
+.stage-quick-settings {
+    margin-bottom: 8px;
+    padding: 12px 14px;
+}
+
+.stage-quick-settings .quick-settings-header {
+    margin-bottom: 10px;
+}
+
+.stage-quick-control-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stage-quick-control-row .form-group {
+    margin: 0;
+}
+
+.stage-quick-control-row label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-3);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.stage-quick-control-row .setting-input {
+    max-width: none;
+}
+
+.stage-scheduling-toggle {
+    min-width: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.stage-month-ranges {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 10px;
+    margin-top: 10px;
+}
+
+.stage-month-field {
+    margin: 0;
+}
+
+.stage-month-field label {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text-3);
+    font-size: 12px;
+}
+
+.stage-month-range-inputs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px;
+}
+
+.stage-month-range-inputs>span {
+    color: var(--text-3);
+    font-size: 12px;
+}
+
+.stage-month-field .setting-input {
+    padding: 6px 10px;
+    min-height: 32px;
+}
+
+.stage-month-field.invalid {
+    padding: 6px;
+    margin: -6px;
+    border: 1px solid rgba(220, 38, 38, .55);
+    border-radius: 8px;
+    background: rgba(254, 226, 226, .45);
+}
+
+.stage-month-field.invalid label,
+.stage-month-field.invalid .stage-month-range-inputs>span {
+    color: #dc2626;
+}
+
+.stage-month-field.invalid .setting-input {
+    border-color: #ef4444;
+}
+
+.stage-quick-message {
+    min-height: 16px;
+    margin-top: 6px;
+    color: #dc2626;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.stage-quick-apply {
+    width: 100%;
+    margin-top: 10px;
+    min-height: 34px;
+}
+
+.stage-quick-apply:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.stage-advanced-toggle {
+    margin: 0 0 8px;
+}
+
+.stage-advanced-settings {
+    padding-top: 2px;
+}
+
+.stages-list {
+    display: grid;
+    gap: 8px;
+    margin: 14px 0 10px;
+}
+
+.stage-add-zone {
+    width: 100%;
+    min-height: 42px;
+    margin: 0 0 10px;
+    background: transparent;
+    font: inherit;
+}
+
+.stage-add-zone:disabled {
+    cursor: not-allowed;
+    opacity: .42;
+    transform: none;
+}
+
+.stage-add-zone:disabled:hover {
+    border-color: #d1d5db;
+    background: transparent;
+    transform: none;
+}
+
+.stage-setting-row {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--schedule-bg-color, #fff);
+}
+
+.stage-setting-row .setting-input {
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+.stage-name-input {
+    font-weight: 600;
+}
+
+.stage-date-range {
+    position: relative;
+    min-width: 0;
+}
+
+.stage-date-range .stats-date-range-picker {
+    min-height: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 7px;
+}
+
+.stage-date-range .stats-date-range-value {
+    font-size: 11px;
+}
+
+.stage-date-range .stats-date-popover {
+    z-index: 1400;
+}
+
+.stage-date-popover {
+    z-index: 2200 !important;
+}
+
+.stage-order-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.stage-order-button {
+    display: grid;
+    place-items: center;
+    width: 19px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-3);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.stage-order-button:hover:not(:disabled) {
+    background: var(--primary-bg);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.stage-order-button:disabled {
+    opacity: .32;
+    cursor: default;
+}
+
+.stage-settings-footer,
+.time-settings-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 0;
+    padding-top: 10px;
+    background: var(--schedule-bg-color, #fff);
+}
+
+.stage-settings-footer .btn,
+.time-settings-footer .btn {
+    width: 100%;
+}
+
+.stage-settings-message {
+    font-size: 13px;
+}
+
+.stage-settings-message.error {
+    color: #dc2626;
+}
+
+.stage-settings-message.success {
+    color: #16a34a;
+}
+
+@media (max-width: 760px) {
+    .stage-quick-control-row {
+        grid-template-columns: 1fr;
+    }
+
+    .stage-month-ranges {
+        grid-template-columns: 1fr;
+    }
+
+    .stage-quick-control-row .setting-input {
+        max-width: none;
+    }
+
+    .stage-setting-row {
+        grid-template-columns: minmax(80px, .7fr) minmax(0, 1.3fr) auto;
+    }
+}
+
+body.dark-theme-active .stage-order-button {
+    background: transparent;
+    color: var(--modal-text-soft);
+}
+
+body.dark-theme-active .stage-order-button:hover:not(:disabled) {
+    background: rgba(129, 140, 248, .16);
+    color: #a5b4fc;
+}
+
+body.dark-theme-active .stage-month-field.invalid {
+    border-color: rgba(248, 113, 113, .7);
+    background: rgba(127, 29, 29, .2);
+}
 
 .actual-duration-edit-icon {
     color: #4a90d9;
@@ -5845,7 +6091,7 @@ body.dark-theme-active .lesson-editor-modal .student-picker {
     margin-bottom: 8px;
 }
 
-.course-import-label-row > label {
+.course-import-label-row>label {
     margin: 0;
 }
 
@@ -8749,14 +8995,12 @@ body.reference-main-ui .left-sidebar.drag-over-recycle::after {
     place-items: center;
     border: 0;
     border-radius: inherit;
-    background: radial-gradient(
-        ellipse at center,
-        rgba(255, 255, 255, .04) 0%,
-        rgba(255, 255, 255, .07) 38%,
-        rgba(254, 242, 242, .1) 58%,
-        rgba(248, 113, 113, .13) 80%,
-        rgba(220, 75, 75, .23) 100%
-    );
+    background: radial-gradient(ellipse at center,
+            rgba(255, 255, 255, .04) 0%,
+            rgba(255, 255, 255, .07) 38%,
+            rgba(254, 242, 242, .1) 58%,
+            rgba(248, 113, 113, .13) 80%,
+            rgba(220, 75, 75, .23) 100%);
     color: #c93f3f;
     box-shadow: none;
     font-size: 17px;
@@ -8775,14 +9019,12 @@ body.reference-main-ui.dark-theme-active .left-sidebar.drag-over-recycle {
 
 body.reference-main-ui.dark-theme-active .left-sidebar.drag-over-recycle::after {
     border: 0;
-    background: radial-gradient(
-        ellipse at center,
-        rgba(15, 23, 42, .06) 0%,
-        rgba(15, 23, 42, .1) 40%,
-        rgba(69, 10, 10, .18) 64%,
-        rgba(127, 29, 29, .28) 82%,
-        rgba(239, 68, 68, .34) 100%
-    );
+    background: radial-gradient(ellipse at center,
+            rgba(15, 23, 42, .06) 0%,
+            rgba(15, 23, 42, .1) 40%,
+            rgba(69, 10, 10, .18) 64%,
+            rgba(127, 29, 29, .28) 82%,
+            rgba(239, 68, 68, .34) 100%);
     color: #fca5a5;
     text-shadow: 0 2px 12px rgba(0, 0, 0, .75);
 }
@@ -10796,6 +11038,7 @@ body.reference-main-ui #statsCards.stats-cards-entering .stats-card:nth-child(5)
         opacity: 0;
         transform: translateY(12px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -12018,8 +12261,8 @@ body.mint-theme-active.reference-main-ui .sidebar-actions .btn.tertiary:hover,
 body.mint-theme-active.reference-main-ui .modal .modal-close:hover,
 body.mint-theme-active.reference-main-ui .modal .modal-close:focus-visible,
 body.mint-theme-active.reference-main-ui .text-stats-header-tools .text-stats-nav-btn:hover,
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab:hover,
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs .stats-tab:hover,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs .stats-tab.active,
 body.mint-theme-active.reference-main-ui #statsTabs .stats-tab:hover,
 body.mint-theme-active.reference-main-ui #statsTabs .stats-tab.active,
 body.mint-theme-active.reference-main-ui .stats-date-range-picker:hover,
@@ -12096,14 +12339,12 @@ body.mint-theme-active.reference-main-ui .left-sidebar.drag-over-recycle {
 }
 
 body.mint-theme-active.reference-main-ui .left-sidebar.drag-over-recycle::after {
-    background: radial-gradient(
-        ellipse at center,
-        rgba(220, 239, 227, .03) 0%,
-        rgba(220, 239, 227, .06) 40%,
-        rgba(250, 232, 228, .09) 62%,
-        rgba(232, 120, 105, .11) 82%,
-        rgba(201, 63, 63, .19) 100%
-    );
+    background: radial-gradient(ellipse at center,
+            rgba(220, 239, 227, .03) 0%,
+            rgba(220, 239, 227, .06) 40%,
+            rgba(250, 232, 228, .09) 62%,
+            rgba(232, 120, 105, .11) 82%,
+            rgba(201, 63, 63, .19) 100%);
     color: #b93838;
 }
 
@@ -12140,7 +12381,7 @@ body.mint-theme-active.reference-main-ui .stats-modal-content {
     box-shadow: 0 26px 70px rgba(47, 111, 82, .17);
 }
 
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs,
 body.mint-theme-active.reference-main-ui #statsTabs {
     background: #e4efe8;
 }
@@ -12157,7 +12398,7 @@ body.mint-theme-active.reference-main-ui .chart-category-tab:last-child {
 }
 
 body.mint-theme-active.reference-main-ui .text-stats-modal-content .text-stats-subtitle,
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs .stats-tab,
 body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card .st-label,
 body.mint-theme-active.reference-main-ui .text-stats-summary-note,
 body.mint-theme-active.reference-main-ui .stats-modal-content .stats-subtitle,
@@ -12165,7 +12406,7 @@ body.mint-theme-active.reference-main-ui .stats-modal-content .stats-card .st-la
     color: #667a6d;
 }
 
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs .stats-tab.active,
 body.mint-theme-active.reference-main-ui #statsTabs .stats-tab.active {
     color: var(--primary-pressed);
     box-shadow: 0 4px 12px var(--shadow-color);
@@ -12317,7 +12558,7 @@ body.mint-theme-active.reference-main-ui .chart-category-tab.active:last-child {
 body.mint-theme-active .settings-tab.active,
 body.mint-theme-active .settings-tab:hover,
 body.mint-theme-active.reference-main-ui .pool-tab.active,
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab.active,
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs .stats-tab.active,
 body.mint-theme-active.reference-main-ui #statsTabs .stats-tab.active,
 body.mint-theme-active.reference-main-ui .stats-date-range-picker:hover,
 body.mint-theme-active.reference-main-ui .modal .modal-close:hover,
@@ -12328,7 +12569,7 @@ body.mint-theme-active.reference-main-ui .modal .modal-close:focus-visible {
 body.mint-theme-active.reference-main-ui .chart-category-label,
 body.mint-theme-active.reference-main-ui .chart-category-tab:not(.active),
 body.mint-theme-active.reference-main-ui .text-stats-modal-content .text-stats-subtitle,
-body.mint-theme-active.reference-main-ui .text-stats-modal-content > #textStatsTabs .stats-tab:not(.active),
+body.mint-theme-active.reference-main-ui .text-stats-modal-content>#textStatsTabs .stats-tab:not(.active),
 body.mint-theme-active.reference-main-ui .text-stats-modal-content .stats-card .st-label,
 body.mint-theme-active.reference-main-ui .text-stats-summary-note,
 body.mint-theme-active.reference-main-ui .stats-modal-content .stats-subtitle,

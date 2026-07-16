@@ -170,8 +170,11 @@
         return {
             courses,
             importItems,
-            rangeStart: new Date(Math.min(...originalDates.map(date => date.getTime()))),
-            rangeEnd: new Date(Math.max(...originalDates.map(date => date.getTime())))
+            // Conflict detection and overwrite must cover the dates that will
+            // actually be written. Stage import can shift them away from the
+            // source JSON dates.
+            rangeStart: new Date(Math.min(...importItems.map(item => item.date.getTime()))),
+            rangeEnd: new Date(Math.max(...importItems.map(item => item.date.getTime())))
         };
     }
 
@@ -262,7 +265,12 @@
             const sourceStudents = Array.isArray(course.students) ? course.students : [];
             const students = sourceStudents.map(s => ensureStudent(app, s, course, oneToOne));
             const subject = ensureSubject(app, course);
-            window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), { source: 'course-import' });
+            window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), {
+                source: 'course-import',
+                // An overwrite may replace a cutoff carrying the old course's
+                // stage metadata. Always bind imported data to its own date.
+                recalculateStage: true
+            });
             sourceStudents.forEach((source, i) => {
                 const status = attendanceStatus(course, source);
                 if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
