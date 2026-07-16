@@ -3107,6 +3107,12 @@ body.mint-theme-active .app-message-actions {
     color: #dc2626;
 }
 
+.recurrence-btn.active.course-completed {
+    background: #fffbeb;
+    border-color: #fbbf24;
+    color: #b45309;
+}
+
 .recurrence-btn.disabled-btn {
     opacity: 0.4;
     cursor: not-allowed;
@@ -6654,6 +6660,12 @@ body.dark-theme-active .recurrence-btn.active.completed {
     background: rgba(220, 38, 38, 0.2);
     border-color: #f87171;
     color: #fca5a5;
+}
+
+body.dark-theme-active .recurrence-btn.active.course-completed {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: #fbbf24;
+    color: #fde68a;
 }
 
 /* ========== 统计图表区域 ========== */

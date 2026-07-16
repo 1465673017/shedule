@@ -683,4 +683,81 @@ assert.strictEqual(
 );
 assert.strictEqual(unweightedSummary.groups[3].label, '高三年级1.5系数', 'lesson-sheet headers should retain coefficient descriptions');
 
+const perCourseCompletionApp = makeApp();
+Object.setPrototypeOf(perCourseCompletionApp, TimetableApp.prototype);
+perCourseCompletionApp.settings = { segmentedScheduling: false };
+perCourseCompletionApp.currentDate = new Date(2026, 6, 7);
+perCourseCompletionApp.getCellVersion = function(cellKey, weekStart) {
+    return ScheduleErpService.getCellVersion(this, cellKey, weekStart);
+};
+perCourseCompletionApp.getCellLessonStart = function(_cellKey, weekStart) {
+    return new Date(weekStart);
+};
+ScheduleErpService.setCellVersion(perCourseCompletionApp, '2-afternoon-0', '2026-07-06', 'math', ['s1']);
+ScheduleErpService.setCellVersion(perCourseCompletionApp, '3-afternoon-0', '2026-07-06', 'english', ['s1']);
+perCourseCompletionApp.completeStudentAfterLesson('s1', new Date(2026, 6, 7), '2-afternoon-0');
+assert.strictEqual(
+    perCourseCompletionApp.isStudentCourseCompleted('2-afternoon-0', 's1'),
+    true,
+    'completion should be stored on the selected course relation'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(perCourseCompletionApp, '2-afternoon-0', '2026-07-13'),
+    null,
+    'the completed course should stop after the selected lesson'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(perCourseCompletionApp, '3-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'another course for the same student should remain ongoing'
+);
+assert.strictEqual(
+    perCourseCompletionApp.hasOtherOngoingCourse('s1', '2-afternoon-0', new Date(2026, 6, 7)),
+    true,
+    'partial completion should report another ongoing course'
+);
+
+const crossStageCompletionApp = makeApp();
+Object.setPrototypeOf(crossStageCompletionApp, TimetableApp.prototype);
+crossStageCompletionApp.settings = {
+    segmentedScheduling: true,
+    stages: [
+        { id: 'stage-a', startDate: '2026-01-01', endDate: '2026-03-31' },
+        { id: 'stage-b', startDate: '2026-04-01', endDate: '2026-06-30' }
+    ]
+};
+crossStageCompletionApp.currentDate = new Date(2026, 2, 10);
+crossStageCompletionApp.getCellVersion = function(cellKey, weekStart) {
+    return ScheduleErpService.getCellVersion(this, cellKey, weekStart);
+};
+crossStageCompletionApp.getCellLessonStart = function(_cellKey, weekStart) { return new Date(weekStart); };
+ScheduleErpService.setCellVersion(crossStageCompletionApp, '2-afternoon-0', '2026-03-09', 'math', ['s1']);
+crossStageCompletionApp.completeStudentAfterLesson('s1', new Date(2026, 2, 10), '2-afternoon-0');
+assert.strictEqual(
+    crossStageCompletionApp.isStudentCourseCompleted('2-afternoon-0', 's1', new Date(2026, 2, 10)),
+    true,
+    'the selected course instance should be completed inside its stage'
+);
+ScheduleErpService.setCellVersion(crossStageCompletionApp, '2-afternoon-0', '2026-04-06', 'math', ['s1']);
+assert.strictEqual(
+    crossStageCompletionApp.isStudentCourseCompleted('2-afternoon-0', 's1', new Date(2026, 3, 7)),
+    false,
+    'a new course instance in the next stage must not inherit the previous stage completion'
+);
+
+const stageAutoAfterPartialApp = makeApp();
+stageAutoAfterPartialApp.settings = {
+    segmentedScheduling: true,
+    stages: [{ id: 'stage-only', startDate: '2026-01-01', endDate: '2026-03-31' }]
+};
+ScheduleErpService.setCellVersion(stageAutoAfterPartialApp, '2-afternoon-0', '2026-03-09', 'math', ['s1']);
+ScheduleErpService.setCellVersion(stageAutoAfterPartialApp, '3-afternoon-0', '2026-03-09', 'english', ['s1']);
+ScheduleErpService.completeStudentFromWeek(stageAutoAfterPartialApp, '2-afternoon-0', 's1', '2026-03-16');
+ScheduleErpService.completeStudentsForEndedStages(stageAutoAfterPartialApp, new Date(2026, 3, 1));
+assert.strictEqual(
+    stageAutoAfterPartialApp.students.find(student => student.id === 's1').completed,
+    true,
+    'partial manual course completion must not prevent automatic completion when the stage ends'
+);
+
 console.log('Schedule ERP tests passed');

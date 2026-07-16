@@ -279,7 +279,11 @@ TimetableApp.prototype.renderAttendanceStudentList = function(students, key) {
                 recType = 'temporary';
             }
             const isStageAutoCompleted = window.ScheduleErpService.isStudentStageAutoCompleted(this, student.id);
-            const isCompleted = recType === 'completed' || (!!student.completed && !isStageAutoCompleted);
+            const courseCompleted = this.isStudentCourseCompleted(key, student.id, this._attModalClassDate);
+            const isCompleted = courseCompleted || recType === 'completed' || (!!student.completed && !isStageAutoCompleted);
+            const allCoursesCompleted = isCompleted && !this.hasOtherOngoingCourse(student.id, key, this._attModalClassDate);
+            const completionClass = isCompleted ? (allCoursesCompleted ? 'active completed' : 'active course-completed') : '';
+            const completionTitle = isCompleted ? (allCoursesCompleted ? '所有课程结课' : '本课程结课') : '结课';
             const auditionDisabled = student.isAudition ? 'disabled disabled-btn' : '';
             const completedDisabled = isCompleted ? 'disabled disabled-btn' : '';
             html += `
@@ -298,7 +302,7 @@ TimetableApp.prototype.renderAttendanceStudentList = function(students, key) {
                         <button class="recurrence-btn ${recType === 'temporary' ? 'active temporary' : ''} ${completedDisabled}"
                                 data-sid="${student.id}"
                                 onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'temporary', this)">临时</button>
-                        <button class="recurrence-btn ${isCompleted ? 'active completed' : ''} ${auditionDisabled}"
+                        <button class="recurrence-btn ${completionClass} ${auditionDisabled}" title="${completionTitle}"
                                 data-sid="${student.id}"
                                 onclick="app.toggleStudentCompleted('${student.id}', this)">结课</button>
                     </div>
@@ -593,22 +597,41 @@ TimetableApp.prototype.completeStudentAfterLesson = function(studentId, classDat
         const nextWeekStr = this.formatLocalDate(nextWeekDate);
         const clickedLessonStart = this.getCellLessonStart(currentCellKey, weekRange.start) || new Date(classDate || this.currentDate);
 
-        const instances = this.erpData && Array.isArray(this.erpData.courseInstances)
-            ? this.erpData.courseInstances
-            : [];
-        const cells = [...new Set(instances.map(instance => instance.cellKey).filter(Boolean))];
+        const lessonStart = this.getCellLessonStart(currentCellKey, weekRange.start);
+        const cutoffWeekStr = lessonStart && lessonStart > clickedLessonStart
+            ? currentWeekStr
+            : nextWeekStr;
+        window.ScheduleErpService.completeStudentFromWeek(this, currentCellKey, studentId, cutoffWeekStr);
+    }
 
-        cells.forEach(cellKey => {
-            const versions = instances.filter(instance => instance.cellKey === cellKey && !instance.isDeleted);
-            if (!versions.some(v => v.student && v.student.includes(studentId))) return;
+TimetableApp.prototype.isStudentCourseCompleted = function(cellKey, studentId, classDate) {
+        const erp = this.erpData || {};
+        const weekStart = this.formatLocalDate(this.getWeekRange(classDate || this.currentDate).start);
+        const version = this.getCellVersion(cellKey, weekStart);
+        if (!version || !version.courseInstanceId) return false;
+        return (erp.exceptionRules || []).some(rule =>
+            rule && rule.type === 'complete-student' &&
+            rule.courseInstanceId === version.courseInstanceId &&
+            rule.cellKey === cellKey &&
+            String(rule.studentId) === String(studentId)
+        );
+    }
 
-            const lessonStart = this.getCellLessonStart(cellKey, weekRange.start);
-            const cutoffWeekStr = lessonStart && lessonStart > clickedLessonStart
-                ? currentWeekStr
-                : nextWeekStr;
-
-            window.ScheduleErpService.completeStudentFromWeek(this, cellKey, studentId, cutoffWeekStr);
+TimetableApp.prototype.hasOtherOngoingCourse = function(studentId, excludedCellKey, classDate) {
+        const erp = this.erpData || {};
+        const instances = Array.isArray(erp.courseInstances) ? erp.courseInstances : [];
+        const referenceWeek = this.formatLocalDate(this.getWeekRange(classDate || this.currentDate).start);
+        const candidateWeeks = new Set([referenceWeek]);
+        instances.forEach(instance => {
+            if (instance && instance.weekStart >= referenceWeek) candidateWeeks.add(instance.weekStart);
         });
+        const cellKeys = [...new Set(instances
+            .filter(instance => instance && !instance.isDeleted && instance.cellKey && instance.cellKey !== excludedCellKey)
+            .map(instance => instance.cellKey))];
+        return cellKeys.some(cellKey => [...candidateWeeks].some(weekStart => {
+            const version = this.getCellVersion(cellKey, weekStart);
+            return !!(version && Array.isArray(version.student) && version.student.map(String).includes(String(studentId)));
+        }));
     }
 
 TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
@@ -624,43 +647,27 @@ TimetableApp.prototype.toggleStudentCompleted = function(studentId, btn) {
             return false;
         }
 
-        const isCompleted = !student.completed;
+        const courseCompleted = cellKey && this.isStudentCourseCompleted(cellKey, studentId, classDate);
 
-        // A manual status change takes ownership of this student's completion
-        // state. Do not let a later schedule reset treat it as stage-generated.
-        if (this.erpData && Array.isArray(this.erpData.stageCompletionRecords)) {
-            this.erpData.stageCompletionRecords.forEach(record => {
-                if (!Array.isArray(record.studentIds)) return;
-                record.studentIds = record.studentIds.filter(id => String(id) !== String(studentId));
-            });
-        }
-        if (this.erpData) {
-            if (!Array.isArray(this.erpData.manualStageCompletionOverrides)) {
-                this.erpData.manualStageCompletionOverrides = [];
-            }
-            if (!this.erpData.manualStageCompletionOverrides.some(id => String(id) === String(studentId))) {
-                this.erpData.manualStageCompletionOverrides.push(String(studentId));
-            }
-        }
-
-        if (isCompleted) {
-            student.completed = true;
-            student.accountStatus = 'completed';
-            student.manualCompletionDate = this.formatLocalDate(new Date(this._attModalClassDate || this.currentDate));
+        if (!courseCompleted) {
             if (cellKey) {
-                this.setStudentRecurrence(cellKey, studentId, 'stopped', this._attModalClassDate);
                 this.completeStudentAfterLesson(studentId, this._attModalClassDate, cellKey);
                 if (!this._attModalRecurrence) this._attModalRecurrence = {};
                 this._attModalRecurrence[studentId] = 'stopped';
             }
         } else {
-            student.completed = false;
-            student.accountStatus = 'normal';
-            delete student.manualCompletionDate;
+            this.setStudentRecurrence(cellKey, studentId, 'recurring', this._attModalClassDate);
             if (this._attModalRecurrence && cellKey) {
-                this._attModalRecurrence[studentId] = this.getStudentRecurrenceType(cellKey, studentId);
+                this._attModalRecurrence[studentId] = 'recurring';
             }
         }
+
+        window.ScheduleErpService.buildTimetableProjection(this);
+        const allCoursesCompleted = !this.hasOtherOngoingCourse(studentId, courseCompleted ? null : cellKey, classDate);
+        student.completed = !courseCompleted && allCoursesCompleted;
+        student.accountStatus = student.completed ? 'completed' : 'normal';
+        if (student.completed) student.manualCompletionDate = this.formatLocalDate(new Date(classDate));
+        else delete student.manualCompletionDate;
 
         if (this.erpData && Array.isArray(this.erpData.studentCourseRelations)) {
             this.erpData.studentCourseRelations.forEach(rel => {
