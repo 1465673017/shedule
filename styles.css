@@ -3885,6 +3885,16 @@ html.electron-app .electron-app-toolbar {
     -webkit-app-region: drag;
 }
 
+/* macOS keeps its native traffic lights; reserve their draggable title-bar area. */
+html.electron-app.macos .electron-app-toolbar {
+    padding-right: 24px;
+    padding-left: 88px;
+}
+
+html.electron-app.macos .electron-window-controls {
+    display: none;
+}
+
 .electron-app-brand {
     display: flex;
     align-items: center;

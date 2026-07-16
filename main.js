@@ -1,7 +1,8 @@
 const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const appIconPath = path.join(__dirname, 'icon', 'orange.ico');
+const isMac = process.platform === 'darwin';
+const appIconPath = path.join(__dirname, 'icon', isMac ? 'orange.png' : 'orange.ico');
 app.setName('A大橙子课时统计（内测版）');
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
@@ -11,7 +12,7 @@ if (!gotSingleInstanceLock) {
 
 function requireAppIcon() {
     if (fs.existsSync(appIconPath)) return true;
-    const message = `缺少必需的应用图标：${appIconPath}\n请恢复 orange.ico 后重新启动。`;
+    const message = `缺少必需的应用图标：${appIconPath}\n请恢复 ${path.basename(appIconPath)} 后重新启动。`;
     console.error(message);
     dialog.showErrorBox('无法启动A大橙子课时统计（内测版）', message);
     return false;
@@ -24,7 +25,11 @@ function createWindow() {
     }
     const win = new BrowserWindow({
         icon: appIconPath,
-        frame: false,
+        frame: isMac,
+        ...(isMac ? {
+            titleBarStyle: 'hidden',
+            trafficLightPosition: { x: 18, y: 23 }
+        } : {}),
         autoHideMenuBar: true,
         width: 1280,
         height: 860,
@@ -82,7 +87,8 @@ if (gotSingleInstanceLock) {
     });
 
     app.whenReady().then(() => {
-        Menu.setApplicationMenu(null);
+        if (!isMac) Menu.setApplicationMenu(null);
+        if (isMac && app.dock) app.dock.setIcon(appIconPath);
         createWindow();
 
         app.on('activate', () => {
