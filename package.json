@@ -10,7 +10,9 @@
   },
   "build": {
     "appId": "com.example.kebiao",
-    "productName": "Timetable App",
+    "productName": "A大橙子课时统计（内测版）",
+    "artifactName": "A大橙子课时统计（内测版）-${version}.${ext}",
+    "asar": true,
     "directories": {
       "output": "dist"
     },
@@ -20,10 +22,13 @@
       "index.html",
       "styles.css",
       "html2canvas.min.js",
+      "chart.umd.min.js",
+      "icon/**",
       "js/**",
       "*.svg"
     ],
     "win": {
+      "icon": "icon/orange.ico",
       "target": "portable"
     },
     "nsis": {

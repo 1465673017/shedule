@@ -1,9 +1,24 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const appIconPath = path.join(__dirname, 'icon', 'orange.ico');
+
+function requireAppIcon() {
+    if (fs.existsSync(appIconPath)) return true;
+    const message = `缺少必需的应用图标：${appIconPath}\n请恢复 orange.ico 后重新启动。`;
+    console.error(message);
+    dialog.showErrorBox('无法启动A大橙子课时统计（内测版）', message);
+    return false;
+}
 
 function createWindow() {
+    if (!requireAppIcon()) {
+        app.quit();
+        return null;
+    }
     const win = new BrowserWindow({
+        icon: appIconPath,
+        autoHideMenuBar: true,
         width: 1280,
         height: 860,
         minWidth: 960,
@@ -34,6 +49,7 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
 });
 
 app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
     createWindow();
 
     app.on('activate', () => {
