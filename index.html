@@ -373,7 +373,10 @@
             </div>
             <form id="courseDataImportForm">
                 <div class="modal-body"><div class="modal-section form-group">
-                    <label for="courseDataImportText">课程 JSON</label>
+                    <div class="course-import-label-row">
+                        <label for="courseDataImportText">课程 JSON</label>
+                        <button type="button" id="courseImportStageStartToggle" class="btn secondary course-import-stage-start" aria-pressed="false" onclick="app.toggleCourseImportStageStart()">阶段导入</button>
+                    </div>
                     <textarea id="courseDataImportText" required rows="14" placeholder="可直接粘贴完整接口返回 JSON，系统会递归识别其中的全部课程"></textarea>
                 </div><div id="courseDataImportMessage" class="modal-subtitle"></div></div>
                 <div class="form-actions"><button type="button" class="btn secondary" onclick="app.closeCourseDataImportModal()">取消</button><button type="submit" class="btn primary">识别并导入</button></div>

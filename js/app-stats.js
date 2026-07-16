@@ -1227,7 +1227,20 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
 
     groupOrder.forEach(function (key) {
         var g = groups[key];
-        var label = formatAxisDateLabel(g.startDate);
+        var label;
+        if (granularity === 'week' && weekMode === 'monthWeeks') {
+            var weekNames = ['第一周', '第二周', '第三周', '第四周', '第五周'];
+            var weekIndex = Math.floor((g.startDate.getDate() - 1) / 7);
+            label = weekNames[weekIndex] || ('第' + (weekIndex + 1) + '周');
+        } else if (granularity === 'week' && weekMode === 'naturalWeeks') {
+            label = formatAxisDateLabel(g.startDate) + '-' + formatAxisDateLabel(g.endDate);
+        } else if (granularity === 'month') {
+            label = g.startDate.getFullYear() + '/' + (g.startDate.getMonth() + 1);
+        } else if (granularity === 'year') {
+            label = String(g.startDate.getFullYear());
+        } else {
+            label = formatAxisDateLabel(g.startDate);
+        }
 
         labels.push(label);
         presentData.push(g.present);

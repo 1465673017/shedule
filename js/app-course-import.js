@@ -25,6 +25,65 @@
         return Number.isNaN(result.getTime()) ? null : result;
     }
 
+    function stageOccurrenceForDate(app, referenceDate) {
+        if (!app.settings || !app.settings.segmentedScheduling) return null;
+        const stages = Array.isArray(app.settings.stages) ? app.settings.stages : [];
+        for (const stage of stages) {
+            const configuredStart = localDate(stage && stage.startDate);
+            const configuredEnd = localDate(stage && stage.endDate);
+            if (!configuredStart || !configuredEnd || configuredStart > configuredEnd) continue;
+            const approximateShift = referenceDate.getFullYear() - configuredStart.getFullYear();
+            for (let shift = approximateShift - 1; shift <= approximateShift + 1; shift++) {
+                const start = new Date(configuredStart);
+                const end = new Date(configuredEnd);
+                start.setFullYear(start.getFullYear() + shift);
+                end.setFullYear(end.getFullYear() + shift);
+                if (referenceDate >= start && referenceDate <= end) return { stage, start, end };
+            }
+        }
+        return null;
+    }
+
+    function shiftCoursesToStageStarts(app, courses) {
+        const datedCourses = courses.map(course => ({ course, date: localDate(course.courseDate) }));
+        const invalid = datedCourses.find(item => !item.date);
+        if (invalid) throw new Error(`课程 ${invalid.course.courseName || invalid.course.id || ''} 缺少有效 courseDate`);
+        const groups = new Map();
+        datedCourses.forEach(item => {
+            const occurrence = stageOccurrenceForDate(app, item.date);
+            if (!occurrence) {
+                throw new Error(`课程日期 ${app.formatLocalDate(item.date)} 不属于任何已配置阶段，请先检查阶段设置`);
+            }
+            const key = `${app.formatLocalDate(occurrence.start)}|${app.formatLocalDate(occurrence.end)}`;
+            if (!groups.has(key)) groups.set(key, { occurrence, items: [] });
+            groups.get(key).items.push(item);
+        });
+
+        const shiftedItems = [];
+        groups.forEach(({ occurrence, items }) => {
+            const scheduleSlots = new Map();
+            items.forEach(item => {
+                const slotKey = `${item.date.getDay()}-${periodIndex(app, item.course)}`;
+                if (!scheduleSlots.has(slotKey)) scheduleSlots.set(slotKey, []);
+                scheduleSlots.get(slotKey).push(item);
+            });
+
+            scheduleSlots.forEach(slotItems => {
+                slotItems.sort((a, b) => a.date - b.date);
+                const firstDate = slotItems[0].date;
+                const targetFirstDate = new Date(occurrence.start);
+                targetFirstDate.setDate(targetFirstDate.getDate() + ((firstDate.getDay() - occurrence.start.getDay() + 7) % 7));
+                const shiftDays = Math.round((targetFirstDate - firstDate) / 86400000);
+                slotItems.forEach(item => {
+                    const date = new Date(item.date);
+                    date.setDate(date.getDate() + shiftDays);
+                    shiftedItems.push({ course: item.course, date });
+                });
+            });
+        });
+        return shiftedItems.sort((a, b) => a.date - b.date);
+    }
+
     function isOneToOne(course) {
         const tags = Array.isArray(course.tags) ? course.tags.map(t => t && (t.name || t)) : [];
         const text = [course.courseName, course.type, ...tags].join(' ');
@@ -95,40 +154,178 @@
         return student;
     }
 
-    function importCourses(app, input) {
+    function buildImportPlan(app, input, options = {}) {
         const courses = extractCourses(input);
         if (!courses.length) throw new Error('没有识别到有效课程数据');
+        const originalDates = courses.map(course => localDate(course.courseDate));
+        const invalidIndex = originalDates.findIndex(date => !date);
+        if (invalidIndex >= 0) {
+            const course = courses[invalidIndex];
+            throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效 courseDate`);
+        }
+        const importItems = options.fromCurrentStage
+            ? shiftCoursesToStageStarts(app, courses)
+            : courses.map((course, index) => ({ course, date: originalDates[index] }));
+        importItems.forEach(item => periodIndex(app, item.course));
+        return {
+            courses,
+            importItems,
+            rangeStart: new Date(Math.min(...originalDates.map(date => date.getTime()))),
+            rangeEnd: new Date(Math.max(...originalDates.map(date => date.getTime())))
+        };
+    }
+
+    function versionHasCourse(version) {
+        return !!(version && !version._cutoff && (version.subject || (Array.isArray(version.student) && version.student.length > 0)));
+    }
+
+    function hasCoursesInRange(app, startDate, endDate) {
+        const erp = window.ScheduleErpService.ensureErpData(app);
+        const keys = [...new Set((erp.courseInstances || []).map(instance => instance.cellKey).filter(Boolean))];
+        for (const key of keys) {
+            const firstDate = app.getFirstOccurrenceOnOrAfter(key, startDate);
+            if (!firstDate || firstDate > endDate) continue;
+            for (let date = new Date(firstDate); date <= endDate; date = app.addDays(date, 7)) {
+                const weekStart = app.getWeekStartStrForDate(date);
+                if (versionHasCourse(app.getCellVersion(key, weekStart))) return true;
+            }
+        }
+        return false;
+    }
+
+    function clearCoursesInRange(app, startDate, endDate) {
+        const erp = window.ScheduleErpService.ensureErpData(app);
+        const cellKeys = [...new Set((erp.courseInstances || []).map(instance => instance.cellKey).filter(Boolean))];
+
+        cellKeys.forEach(cellKey => {
+            const firstCandidateDate = app.getFirstOccurrenceOnOrAfter(cellKey, startDate);
+            const lastCandidateDate = app.getLastOccurrenceOnOrBefore(cellKey, endDate);
+            if (!firstCandidateDate || !lastCandidateDate || firstCandidateDate > lastCandidateDate) return;
+
+            const searchFromWeekStart = app.getWeekStartStrForDate(firstCandidateDate);
+            const searchToWeekStart = app.getWeekStartStrForDate(lastCandidateDate);
+            const firstAffectedWeekStart = app.findFirstWeekWithContent(cellKey, searchFromWeekStart, searchToWeekStart);
+            if (!firstAffectedWeekStart) return;
+            const lastAffectedWeekStart = app.findLastWeekWithContent(cellKey, firstAffectedWeekStart, searchToWeekStart);
+            if (!lastAffectedWeekStart) return;
+
+            const restoreWeekStart = app.getWeekStartStrForDate(app.addDays(app.parseDateInputValue(lastAffectedWeekStart), 7));
+            const restoreSnapshot = app.cloneVersionSnapshot(app.getCellVersion(cellKey, restoreWeekStart));
+            app.setCellVersion(cellKey, firstAffectedWeekStart, null, [], { cutoff: true });
+
+            if (restoreSnapshot && (restoreSnapshot.subject || restoreSnapshot.student.length > 0)) {
+                const restoredVersion = window.ScheduleErpService.restoreCellSnapshot(app, cellKey, restoreWeekStart, restoreSnapshot);
+                const restoredInstance = restoredVersion
+                    ? window.ScheduleErpService.getCourseInstanceForVersion(app, restoredVersion)
+                    : null;
+                if (restoredInstance && restoreSnapshot.actualMinutesByDate) {
+                    restoredInstance.actualMinutesByDate = Object.fromEntries(
+                        Object.entries(restoreSnapshot.actualMinutesByDate).filter(([dateKey]) =>
+                            !app.isDateWithinCustomResetRange(dateKey, startDate, endDate)
+                        )
+                    );
+                }
+            }
+        });
+
+        erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
+            !app.isDateWithinCustomResetRange(record.dateKey, startDate, endDate)
+        );
+        (erp.courseInstances || []).forEach(instance => {
+            if (!instance.actualMinutesByDate) return;
+            instance.actualMinutesByDate = Object.fromEntries(
+                Object.entries(instance.actualMinutesByDate).filter(([dateKey]) =>
+                    !app.isDateWithinCustomResetRange(dateKey, startDate, endDate)
+                )
+            );
+            instance.updatedAt = new Date().toISOString();
+        });
+        window.ScheduleErpService.buildTimetableProjection(app);
+    }
+
+    function importCourses(app, input, options = {}) {
+        const plan = options.plan || buildImportPlan(app, input, options);
+        const courses = plan.courses;
+        const importItems = plan.importItems;
         let studentCount = 0;
-        courses.forEach(course => {
-            const date = localDate(course.courseDate);
+        let skippedCourseCount = 0;
+        importItems.forEach(({ course, date }) => {
             if (!date) throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效 courseDate`);
+            const day = date.getDay() || 7;
+            const cellKey = app.buildCellKey(day, periodIndex(app, course));
+            const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
+            if (options.skipOccupied && versionHasCourse(app.getCellVersion(cellKey, weekStart))) {
+                skippedCourseCount++;
+                return;
+            }
             const oneToOne = isOneToOne(course);
             const sourceStudents = Array.isArray(course.students) ? course.students : [];
             const students = sourceStudents.map(s => ensureStudent(app, s, course, oneToOne));
             const subject = ensureSubject(app, course);
-            const day = date.getDay() || 7;
-            const cellKey = app.buildCellKey(day, periodIndex(app, course));
-            const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
             window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), { source: 'course-import' });
             sourceStudents.forEach((source, i) => {
                 const status = attendanceStatus(course, source);
-                if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, course.courseDate);
+                if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
             });
             studentCount += students.length;
         });
         app.syncRealtime({ weekRange: true });
-        return { courseCount: courses.length, studentCount };
+        return { courseCount: courses.length - skippedCourseCount, skippedCourseCount, studentCount };
     }
 
-    window.CourseDataImportService = { extractCourses, isOneToOne, importCourses };
-    TimetableApp.prototype.openCourseDataImportModal = function () { document.getElementById('courseDataImportModal').style.display = 'block'; };
+    window.CourseDataImportService = {
+        extractCourses,
+        isOneToOne,
+        importCourses,
+        shiftCoursesToStageStarts,
+        buildImportPlan,
+        hasCoursesInRange,
+        clearCoursesInRange
+    };
+    TimetableApp.prototype.syncCourseImportStageStartToggle = function () {
+        const button = document.getElementById('courseImportStageStartToggle');
+        if (!button) return;
+        const enabled = !!(this.settings && this.settings.segmentedScheduling);
+        if (!enabled) this._courseImportFromCurrentStage = false;
+        button.style.display = enabled ? 'inline-flex' : 'none';
+        button.classList.toggle('active', !!this._courseImportFromCurrentStage);
+        button.setAttribute('aria-pressed', this._courseImportFromCurrentStage ? 'true' : 'false');
+        button.textContent = this._courseImportFromCurrentStage ? '✓ 阶段导入' : '阶段导入';
+    };
+    TimetableApp.prototype.toggleCourseImportStageStart = function () {
+        this._courseImportFromCurrentStage = !this._courseImportFromCurrentStage;
+        this.syncCourseImportStageStartToggle();
+    };
+    TimetableApp.prototype.openCourseDataImportModal = function () {
+        this._courseImportFromCurrentStage = false;
+        this.syncCourseImportStageStartToggle();
+        document.getElementById('courseDataImportModal').style.display = 'block';
+    };
     TimetableApp.prototype.closeCourseDataImportModal = function () { document.getElementById('courseDataImportModal').style.display = 'none'; };
-    TimetableApp.prototype.submitCourseDataImport = function (event) {
+    TimetableApp.prototype.submitCourseDataImport = async function (event) {
         event.preventDefault();
         const message = document.getElementById('courseDataImportMessage');
         try {
-            const result = importCourses(this, document.getElementById('courseDataImportText').value);
-            message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生`;
+            const input = document.getElementById('courseDataImportText').value;
+            const options = {
+                fromCurrentStage: !!this._courseImportFromCurrentStage
+            };
+            const plan = buildImportPlan(this, input, options);
+            const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
+            let overwrite = false;
+            if (hasOldCourses) {
+                overwrite = await window.showAppConfirm(
+                    `本周有旧数据未清理，是否覆盖旧数据？\n\n确定：清理 ${this.formatLocalDate(plan.rangeStart)} 至 ${this.formatLocalDate(plan.rangeEnd)} 内的所有课程后导入。\n取消：保留原课程，只在空课位新增数据。`
+                );
+                if (overwrite) clearCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
+            }
+            const result = importCourses(this, input, {
+                ...options,
+                plan,
+                skipOccupied: hasOldCourses && !overwrite
+            });
+            const skippedText = result.skippedCourseCount > 0 ? `，跳过 ${result.skippedCourseCount} 节已占用课程` : '';
+            message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生${skippedText}`;
         } catch (error) { message.textContent = `导入失败：${error.message}`; }
     };
 })();

@@ -3858,6 +3858,10 @@ body.mint-theme-active .app-message-actions {
 }
 
 /* Electron-only workspace toolbar and stable timetable density. */
+:root {
+    --electron-toolbar-height: 64px;
+}
+
 .electron-app-toolbar {
     display: none;
 }
@@ -3868,7 +3872,7 @@ html.electron-app .electron-app-toolbar {
     top: 0;
     right: 0;
     left: 0;
-    height: 64px;
+    height: var(--electron-toolbar-height);
     padding: 0 144px 0 24px;
     display: grid;
     grid-template-columns: minmax(260px, 1fr);
@@ -3997,12 +4001,12 @@ html.electron-app .electron-app-toolbar {
 }
 
 html.electron-app body.reference-main-ui .left-sidebar {
-    top: 64px;
-    height: calc(100vh - 64px);
+    top: var(--electron-toolbar-height);
+    height: calc(100vh - var(--electron-toolbar-height));
 }
 
 html.electron-app body.reference-main-ui .container {
-    top: 64px;
+    top: var(--electron-toolbar-height);
 }
 
 html.electron-app body.reference-main-ui .timetable-wrapper {
@@ -5821,6 +5825,32 @@ body.dark-theme-active .lesson-editor-modal .student-picker {
     margin: 0;
     padding: 16px 24px 20px;
     background: var(--card-color, #fff);
+}
+
+.course-import-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.course-import-label-row > label {
+    margin: 0;
+}
+
+.course-import-stage-start {
+    min-height: 34px;
+    padding: 6px 13px;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    font-size: 13px;
+}
+
+.course-import-stage-start.active {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 5px 12px var(--shadow-color);
 }
 
 .standard-form-modal .form-group select,

@@ -78,6 +78,10 @@ TimetableApp.prototype.insertPeriodAfter = function(index) {
             const prevEnd = prevPeriod.time.split('-')[1];
             newStart = prevEnd;
             newEnd = this.addMinutesToTime(prevEnd, periodDuration);
+            if (this.timeToMinutes(newEnd) > 24 * 60) {
+                newStart = '06:00';
+                newEnd = this.addMinutesToTime(newStart, periodDuration);
+            }
         }
         
         const newPeriod = { name: `第${index + 2}节`, time: `${newStart}-${newEnd}` };
@@ -97,6 +101,10 @@ TimetableApp.prototype.addPeriodToEnd = function() {
             const lastEnd = lastPeriod.time.split('-')[1];
             newStart = lastEnd;
             newEnd = this.addMinutesToTime(lastEnd, periodDuration);
+            if (this.timeToMinutes(newEnd) > 24 * 60) {
+                newStart = '06:00';
+                newEnd = this.addMinutesToTime(newStart, periodDuration);
+            }
         }
         
         const newPeriod = { name: `第${this.periods.length + 1}节`, time: `${newStart}-${newEnd}` };
