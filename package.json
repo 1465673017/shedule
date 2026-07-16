@@ -31,6 +31,17 @@
       "icon": "icon/orange.ico",
       "target": "portable"
     },
+    "mac": {
+      "icon": "icon/orange.png",
+      "artifactName": "kebiao-${version}-${arch}.dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
