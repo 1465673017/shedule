@@ -357,11 +357,20 @@ TimetableApp.prototype.copyCourseFromCell = function(cell) {
         const studentIds = Array.isArray(version.student) ? version.student.map(id => String(id)) : [];
         if (!version.subject && studentIds.length === 0) return;
 
+        this.copiedScheduleBlock = null;
         this.copiedCourse = {
             subjectId: version.subject || null,
             studentIds
         };
         this.renderTimetable();
+    }
+
+TimetableApp.prototype.cancelCopyPasteState = function() {
+        if (!this.copiedCourse && !this.copiedScheduleBlock) return false;
+        this.copiedCourse = null;
+        this.copiedScheduleBlock = null;
+        this.renderTimetable();
+        return true;
     }
 
 TimetableApp.prototype.pasteCopiedCourseToCell = function(cell) {
@@ -421,6 +430,154 @@ TimetableApp.prototype.pasteCopiedCourseToCell = function(cell) {
         return true;
     }
 
+TimetableApp.prototype.getScheduleBlockEntries = function(type, sourceIndex, weekStartStr) {
+        const days = [1, 2, 3, 4, 5, 6, 7];
+        const periods = this.periods.map((_period, index) => index);
+        const entries = [];
+        const sourceDays = type === 'day' ? [Number(sourceIndex)] : days;
+        const sourcePeriods = type === 'period' ? [Number(sourceIndex)] : periods;
+        sourceDays.forEach(day => sourcePeriods.forEach(period => {
+            const version = this.getCellVersion(this.buildCellKey(day, period), weekStartStr);
+            if (!version) return;
+            const studentIds = Array.isArray(version.student) ? version.student.map(String) : [];
+            if (!version.subject && studentIds.length === 0) return;
+            entries.push({ day, period, subjectId: version.subject || null, studentIds });
+        }));
+        return entries;
+    }
+
+TimetableApp.prototype.copyScheduleBlock = function(type, sourceIndex = null) {
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const entries = this.getScheduleBlockEntries(type, sourceIndex, weekStartStr);
+        if (entries.length === 0) {
+            alert(type === 'week' ? '本周没有可复制的课程' : '该范围没有可复制的课程');
+            return false;
+        }
+        this.copiedCourse = null;
+        this.copiedScheduleBlock = { type, sourceIndex: sourceIndex === null ? null : Number(sourceIndex), sourceWeekStart: weekStartStr, entries };
+        this.renderTimetable();
+        return true;
+    }
+
+TimetableApp.prototype.getScheduleBlockTargets = function(targetType, targetIndex = null) {
+        const copied = this.copiedScheduleBlock;
+        if (!copied || copied.type !== targetType) return [];
+        const days = [1, 2, 3, 4, 5, 6, 7];
+        const periods = this.periods.map((_period, index) => index);
+        const targetDays = targetType === 'day' ? [Number(targetIndex)] : days;
+        const targetPeriods = targetType === 'period' ? [Number(targetIndex)] : periods;
+        return targetDays.flatMap(day => targetPeriods.map(period => {
+            const sourceDay = targetType === 'day' ? Number(copied.sourceIndex) : day;
+            const sourcePeriod = targetType === 'period' ? Number(copied.sourceIndex) : period;
+            const source = copied.entries.find(entry => entry.day === sourceDay && entry.period === sourcePeriod);
+            return {
+                day,
+                period,
+                subjectId: source ? source.subjectId : null,
+                studentIds: source ? [...source.studentIds] : []
+            };
+        }));
+    }
+
+TimetableApp.prototype.pasteScheduleBlock = async function(type, targetIndex = null) {
+        const copied = this.copiedScheduleBlock;
+        if (!copied || copied.type !== type) return false;
+        const targetWeekStart = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const targets = this.getScheduleBlockTargets(type, targetIndex);
+        if (targets.length === 0) return false;
+        if (targets.some(target => this.isHistoricalCellProtected(this.buildCellKey(target.day, target.period), targetWeekStart))) {
+            this.showHistoryProtectionNotice();
+            return false;
+        }
+        const targetKeys = targets.map(target => this.buildCellKey(target.day, target.period));
+        for (const target of targets) {
+            for (const studentId of target.studentIds) {
+                const student = this.students.find(item => String(item.id) === String(studentId));
+                if (!student || !student.isAudition) continue;
+                const assigned = this.getAuditionStudentAssignedKeys(studentId, targetKeys);
+                if (assigned.length > 0) {
+                    alert(this.getAuditionStudentConflictMessage(studentId, assigned));
+                    return false;
+                }
+            }
+        }
+
+        const conflicts = targets.filter(target => {
+            const existing = this.getCellVersion(this.buildCellKey(target.day, target.period), targetWeekStart);
+            return !!(existing && (existing.subject || (existing.student || []).length > 0));
+        });
+        let overwrite = false;
+        if (conflicts.length > 0) {
+            overwrite = await window.showAppConfirm(
+                `目标范围有 ${conflicts.length} 节课程冲突，是否覆盖？\n\n确定：覆盖冲突课程。\n取消：保留原课程，仅粘贴到空课位。`
+            );
+        }
+
+        let pastedCount = 0;
+        targets.forEach(target => {
+            const key = this.buildCellKey(target.day, target.period);
+            const existing = this.getCellVersion(key, targetWeekStart);
+            const occupied = !!(existing && (existing.subject || (existing.student || []).length > 0));
+            const hasSourceCourse = !!(target.subjectId || target.studentIds.length > 0);
+            if (!overwrite && (!hasSourceCourse || occupied)) return;
+            if (overwrite && !hasSourceCourse) {
+                if (occupied && this.setCellVersion(key, targetWeekStart, null, [], { cutoff: true }) !== false) pastedCount++;
+                return;
+            }
+            let subjectId = target.subjectId;
+            if (!subjectId && target.studentIds.length > 0) subjectId = this.ensureUncategorizedSubject().id;
+            if (this.setCellVersion(key, targetWeekStart, subjectId, target.studentIds) === false) return;
+            this.ensureAuditionStudentsTemporary(key, target.studentIds);
+            target.studentIds.forEach(studentId => {
+                const student = this.students.find(item => String(item.id) === String(studentId));
+                if (student && student.completed && !(this.settings && this.settings.segmentedScheduling)) {
+                    this.setStudentRecurrence(key, studentId, 'temporary');
+                }
+            });
+            pastedCount++;
+        });
+
+        this.copiedScheduleBlock = null;
+        this.syncRealtime();
+        if (pastedCount === 0) alert('没有可粘贴的空课位');
+        return pastedCount > 0;
+    }
+
+TimetableApp.prototype.createScheduleHeaderAction = function(container, type, index = null) {
+        if (!container) return;
+        container.style.position = 'relative';
+        const copied = this.copiedScheduleBlock;
+        const weekStart = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const canPaste = !!copied && copied.type === type && (
+            type === 'week' ? copied.sourceWeekStart !== weekStart : Number(copied.sourceIndex) !== Number(index)
+        );
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `copy-course-btn schedule-block-action ${canPaste ? 'paste-indicator' : ''}`;
+        button.textContent = canPaste ? '粘贴' : '复制';
+        button.title = canPaste
+            ? (type === 'week' ? '粘贴整周课表' : type === 'day' ? '粘贴整列课程' : '粘贴整行课程')
+            : (type === 'week' ? '复制本周课表' : type === 'day' ? '复制这一列课程' : '复制这一行课程');
+        button.addEventListener('click', async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (canPaste) await this.pasteScheduleBlock(type, index);
+            else this.copyScheduleBlock(type, index);
+        });
+        container.querySelectorAll(':scope > .schedule-block-action').forEach(existing => existing.remove());
+        container.appendChild(button);
+    }
+
+TimetableApp.prototype.renderScheduleBlockActions = function() {
+        this.createScheduleHeaderAction(document.querySelector('#timetable thead .period-header'), 'week');
+        document.querySelectorAll('#timetable thead [data-day-header]').forEach(header => {
+            this.createScheduleHeaderAction(header, 'day', Number(header.dataset.dayHeader));
+        });
+        document.querySelectorAll('#timetableBody .period-cell').forEach((cell, index) => {
+            this.createScheduleHeaderAction(cell, 'period', index);
+        });
+    }
+
 TimetableApp.prototype.renderTimetable = function() {
         if (window.ScheduleErpService.completeStudentsForEndedStages(this)) {
             this.saveData();
@@ -438,6 +595,7 @@ TimetableApp.prototype.renderTimetable = function() {
         });
 
         this.highlightTodayColumn();
+        this.renderScheduleBlockActions();
         this.syncTimetableLayout();
 }
 

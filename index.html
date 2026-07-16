@@ -669,14 +669,13 @@
             </div>
             <div class="settings-content">
                 <div class="settings-tabs">
-                    <button class="settings-tab" data-tab="basic">基础设置</button>
-                    <button class="settings-tab active" data-tab="theme">主题设置</button>
+                    <button class="settings-tab active" data-tab="basic">基础设置</button>
                     <button class="settings-tab" data-tab="grade">年级设置</button>
                     <button class="settings-tab" data-tab="stage">阶段设置</button>
                     <button class="settings-tab" data-tab="time">时间设置</button>
                 </div>
 
-                <div id="basicSettingsTab" class="settings-tab-pane">
+                <div id="basicSettingsTab" class="settings-tab-pane active">
                     <div class="settings-section basic-settings-section">
                         <div class="settings-header">
                             <div>
@@ -684,6 +683,17 @@
                                 <p class="setting-description">开启后，今天以前的排课和出勤数据将无法修改。</p>
                             </div>
                             <button type="button" id="historyProtectionToggle" class="toggle-switch" onclick="app.toggleHistoryProtection()">已关闭</button>
+                        </div>
+                        <div class="basic-setting-row">
+                            <div>
+                                <label for="themeSelect">主题</label>
+                                <p class="setting-description">选择应用界面的整体配色。</p>
+                            </div>
+                            <select id="themeSelect" class="setting-input" onchange="app.applyPredefinedTheme(this.value)">
+                                <option value="default">默认主题</option>
+                                <option value="dark">暗色主题</option>
+                                <option value="mint">浅绿色主题</option>
+                            </select>
                         </div>
                         <div class="basic-setting-row">
                             <div>
@@ -707,7 +717,7 @@
                     </div>
                 </div>
 
-                <div id="themeSettingsTab" class="settings-tab-pane active">
+                <div id="themeSettingsTab" class="settings-tab-pane">
                     <div class="settings-section">
                         <!-- 预设主题 -->
                         <div class="settings-section">

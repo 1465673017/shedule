@@ -11630,6 +11630,42 @@ body.reference-main-ui .copy-course-btn {
     transition: opacity .18s ease, background-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
+body.reference-main-ui .schedule-block-action {
+    position: absolute;
+    right: 6px;
+    bottom: 5px;
+    z-index: 20;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px !important;
+    height: 20px !important;
+    padding: 0 7px !important;
+    border-radius: 999px !important;
+    box-sizing: border-box;
+    line-height: 20px !important;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+body.reference-main-ui .timetable th:hover > .schedule-block-action,
+body.reference-main-ui .period-cell:hover > .schedule-block-action {
+    display: inline-flex;
+}
+
+body.reference-main-ui .schedule-block-action.paste-indicator {
+    border-color: rgba(37, 99, 235, .18) !important;
+    background: rgba(239, 246, 255, .96) !important;
+    color: #2563eb !important;
+}
+
+body.reference-main-ui.dark-theme-active .schedule-block-action.paste-indicator {
+    border-color: rgba(129, 140, 248, .3) !important;
+    background: rgba(30, 41, 59, .94) !important;
+    color: #a5b4fc !important;
+}
+
 body.reference-main-ui .copy-course-btn:hover,
 body.reference-main-ui .copy-course-btn:focus-visible {
     background: rgba(255, 255, 255, .94) !important;

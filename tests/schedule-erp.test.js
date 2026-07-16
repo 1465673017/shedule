@@ -645,10 +645,42 @@ assert.strictEqual(
 
 const dragDropSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-dragdrop.js'), 'utf8');
 const timetableSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'app-timetable.js'), 'utf8');
+vm.runInThisContext(timetableSource, { filename: 'app-timetable.js' });
 assert.strictEqual(
     /addEventListener\(['"]dblclick['"]/.test(`${dragDropSource}\n${timetableSource}`),
     false,
     'the timetable should not register a double-click delete handler'
+);
+
+const blockCopyApp = Object.create(TimetableApp.prototype);
+blockCopyApp.periods = [{}, {}, {}, {}];
+blockCopyApp.copiedScheduleBlock = {
+    type: 'day',
+    sourceIndex: 1,
+    sourceWeekStart: '2026-07-06',
+    entries: [
+        { day: 1, period: 0, subjectId: 'math', studentIds: ['s1'] },
+        { day: 1, period: 2, subjectId: 'english', studentIds: ['s2'] }
+    ]
+};
+assert.deepStrictEqual(
+    blockCopyApp.getScheduleBlockTargets('day', 4).filter(entry => entry.subjectId).map(entry => [entry.day, entry.period, entry.subjectId]),
+    [[4, 0, 'math'], [4, 2, 'english']],
+    'column copy should preserve periods while remapping every course to the target day'
+);
+blockCopyApp.copiedScheduleBlock = {
+    type: 'period',
+    sourceIndex: 0,
+    sourceWeekStart: '2026-07-06',
+    entries: [
+        { day: 1, period: 0, subjectId: 'math', studentIds: ['s1'] },
+        { day: 5, period: 0, subjectId: 'english', studentIds: ['s2'] }
+    ]
+};
+assert.deepStrictEqual(
+    blockCopyApp.getScheduleBlockTargets('period', 3).filter(entry => entry.subjectId).map(entry => [entry.day, entry.period, entry.subjectId]),
+    [[1, 3, 'math'], [5, 3, 'english']],
+    'row copy should preserve days while remapping every course to the target period'
 );
 
 const durationStatsApp = Object.create(TimetableApp.prototype);

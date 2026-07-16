@@ -122,6 +122,7 @@ class TimetableApp {
         this.isTemporaryCourseEdit = false;
         this._temporaryCourseSourceVersion = null;
         this.copiedCourse = null;
+        this.copiedScheduleBlock = null;
         this.draggedItem = null;
         
         this.currentDate = new Date();
@@ -289,6 +290,7 @@ class TimetableApp {
                 this.removeItemFromCell(this.editingCell);
             }
             if (e.key === 'Escape') {
+                this.cancelCopyPasteState();
                 this.closeSubjectModal();
                 this.closeStudentBatchModal();
                 this.closeTimeModal();
@@ -302,6 +304,12 @@ class TimetableApp {
                 this.closeTextStatsModal();
                 this.closeExportModal();
             }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!this.copiedCourse && !this.copiedScheduleBlock) return;
+            if (e.target.closest('.copy-course-btn, .schedule-block-action, .cell, .timetable th, .period-cell, .date-navigator')) return;
+            this.cancelCopyPasteState();
         });
         
         // 点击弹窗外部关闭弹窗

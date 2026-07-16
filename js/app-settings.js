@@ -9,7 +9,7 @@ TimetableApp.prototype.closeTutorialModal = function() {
         document.getElementById('tutorialModal').style.display = 'none';
     }
 
-TimetableApp.prototype.openSettingsModal = function(defaultTab = 'theme') {
+TimetableApp.prototype.openSettingsModal = function(defaultTab = 'basic') {
         const modal = document.getElementById('settingsModal');
         modal.style.display = 'block';
         this.renderGrades();
@@ -818,6 +818,8 @@ TimetableApp.prototype.isLightColor = function(hex) {
 }
 
 TimetableApp.prototype.updateThemeSettingsUI = function() {
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect) themeSelect.value = this.settings.theme || 'default';
     // Clear active state from predefined themes
     document.querySelectorAll('.theme-option').forEach(b => b.classList.remove('active'));
     
