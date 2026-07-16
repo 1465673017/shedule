@@ -3737,6 +3737,78 @@ body {
     }
 }
 
+/* Unified application scrollbars for Electron/Chromium and Firefox. */
+:root {
+    --app-scrollbar-thumb: rgba(79, 143, 247, .34);
+    --app-scrollbar-thumb-hover: rgba(79, 143, 247, .56);
+    --app-scrollbar-track: rgba(148, 163, 184, .08);
+}
+
+body.dark-theme-active {
+    --app-scrollbar-thumb: rgba(148, 163, 184, .34);
+    --app-scrollbar-thumb-hover: rgba(148, 163, 184, .56);
+    --app-scrollbar-track: rgba(15, 23, 42, .2);
+}
+
+body.mint-theme-active {
+    --app-scrollbar-thumb: rgba(47, 111, 82, .34);
+    --app-scrollbar-thumb-hover: rgba(47, 111, 82, .56);
+    --app-scrollbar-track: rgba(47, 111, 82, .07);
+}
+
+html,
+body,
+body * {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track) !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+body *::-webkit-scrollbar {
+    width: 10px !important;
+    height: 10px !important;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+body *::-webkit-scrollbar-track {
+    background: var(--app-scrollbar-track) !important;
+    border-radius: 999px !important;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+body *::-webkit-scrollbar-thumb {
+    min-width: 32px;
+    min-height: 32px;
+    border: 2px solid transparent !important;
+    border-radius: 999px !important;
+    background: var(--app-scrollbar-thumb) !important;
+    background-clip: padding-box !important;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+body *::-webkit-scrollbar-thumb:hover {
+    background: var(--app-scrollbar-thumb-hover) !important;
+    background-clip: padding-box !important;
+}
+
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+body *::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+body *::-webkit-scrollbar-corner {
+    background: transparent !important;
+}
+
 .settings-section {
     margin-bottom: 20px;
 }
@@ -4378,8 +4450,10 @@ body {
 .stage-order-button { display: grid; place-items: center; width: 19px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); font-size: 12px; font-weight: 700; line-height: 1; cursor: pointer; transition: color .18s ease, background-color .18s ease, transform .18s ease; }
 .stage-order-button:hover:not(:disabled) { background: var(--primary-bg); color: var(--primary-color); transform: translateY(-1px); }
 .stage-order-button:disabled { opacity: .32; cursor: default; }
-.stage-settings-footer { display: flex; flex-direction: column; gap: 6px; margin-top: 0; padding-top: 10px; background: var(--schedule-bg-color, #fff); }
-.stage-settings-footer .btn { width: 100%; }
+.stage-settings-footer,
+.time-settings-footer { display: flex; flex-direction: column; gap: 6px; margin-top: 0; padding-top: 10px; background: var(--schedule-bg-color, #fff); }
+.stage-settings-footer .btn,
+.time-settings-footer .btn { width: 100%; }
 .stage-settings-message { font-size: 13px; }
 .stage-settings-message.error { color: #dc2626; }
 .stage-settings-message.success { color: #16a34a; }

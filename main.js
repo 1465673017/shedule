@@ -2,6 +2,11 @@ const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const appIconPath = path.join(__dirname, 'icon', 'orange.ico');
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+    app.quit();
+}
 
 function requireAppIcon() {
     if (fs.existsSync(appIconPath)) return true;
@@ -48,19 +53,33 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
     return { canceled: false, filePath: result.filePath };
 });
 
-app.whenReady().then(() => {
-    Menu.setApplicationMenu(null);
-    createWindow();
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
+if (gotSingleInstanceLock) {
+    app.on('second-instance', () => {
+        const [win] = BrowserWindow.getAllWindows();
+        if (!win) {
             createWindow();
+            return;
+        }
+
+        if (win.isMinimized()) win.restore();
+        if (!win.isVisible()) win.show();
+        win.focus();
+    });
+
+    app.whenReady().then(() => {
+        Menu.setApplicationMenu(null);
+        createWindow();
+
+        app.on('activate', () => {
+            if (BrowserWindow.getAllWindows().length === 0) {
+                createWindow();
+            }
+        });
+    });
+
+    app.on('window-all-closed', () => {
+        if (process.platform !== 'darwin') {
+            app.quit();
         }
     });
-});
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
-});
+}
