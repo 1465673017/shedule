@@ -2,6 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const appIconPath = path.join(__dirname, 'icon', 'orange.ico');
+app.setName('A大橙子课时统计（内测版）');
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {
@@ -23,6 +24,7 @@ function createWindow() {
     }
     const win = new BrowserWindow({
         icon: appIconPath,
+        frame: false,
         autoHideMenuBar: true,
         width: 1280,
         height: 860,
@@ -51,6 +53,18 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
     const content = encoding === 'base64' ? Buffer.from(data, 'base64') : data;
     await fs.promises.writeFile(result.filePath, content, encoding === 'base64' ? undefined : 'utf8');
     return { canceled: false, filePath: result.filePath };
+});
+
+ipcMain.on('window-control', (event, action) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return;
+
+    if (action === 'minimize') win.minimize();
+    if (action === 'maximize') {
+        if (win.isMaximized()) win.unmaximize();
+        else win.maximize();
+    }
+    if (action === 'close') win.close();
 });
 
 if (gotSingleInstanceLock) {

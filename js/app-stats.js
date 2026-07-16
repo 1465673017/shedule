@@ -262,6 +262,10 @@ TimetableApp.prototype.updateStatsWeekModeBadge = function () {
     badge.hidden = !(this._statsTab === 'week' && this._statsWeekMode === 'naturalWeeks');
 };
 
+TimetableApp.prototype.formatStatsChartAxisDate = function (date) {
+    return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
+};
+
 TimetableApp.prototype.onStatsDateChange = function () {
     // Unified handler for date input changes — routes to the active tab's renderer
     switch (this._statsTab) {
@@ -1056,6 +1060,7 @@ TimetableApp.prototype.getChartSliceData = function (data, index) {
         groupStartDates: data.groupStartDates ? [data.groupStartDates[index]] : [],
         groupEndDates: data.groupEndDates ? [data.groupEndDates[index]] : [],
         granularity: data.granularity,
+        rangeDayCount: data.rangeDayCount,
         selectedLabel: data.labels[index]
     };
 };
@@ -1216,63 +1221,13 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
     var groupStartDates = [];
     var groupEndDates = [];
 
-    var rangeCrossesMonth = startDate.getFullYear() !== endDate.getFullYear() || startDate.getMonth() !== endDate.getMonth();
-    var rangeCrossesYear = startDate.getFullYear() !== endDate.getFullYear();
-    var weekOrdinalByMonth = {};
-    var formatFullDateLabel = function (d) {
-        return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
-    };
-    var formatShortDateLabel = function (d) {
-        return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    var formatAxisDateLabel = function (d) {
+        return self.formatStatsChartAxisDate(d);
     };
 
     groupOrder.forEach(function (key) {
         var g = groups[key];
-        var label;
-        if (granularity === 'day') {
-            var d = new Date(key + 'T00:00:00');
-            label = rangeCrossesMonth ? formatFullDateLabel(d) : formatShortDateLabel(d);
-        } else if (granularity === 'week') {
-            var weekMonthKey = g.startDate.getFullYear() + '-' + String(g.startDate.getMonth() + 1).padStart(2, '0');
-            weekOrdinalByMonth[weekMonthKey] = (weekOrdinalByMonth[weekMonthKey] || 0) + 1;
-            label = '第' + weekOrdinalByMonth[weekMonthKey] + '周';
-            if (rangeCrossesMonth) {
-                label = g.startDate.getFullYear() + '年' + (g.startDate.getMonth() + 1) + '月' + label;
-            }
-        } else if (granularity === 'month') {
-            var parts = key.split('-');
-            label = parseInt(parts[1]) + '月';
-            if (rangeCrossesYear) {
-                label = parts[0] + '年' + label;
-            }
-        } else {
-            label = key + '年';
-        }
-        if (granularity === 'week') {
-            var weekMonthKeyDisplay = g.startDate.getFullYear() + '-' + String(g.startDate.getMonth() + 1).padStart(2, '0');
-            var weekIndexDisplay = weekOrdinalByMonth[weekMonthKeyDisplay];
-            var weekRangeLabel = (g.startDate.getMonth() + 1) + '/' + g.startDate.getDate() + '-' + (g.endDate.getMonth() + 1) + '/' + g.endDate.getDate();
-            label = '第' + weekIndexDisplay + '周 ' + weekRangeLabel;
-            if (startDate.getFullYear() !== endDate.getFullYear()) {
-                label = g.startDate.getFullYear() + ' ' + label;
-            }
-        }
-
-        if (granularity === 'week') {
-            if (weekMode === 'naturalWeeks') {
-                label = (g.startDate.getMonth() + 1) + '/' + g.startDate.getDate() + '-' + (g.endDate.getMonth() + 1) + '/' + g.endDate.getDate();
-                if (startDate.getFullYear() !== endDate.getFullYear()) {
-                    label = g.startDate.getFullYear() + ' ' + label;
-                }
-            } else {
-                var weekMonthKeyDisplayFinal = g.startDate.getFullYear() + '-' + String(g.startDate.getMonth() + 1).padStart(2, '0');
-                var weekIndexDisplayFinal = weekOrdinalByMonth[weekMonthKeyDisplayFinal];
-                label = '第' + weekIndexDisplayFinal + '周';
-                if (rangeCrossesMonth) {
-                    label = (g.startDate.getMonth() + 1) + '月' + label;
-                }
-            }
-        }
+        var label = formatAxisDateLabel(g.startDate);
 
         labels.push(label);
         presentData.push(g.present);
@@ -1305,7 +1260,8 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         typeMinutesByGroup: typeMinutesByGroup,
         groupStartDates: groupStartDates,
         groupEndDates: groupEndDates,
-        granularity: granularity
+        granularity: granularity,
+        rangeDayCount: dayCount
     };
 };
 
@@ -1748,7 +1704,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
     var stackedTotalLabelPlugin = {
         id: 'durationStackedTotalLabels',
         afterDatasetsDraw: function (chart) {
-            if (!hasData) return;
+            if (!hasData || data.labels.length > 42) return;
             var drawCtx = chart.ctx;
             drawCtx.save();
             drawCtx.fillStyle = isDark ? '#e2e8f0' : '#344054';

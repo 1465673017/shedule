@@ -223,7 +223,7 @@ TimetableApp.prototype.saveGrade = function(e) {
         this.closeGradeModal();
     }
 
-TimetableApp.prototype.deleteGrade = function(id) {
+TimetableApp.prototype.deleteGrade = async function(id) {
         if (!id && !this.editingGrade) return;
         
         const gradeId = id || this.editingGrade.id;
@@ -233,7 +233,7 @@ TimetableApp.prototype.deleteGrade = function(id) {
             return;
         }
         
-        if (!confirm('确定要删除这个年级吗？')) return;
+        if (!await window.showAppConfirm('确定要删除这个年级吗？')) return;
         
         const deletedGrade = this.grades.find(g => g.id === gradeId);
         const deletedGradeName = deletedGrade ? deletedGrade.name : '';

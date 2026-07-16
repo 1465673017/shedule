@@ -5,10 +5,41 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>A大橙子课时统计（内测版）</title>
     <link rel="icon" type="image/x-icon" href="./icon/orange.ico">
+    <script>if (navigator.userAgent.includes('Electron')) document.documentElement.classList.add('electron-app');</script>
     <link rel="stylesheet" href="./styles.css">
 </head>
 
 <body class="reference-main-ui">
+    <header class="electron-app-toolbar" aria-label="应用工具栏">
+        <div class="electron-app-brand">
+            <img src="./icon/orange.ico" alt="" class="electron-app-logo">
+            <div class="electron-app-brand-copy">
+                <strong>A大橙子课时统计</strong>
+                <span>课表工作台 · 内测版</span>
+            </div>
+        </div>
+        <div class="electron-window-controls" aria-label="窗口控制">
+            <button type="button" aria-label="最小化" title="最小化" onclick="window.electronAPI.windowControl('minimize')">&#8722;</button>
+            <button type="button" aria-label="最大化或还原" title="最大化或还原" onclick="window.electronAPI.windowControl('maximize')">&#9633;</button>
+            <button type="button" class="electron-window-close" aria-label="关闭" title="关闭" onclick="window.electronAPI.windowControl('close')">&#215;</button>
+        </div>
+    </header>
+    <div id="appMessageModal" class="modal app-message-modal" role="dialog" aria-modal="true" aria-labelledby="appMessageTitle">
+        <div class="app-message-dialog">
+            <div class="app-message-heading">
+                <img src="./icon/orange.ico" alt="" class="app-message-logo">
+                <div>
+                    <h3 id="appMessageTitle">A大橙子课时统计</h3>
+                    <span>内测版</span>
+                </div>
+            </div>
+            <div id="appMessageText" class="app-message-text"></div>
+            <div class="app-message-actions">
+                <button type="button" id="appMessageCancel" class="btn secondary">取消</button>
+                <button type="button" id="appMessageConfirm" class="btn primary">确定</button>
+            </div>
+        </div>
+    </div>
     <!-- 主要内容区域 -->
     <div class="container">
         <main class="main-content">
@@ -972,11 +1003,151 @@
             <div class="modal-header">
                 <div class="modal-title-block">
                     <h3>课程表完整使用教程</h3>
-                    <p class="modal-subtitle">从首次设置、日常排课到出勤统计与数据导出</p>
+                    <p class="modal-subtitle">覆盖阶段设置、时间设置、日常排课、出勤统计与数据导出</p>
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTutorialModal()">×</button>
             </div>
             <div class="tutorial-content">
+                <div class="tutorial-guide-content">
+                    <div class="tutorial-intro">
+                        <strong>建议按这个顺序完成首次配置</strong>
+                        <span>年级与主题 → 阶段设置 → 时间设置 → 科目和学生 → 排课与出勤 → 统计和导出</span>
+                    </div>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">1</div>
+                        <div class="tutorial-step-body">
+                            <h4>进入基础设置，准备基础资料</h4>
+                            <p>点击左侧“基础设置”，通过顶部标签切换不同配置页面。</p>
+                            <ul>
+                                <li><strong>主题设置：</strong>选择默认、暗色或浅绿色主题。</li>
+                                <li><strong>年级设置：</strong>添加实际使用的年级，调整名称和识别颜色。</li>
+                                <li>推荐先完成阶段和时间设置，再建立科目与学生并开始排课。</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">2</div>
+                        <div class="tutorial-step-body">
+                            <h4>配置阶段设置</h4>
+                            <p>“阶段设置”用于按学期、季度、寒暑期或自定义周期管理排课。</p>
+                            <ul>
+                                <li><strong>快速设置：</strong>填写全年分段数量、第一阶段开始日期和各阶段月份范围。</li>
+                                <li>月份范围不能重叠；出现红色提示时，修正后再点击“应用快速设置”。</li>
+                                <li><strong>高级设置：</strong>可修改阶段名称和精确起止日期、添加阶段，并调整阶段顺序。</li>
+                                <li>高级设置完成后点击底部“保存”，阶段日期必须完整且不能相互重叠。</li>
+                                <li>需要按阶段处理学生状态与排课时，点击“开启分段排课”；不需要则保持关闭。</li>
+                            </ul>
+                            <p class="tutorial-note">跨年阶段可以直接设置完整日期。先确认所有阶段范围，再开启分段排课。</p>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">3</div>
+                        <div class="tutorial-step-body">
+                            <h4>配置时间设置</h4>
+                            <ul>
+                                <li>在快速设置中填写每日节数、第一节开始时间、单节时长和普通课间时长。</li>
+                                <li>需要午休或晚间休息时，选择插入位置并填写分钟数；不需要则选择“不插入休息”。</li>
+                                <li>点击“应用快速设置”，系统会自动计算所有课时的起止时间。</li>
+                                <li>打开<strong>高级设置</strong>可逐节修改名称和时间，也可以新增或删除课时。</li>
+                                <li>高级设置完成后点击底部“保存”；“显示课时时间”控制主课表是否展示时间。</li>
+                            </ul>
+                            <p class="tutorial-note">快速设置适合整体生成，高级设置适合特殊节次、不等长课程和精确微调。</p>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">4</div>
+                        <div class="tutorial-step-body">
+                            <h4>建立科目池和学生池</h4>
+                            <ul>
+                                <li>在“科目池”点击“添加科目”，填写名称、可选教师和课程颜色。</li>
+                                <li>在“学生池”点击“添加学生”，填写姓名并选择年级；按需标记为 <strong>1v1</strong> 或 <strong>试听</strong>。</li>
+                                <li>学生较多时使用“批量导入”；已有课程 JSON 时可使用“导入课程数据”。</li>
+                                <li>通过“全部、进行中、已结课、试听”筛选学生，并用卡片按钮维护资料。</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">5</div>
+                        <div class="tutorial-step-body">
+                            <h4>按正常流程安排课程</h4>
+                            <ul>
+                                <li>先用上一周、下一周、日期选择器或“今天”切换目标周，核对顶部日期范围。</li>
+                                <li>把科目卡片拖到目标日期和节次，打开“添加课程”。</li>
+                                <li>确认科目，搜索并勾选本节课学生，根据需要设置循环状态，然后保存。</li>
+                                <li>也可以把学生卡片拖入已有课程，或在课程编辑窗口调整学生名单。</li>
+                                <li>课程按实际日期保存；循环课程会按照当前循环规则延续到后续日期。</li>
+                            </ul>
+                            <p class="tutorial-note">建议先排好一个标准周并核对，再继续处理循环、调课和临时课程。</p>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">6</div>
+                        <div class="tutorial-step-body">
+                            <h4>调课、修改课程并记录出勤</h4>
+                            <ul>
+                                <li>点击课表中的课程卡片，查看课程信息、学生名单和当前状态。</li>
+                                <li>需要调整时可编辑课程和学生；不再需要的课程可以删除。</li>
+                                <li>临时换课或只修改当前日期时，选择临时方式，避免影响后续循环课程。</li>
+                                <li>课后及时登记出勤、请假或缺勤，这些记录会参与人数和实际课时统计。</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">7</div>
+                        <div class="tutorial-step-body">
+                            <h4>查看统计并核对数据</h4>
+                            <ul>
+                                <li><strong>课时统计：</strong>快速查看日、周、月、年课时和课程明细。</li>
+                                <li><strong>课时统计总览：</strong>在课时与人数视图间切换，按日期范围查看趋势和班型对比。</li>
+                                <li>展开课程明细，核对课程时长、学生和出勤；发现问题后返回课表修正。</li>
+                                <li>日期范围较长时选择合适的统计粒度，让横轴和趋势更容易阅读。</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section">
+                        <div class="tutorial-step-number">8</div>
+                        <div class="tutorial-step-body">
+                            <h4>导出课表和课时单</h4>
+                            <ul>
+                                <li>点击“导出数据”，可导出当前周课表的 PNG 图片或 Excel。</li>
+                                <li>选择开始与结束日期，可导出对应范围的课时单 Excel 明细。</li>
+                                <li>导出前确认当前周、日期范围、课程时长和出勤记录。</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="tutorial-section tutorial-section-warning">
+                        <div class="tutorial-step-number">9</div>
+                        <div class="tutorial-step-body">
+                            <h4>保存、备份与重置</h4>
+                            <ul>
+                                <li>课程、科目、学生、阶段和时间设置会保存在当前软件或浏览器环境中。</li>
+                                <li>更换设备、清理应用数据或重新安装前，请先导出重要课表和课时单留档。</li>
+                                <li>“重置课表”可清空课程、全部重置或按日期范围清除；执行前务必核对范围。</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <div class="tutorial-shortcuts">
+                        <h4>日常使用小建议</h4>
+                        <div class="tutorial-shortcut-grid">
+                            <span>阶段和时间设置完成后再集中排课</span>
+                            <span>每次排课前先核对当前周和日期</span>
+                            <span>课后及时登记出勤、请假和缺勤</span>
+                            <span>定期导出 Excel，重置前先备份</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tutorial-legacy-content" aria-hidden="true">
                 <div class="tutorial-intro">
                     <strong>推荐使用顺序</strong>
                     <span>基础设置 → 添加科目和学生 → 安排课程 → 记录出勤 → 查看统计 → 导出归档</span>
@@ -1095,6 +1266,7 @@
                         <span>重置前先导出重要数据</span>
                     </div>
                 </div>
+                </div>
 
                 <div class="tutorial-start-row">
                     <button onclick="app.startCreatingTimetable()" class="btn primary tutorial-start-btn">
@@ -1106,6 +1278,7 @@
     </div>
     <script src="./chart.umd.min.js"></script>
     <script src="./html2canvas.min.js"></script>
+    <script src="./js/app-dialogs.js"></script>
     <script src="./js/app-erp.js"></script>
     <script src="./js/app-core.js"></script>
     <script src="./js/app-course-import.js"></script>

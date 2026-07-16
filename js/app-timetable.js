@@ -51,6 +51,8 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
 
             const auditionAssigned = this.getAuditionStudentAssignedKeys(item.id, [key]);
             if (auditionAssigned.length > 0) {
+                alert(this.getAuditionStudentConflictMessage(item.id, auditionAssigned));
+                return;
                 const student = this.students.find(s => s.id === item.id);
                 alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
                 return;
@@ -109,6 +111,8 @@ TimetableApp.prototype.addCourseToCell = function(courseItem, day, period) {
         for (const studentId of studentIds) {
             const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [key]);
             if (auditionAssigned.length > 0) {
+                alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
+                return;
                 const student = this.students.find(s => s.id === studentId);
                 alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
                 return;
@@ -190,6 +194,8 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
 
         const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [sourceKey, targetKey]);
         if (auditionAssigned.length > 0) {
+            alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
+            return;
             alert(`试听学生「${draggedStudent ? draggedStudent.name : '未知'}」已排在其他课程中，不可重复排课`);
             return;
         }
@@ -259,7 +265,7 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         this.syncRealtime();
     }
 
-TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
+TimetableApp.prototype.moveSubject = async function(sourceKey, targetKey) {
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
         const nextWeekStr = this.formatLocalDate(this.getWeekRange(new Date(new Date(this.getWeekRange(this.currentDate).start).getTime() + 7 * 24 * 60 * 60 * 1000)).start);
         const sourceVersion = this.getCellVersion(sourceKey, weekStartStr);
@@ -273,7 +279,7 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
 
         if (targetStudents.length > 0 && 
             [...targetStudents].sort().join(',') !== [...sourceStudents].sort().join(',')) {
-            if (!confirm('目标位置有不同的学生，合并会覆盖学生列表，是否继续？')) {
+            if (!await window.showAppConfirm('目标位置有不同的学生，合并会覆盖学生列表，是否继续？')) {
                 return;
             }
         }
@@ -305,6 +311,8 @@ TimetableApp.prototype.moveSubject = function(sourceKey, targetKey) {
         for (const studentId of sourceStudents) {
             const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [sourceKey, targetKey]);
             if (auditionAssigned.length > 0) {
+                alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
+                return;
                 const student = this.students.find(s => s.id === studentId);
                 alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
                 return;
@@ -384,6 +392,8 @@ TimetableApp.prototype.pasteCopiedCourseToCell = function(cell) {
         for (const studentId of studentIds) {
             const auditionAssigned = this.getAuditionStudentAssignedKeys(studentId, [key]);
             if (auditionAssigned.length > 0) {
+                alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
+                return false;
                 const student = this.students.find(s => s.id === studentId);
                 alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
                 return false;

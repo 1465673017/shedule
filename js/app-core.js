@@ -351,6 +351,38 @@ class TimetableApp {
         return assignedKeys;
     }
 
+    getAuditionStudentConflictMessage(studentId, assignedKeys = null) {
+        const student = this.students.find(s => String(s.id) === String(studentId));
+        const studentName = student ? student.name : '未知';
+        const keys = Array.isArray(assignedKeys)
+            ? assignedKeys
+            : this.getAuditionStudentAssignedKeys(studentId);
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const weekdayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const schedules = [...new Set(keys)].map(key => {
+            const parsed = this.parseCellKey(key);
+            const occurrenceDate = this.getCellOccurrenceDate(weekStartStr, key);
+            if (!parsed || !occurrenceDate) return null;
+            const period = this.getPeriod(parsed.periodIndex);
+            const dateText = `${occurrenceDate.getFullYear()}年${occurrenceDate.getMonth() + 1}月${occurrenceDate.getDate()}日`;
+            const weekdayText = weekdayNames[parsed.day - 1] || '';
+            const periodName = period && period.name ? period.name : `第${parsed.periodIndex + 1}节`;
+            const timeText = period && period.time ? `（${period.time}）` : '';
+            return {
+                day: parsed.day,
+                periodIndex: parsed.periodIndex,
+                text: `${dateText}（${weekdayText}）${periodName}${timeText}`
+            };
+        }).filter(Boolean).sort((a, b) => a.day - b.day || a.periodIndex - b.periodIndex);
+
+        if (schedules.length === 0) {
+            return `试听学生「${studentName}」已排在其他课程中，不可重复排课`;
+        }
+
+        const details = schedules.map(schedule => `• ${schedule.text}`).join('\n');
+        return `试听学生「${studentName}」已经排课：\n${details}\n试听学生不可重复排课。`;
+    }
+
     hasAuditionStudentEverScheduled(studentId, excludeKeys = []) {
         const student = this.students.find(s => String(s.id) === String(studentId));
         if (!student || !student.isAudition) {
@@ -806,7 +838,7 @@ class TimetableApp {
         return true;
     }
 
-    resetScheduleByCustomRange() {
+    async resetScheduleByCustomRange() {
         const startInput = document.getElementById('customResetStartDate');
         const endInput = document.getElementById('customResetEndDate');
         const startDate = this.parseDateInputValue(startInput ? startInput.value : '');
@@ -829,7 +861,7 @@ class TimetableApp {
             message = '确定要清除此日期及以前所有课程吗？这会清空对应日期的排课、考勤和实际上课时长，其余课程保留。';
         }
 
-        if (!confirm(message)) {
+        if (!await window.showAppConfirm(message)) {
             return;
         }
 
@@ -931,8 +963,8 @@ class TimetableApp {
         this.syncRealtime({ weekRange: true });
     }
 
-    resetScheduleOnly() {
-        if (!confirm('确定要重置课表吗？这会清空当前排课、循环和考勤数据，但保留科目、学生、手动课程、年级、课时和设置。')) {
+    async resetScheduleOnly() {
+        if (!await window.showAppConfirm('确定要重置课表吗？这会清空当前排课、循环和考勤数据，但保留科目、学生、手动课程、年级、课时和设置。')) {
             return;
         }
 
@@ -973,8 +1005,8 @@ class TimetableApp {
         this.syncRealtime({ weekRange: true });
     }
 
-    resetTimetable() {
-        if (!confirm('确定要重置课表吗？这会清空当前课表、学生、手动课程、考勤和循环数据。')) {
+    async resetTimetable() {
+        if (!await window.showAppConfirm('确定要重置课表吗？这会清空当前课表、学生、手动课程、考勤和循环数据。')) {
             return;
         }
 

@@ -735,9 +735,7 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
 
             if (auditionAssigned.length > 0) {
 
-                const student = this.students.find(s => s.id === studentId);
-
-                alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
+                alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
 
                 return;
 
@@ -822,9 +820,7 @@ TimetableApp.prototype.saveTemporaryCourseEdit = function() {
 
             if (auditionAssigned.length > 0) {
 
-                const student = this.students.find(s => s.id === studentId);
-
-                alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
+                alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
 
                 return;
 
@@ -1086,9 +1082,7 @@ TimetableApp.prototype.saveCourseEdit = function() {
 
             if (auditionAssigned.length > 0) {
 
-                const student = this.students.find(s => s.id === studentId);
-
-                alert(`试听学生「${student ? student.name : '未知'}」已排在其他课程中，不可重复排课`);
+                alert(this.getAuditionStudentConflictMessage(studentId, auditionAssigned));
 
                 return;
 
@@ -1346,11 +1340,11 @@ TimetableApp.prototype.renderCoursePool = function(pool) {
 
     }
 
-TimetableApp.prototype.deleteCourseFromPool = function(course) {
+TimetableApp.prototype.deleteCourseFromPool = async function(course) {
 
         if (course.isManual) {
 
-            if (!confirm('Delete this course?')) return;
+            if (!await window.showAppConfirm('确定要删除这门课程吗？')) return;
 
             const oldSubjectId = course.subjectId;
 
@@ -1376,7 +1370,7 @@ TimetableApp.prototype.deleteCourseFromPool = function(course) {
 
         const count = course.count || 1;
 
-        if (!confirm('Delete ' + count + ' scheduled course(s)?')) return;
+        if (!await window.showAppConfirm(`确定要删除这门课程及其 ${count} 条已排课记录吗？`)) return;
 
         const oldSubjectId = course.subjectId;
 

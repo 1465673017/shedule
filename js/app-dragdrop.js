@@ -141,7 +141,15 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
         // 使用事件委托处理表格拖拽
 
-        const validateDrop = (draggedItem, targetKey, excludeKeys = []) => {
+        const validateDrop = (draggedItem, targetKey, excludeKeys = [], showMessage = false) => {
+
+            const rejectDrop = (message) => {
+
+                if (showMessage && message) alert(message);
+
+                return false;
+
+            };
 
             if (!draggedItem) return false;
 
@@ -151,19 +159,25 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
             if (draggedItem.type === 'subject') {
 
-                return !existingVersion || !existingVersion.subject;
+                if (existingVersion && existingVersion.subject) {
+
+                    return rejectDrop('该课时已有课程，请先编辑、移动或删除原课程');
+
+                }
+
+                return true;
 
             } else {
 
-                if (!existingVersion) return true;
-
-                const existingStudents = existingVersion.student || [];
+                const existingStudents = existingVersion ? (existingVersion.student || []) : [];
 
                 const studentExists = existingStudents.includes(draggedItem.id);
 
                 const isFull = existingStudents.length >= this.MAX_STUDENTS_PER_COURSE;
 
-                if (studentExists || isFull) return false;
+                if (studentExists) return rejectDrop('该学生已经在这节课程中');
+
+                if (isFull) return rejectDrop(`每节课最多只能有 ${this.MAX_STUDENTS_PER_COURSE} 个学生`);
 
                 const draggedStudent = this.students.find(s => s.id === draggedItem.id);
 
@@ -171,13 +185,19 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                 const { has1v1, studentCount } = this.getCell1v1Status(targetKey);
 
-                if (isDragged1v1 && studentCount > 0) return false;
+                if (isDragged1v1 && studentCount > 0) return rejectDrop('1v1课程最多容纳一人');
 
-                if (!isDragged1v1 && has1v1) return false;
+                if (!isDragged1v1 && has1v1) return rejectDrop('1v1课程最多容纳一人');
 
                 const auditionAssigned = this.getAuditionStudentAssignedKeys(draggedItem.id, excludeKeys);
 
-                return auditionAssigned.length === 0;
+                if (auditionAssigned.length > 0) {
+
+                    return rejectDrop(this.getAuditionStudentConflictMessage(draggedItem.id, auditionAssigned));
+
+                }
+
+                return true;
 
             }
 
@@ -277,7 +297,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                             }
 
-                        } else if (validateDrop(this.draggedItem, key, excludeKeys)) {
+                        } else if (validateDrop(this.draggedItem, key, excludeKeys, true)) {
 
                             this.addItemToCell(this.draggedItem, day, period);
 
@@ -297,7 +317,7 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                             }
 
-                        } else if (validateDrop(this.draggedItem, key, excludeKeys)) {
+                        } else if (validateDrop(this.draggedItem, key, excludeKeys, true)) {
 
                             this.addItemToCell(this.draggedItem, day, period);
 
