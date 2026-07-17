@@ -12945,33 +12945,9 @@ body.mint-theme-active.reference-main-ui .student-card-light.vertical:hover {
 .timetable th,
 .timetable td,
 .cell {
-    transition-property: background-color, border-color, color, box-shadow, opacity;
+    transition-property: background-color, border-color, color, box-shadow, opacity, transform, filter;
     transition-duration: .18s;
     transition-timing-function: ease;
-}
-
-.btn:hover,
-.btn:active,
-.subject-card:hover,
-.student-card-light:hover,
-.theme-option:hover,
-.grade-chip:hover,
-.grade-chip.selected,
-.subject-chip:hover,
-.student-chip:hover,
-.stats-card:hover,
-.period-add-zone:hover,
-.text-stats-nav-btn:hover,
-.text-stats-nav-btn:active,
-.chart-category-tab:hover,
-body.reference-main-ui .sidebar-actions .btn:hover,
-body.reference-main-ui .sidebar-actions .btn:active,
-body.reference-main-ui .lesson-editor-modal .subject-chip:hover,
-body.reference-main-ui .entity-editor-modal.student-mode .grade-chip:hover,
-body.reference-main-ui .copy-course-btn:hover,
-body.reference-main-ui .copy-course-btn:focus-visible {
-    transform: none !important;
-    filter: none;
 }
 
 .grade-row,
