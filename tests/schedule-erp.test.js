@@ -738,6 +738,45 @@ assert.deepStrictEqual(
 );
 
 lessonSheetApp.formatDuration = (hours, minutes) => `${hours}h${minutes ? `${minutes}min` : ''}`;
+lessonSheetApp.timeToMinutes = value => {
+    const [hours, minutes] = String(value).split(':').map(Number);
+    return hours * 60 + minutes;
+};
+
+lessonSheetApp.erpData = {
+    courseInstances: [{
+        id: 'weekly-course',
+        actualMinutesByDate: {
+            '2026-07-17': 90
+        }
+    }]
+};
+assert.strictEqual(
+    lessonSheetApp.getLessonActualMinutesForStats({
+        courseInstanceId: 'weekly-course',
+        dates: ['2026-07-10']
+    }),
+    undefined,
+    'lesson actual duration must not fall back to a different occurrence date'
+);
+assert.strictEqual(
+    lessonSheetApp.getLessonDurationMinutesForStats({
+        courseInstanceId: 'weekly-course',
+        dates: ['2026-07-10'],
+        time: '08:00-10:00'
+    }),
+    120,
+    'an occurrence without actual duration should use its own scheduled duration'
+);
+assert.strictEqual(
+    lessonSheetApp.getLessonActualMinutesForStats({
+        courseInstanceId: 'weekly-course',
+        dates: ['2026-07-17']
+    }),
+    90,
+    'an occurrence should use actual duration saved for its exact date'
+);
+
 const expandedStudentRows = lessonSheetApp.getLessonSheetExpandedRows([{
     dateKey: '2026-07-01',
     subject: 'Physics',
@@ -748,13 +787,19 @@ const expandedStudentRows = lessonSheetApp.getLessonSheetExpandedRows([{
     studentDetails: [
         { name: 'A', status: 'present', actualMinutes: 120 },
         { name: 'B', status: 'present', actualMinutes: 90 },
-        { name: 'C', status: 'absent', actualMinutes: 120 }
+        { name: 'C', status: 'absent', actualMinutes: 120 },
+        { name: 'D', status: 'present', actualMinutes: 150 }
     ]
 }]);
 assert.deepStrictEqual(
-    expandedStudentRows.map(row => [row.actualDuration, row.isUnderTwoHours]),
-    [['2h', false], ['1h30min', true], ['0h', true]],
-    'lesson-sheet detail rows should use each student actual duration and flag rows below two hours'
+    expandedStudentRows.map(row => [row.actualDuration, row.isUnderTwoHours, row.isOverTwoHours]),
+    [
+        ['2h', false, false],
+        ['1h30min', true, false],
+        ['0h', true, false],
+        ['2h30min', false, true]
+    ],
+    'lesson-sheet detail rows should flag durations below and above two hours separately'
 );
 
 const perCourseCompletionApp = makeApp();

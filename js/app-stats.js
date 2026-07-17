@@ -511,8 +511,6 @@ TimetableApp.prototype.getLessonActualMinutesForStats = function (lesson) {
                     return instance.actualMinutesByDate[dateKey];
                 }
             }
-            const firstKey = Object.keys(instance.actualMinutesByDate)[0];
-            if (firstKey) return instance.actualMinutesByDate[firstKey];
         }
     }
     return undefined;

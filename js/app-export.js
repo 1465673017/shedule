@@ -241,7 +241,8 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
                 attendanceStatus: '-',
                 typeLabel: mapTypeLabel(row.typeLabel),
                 actualDuration: row.actualDuration,
-                isUnderTwoHours: Number(row.durationMinutes || 0) < 120
+                isUnderTwoHours: Number(row.durationMinutes || 0) < 120,
+                isOverTwoHours: Number(row.durationMinutes || 0) > 120
             }];
         }
 
@@ -260,7 +261,8 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
                 attendanceStatus: mapStatusLabel(student.status),
                 typeLabel: mapTypeLabel(row.typeLabel),
                 actualDuration: this.formatDuration(Math.floor(minutes / 60), minutes % 60),
-                isUnderTwoHours: minutes < 120
+                isUnderTwoHours: minutes < 120,
+                isOverTwoHours: minutes > 120
             };
         });
     });
@@ -492,7 +494,7 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
         const makeRow = (cells, cellStyles = []) => `<Row>${cells.map((value, index) => makeCell(value, cellStyles[index] || 'Cell')).join('')}</Row>`;
         const makeMergedCell = (value, mergeAcross, styleId = 'Header') => `<Cell ss:StyleID="${styleId}" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
 
-        const summaryHeaders = ['日期', '年级', '科目', '时间', '学生', '应到', '实到', '请假', '试听', '类型', '实际时长'];
+        const summaryHeaders = ['日期', '年级', '科目', '时间', '学生', '应到', '实到', '请假', '类型', '实际时长'];
         const detailHeaders = ['日期', '年级', '科目', '时间', '学生', '出勤状态', '类型', '实际时长'];
         const variableDurationColumnCount = rows.reduce((max, row) => row.hasVariableStudentDurations
             ? Math.max(max, row.studentDurationDisplays.length)
@@ -606,6 +608,28 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
    <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
    <Interior ss:Color="#FFF200" ss:Pattern="Solid"/>
   </Style>
+  <Style ss:ID="CellRed">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Color="#9C0006"/>
+   <Interior ss:Color="#FFC7CE" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="CellLeftRed">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Color="#9C0006"/>
+   <Interior ss:Color="#FFC7CE" ss:Pattern="Solid"/>
+  </Style>
  </Styles>
  <Worksheet ss:Name="课时统计汇总">
   <Table ss:ExpandedColumnCount="${1 + (summaryMatrix.groups.length * summaryMatrix.typeKeys.length)}" ss:ExpandedRowCount="${summaryMatrix.dayRows.length + 3}" x:FullColumns="1" x:FullRows="1">
@@ -624,13 +648,12 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
   </WorksheetOptions>
  </Worksheet>
  <Worksheet ss:Name="课时统计1">
-  <Table ss:ExpandedColumnCount="${11 + variableDurationColumnCount}" ss:ExpandedRowCount="${rows.length + 1}" x:FullColumns="1" x:FullRows="1">
+  <Table ss:ExpandedColumnCount="${10 + variableDurationColumnCount}" ss:ExpandedRowCount="${rows.length + 1}" x:FullColumns="1" x:FullRows="1">
    <Column ss:Width="78"/>
    <Column ss:Width="82"/>
    <Column ss:Width="74"/>
    <Column ss:Width="88"/>
    <Column ss:Width="180"/>
-   <Column ss:Width="42"/>
    <Column ss:Width="42"/>
    <Column ss:Width="42"/>
    <Column ss:Width="42"/>
@@ -649,15 +672,17 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
             row.scheduledStudents,
             row.presentCount,
             row.leaveCount + row.absentCount,
-            row.auditionCount,
             row.typeLabel,
             row.actualDuration,
             ...extraDurations
         ];
+        const isOverTwoHours = Number(row.durationMinutes || 0) > 120;
         const highlightRow = row.hasVariableStudentDurations || Number(row.durationMinutes || 0) < 120;
-        const styles = highlightRow
-            ? values.map((value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
-            : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell'];
+        const styles = isOverTwoHours
+            ? values.map((_value, index) => index === 4 ? 'CellLeftRed' : 'CellRed')
+            : (highlightRow
+                ? values.map((_value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
+                : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell']);
         return makeRow(values, styles);
     }).join('')}
   </Table>
@@ -687,9 +712,11 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
             row.typeLabel,
             row.actualDuration
         ];
-        const styles = row.isUnderTwoHours
-            ? values.map((value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
-            : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell'];
+        const styles = row.isOverTwoHours
+            ? values.map((_value, index) => index === 4 ? 'CellLeftRed' : 'CellRed')
+            : (row.isUnderTwoHours
+                ? values.map((_value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
+                : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell']);
         return makeRow(values, styles);
     }).join('')}
   </Table>
