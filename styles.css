@@ -2078,12 +2078,13 @@ body.mint-theme-active .app-message-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 10px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
     white-space: nowrap;
+}
+
+.lps-item:last-child {
+    border-bottom: none;
 }
 
 .lps-identity {
@@ -2128,12 +2129,16 @@ body.mint-theme-active .app-message-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    gap: 12px;
+    margin-bottom: 8px;
 }
 
 .att-row:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .att-status {
@@ -2142,19 +2147,24 @@ body.mint-theme-active .app-message-actions {
 }
 
 .att-btn {
-    padding: 4px 10px;
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 13px;
     border-radius: 6px;
     border: 1px solid #e2e8f0;
     background: #ffffff;
     color: #64748b;
     cursor: pointer;
     transition: all 0.15s;
-    font-weight: 500;
+    white-space: nowrap;
 }
 
 .att-btn:hover {
     background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #475569;
 }
 
 .att-btn.present {
@@ -3099,24 +3109,19 @@ body.mint-theme-active .app-message-actions {
 
 /* 点名界面 - 学生重复类型切换按钮（与标记请假同款） */
 .recurrence-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 13px;
+    font-size: 12px;
     color: #64748b;
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 4px 10px;
     border-radius: 6px;
     border: 1px solid #e2e8f0;
     background: #ffffff;
     transition: all 0.15s;
-    white-space: nowrap;
+    font-weight: 500;
 }
 
 .recurrence-btn:hover {
     background: #f1f5f9;
-    border-color: #94a3b8;
-    color: #475569;
 }
 
 .recurrence-btn.active.recurring {
@@ -6442,7 +6447,7 @@ body.dark-theme-active .tutorial-content {
     }
 }
 
-body.dark-theme-active .lesson-popup-students .lps-item {
+body.dark-theme-active .att-row {
     background: #334155;
     border-color: #475569;
 }
@@ -6536,6 +6541,8 @@ body.dark-theme-active .att-btn {
 
 body.dark-theme-active .att-btn:hover {
     background: #334155;
+    border-color: #64748b;
+    color: #e2e8f0;
 }
 
 body.dark-theme-active .att-btn.present {
@@ -6713,8 +6720,6 @@ body.dark-theme-active .recurrence-btn {
 
 body.dark-theme-active .recurrence-btn:hover {
     background: #334155;
-    border-color: #64748b;
-    color: #e2e8f0;
 }
 
 body.dark-theme-active .recurrence-btn.active.recurring {
