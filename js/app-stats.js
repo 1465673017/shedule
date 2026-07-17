@@ -532,6 +532,22 @@ TimetableApp.prototype.getLessonDurationMinutesForStats = function (lesson) {
     return 0;
 }
 
+// 模式二按每名学生的实际上课时间累计学生课时。
+TimetableApp.prototype.getLessonStudentMinutesForUnitStats = function (lesson) {
+    const fallbackMinutes = this.getLessonDurationMinutesForStats(lesson);
+    const students = Array.isArray(lesson.students) ? lesson.students : [];
+    if (students.length > 0) {
+        return students.reduce(function (total, student) {
+            if (!student || student.status === 'leave' || student.status === 'absent') return total;
+            const minutes = student.actualMinutes !== undefined
+                ? Number(student.actualMinutes)
+                : fallbackMinutes;
+            return total + Math.max(0, Number.isFinite(minutes) ? minutes : 0);
+        }, 0);
+    }
+    return fallbackMinutes * Math.max(0, Number(lesson.studentCount) || 0);
+}
+
 TimetableApp.prototype.getLessonSegmentTypeStats = function (lesson) {
     const presentStudents = (lesson.students || []).filter(student =>
         student && !student.isAudition && student.status !== 'leave' && student.status !== 'absent'
@@ -1122,10 +1138,13 @@ TimetableApp.prototype.getChartSliceData = function (data, index) {
 };
 
 TimetableApp.prototype.switchChartCategory = function (category) {
+    var isRepeatedDurationClick = category === 'duration' && this._currentChartCategory === 'duration';
+    this._durationUnitMode = isRepeatedDurationClick ? !this._durationUnitMode : false;
     this._currentChartCategory = category;
     document.querySelectorAll('.chart-category-tab').forEach(function (btn) {
         btn.classList.toggle('active', btn.dataset.category === category);
-    });
+        btn.classList.toggle('lesson-unit-active', btn.dataset.category === 'duration' && !!this._durationUnitMode);
+    }, this);
     if (this._statsBaseCardLessons && this._statsBaseCardStart && this._statsBaseCardEnd) {
         this.renderStatsCards(this._statsBaseCardLessons, {
             startDate: this._statsBaseCardStart,
@@ -1220,7 +1239,9 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
 
             var lessonCount = lesson.lessonCount || 1;
             var segmented = self.getLessonSegmentTypeStats(lesson);
-            groups[groupKey].totalMinutes += segmented.totalMinutes * lessonCount;
+            groups[groupKey].totalMinutes += (self._durationUnitMode
+                ? self.getLessonStudentMinutesForUnitStats(lesson)
+                : segmented.totalMinutes) * lessonCount;
             Object.keys(segmented.typeStats).forEach(function (typeKey) {
                 groups[groupKey].typeMinutes[typeKey] = (groups[groupKey].typeMinutes[typeKey] || 0)
                     + segmented.typeStats[typeKey] * lessonCount;
@@ -1698,6 +1719,99 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
     var self = this;
 
+    if (this._durationUnitMode) {
+        var unitData = data.totalMinutesData.map(function (minutes) { return minutes / 40; });
+        var hasUnitData = unitData.some(function (value) { return value > 0; });
+        var themeStyles = getComputedStyle(document.body);
+        var primaryRgb = themeStyles.getPropertyValue('--primary-rgb').trim() || '22, 119, 255';
+        var unitBarGradient = function (context) {
+            var chart = context.chart;
+            var value = Number(context.raw);
+            var yScale = chart.scales && chart.scales.y;
+            if (!chart.chartArea || !yScale || !Number.isFinite(value) || value <= 0) {
+                return 'rgba(' + primaryRgb + ', .16)';
+            }
+
+            // Each bar owns a full-height gradient: light at its base and the
+            // current theme color at its top, regardless of the bar's value.
+            var valueY = yScale.getPixelForValue(value);
+            var baseY = yScale.getPixelForValue(0);
+            var top = Math.min(valueY, baseY);
+            var bottom = Math.max(valueY, baseY);
+            if (!Number.isFinite(top) || !Number.isFinite(bottom) || top === bottom) {
+                return 'rgba(' + primaryRgb + ', .16)';
+            }
+            var gradient = chart.ctx.createLinearGradient(0, bottom, 0, top);
+            gradient.addColorStop(0, 'rgba(' + primaryRgb + ', .22)');
+            gradient.addColorStop(1, 'rgb(' + primaryRgb + ')');
+            return gradient;
+        };
+        var formatPd = function (value) {
+            return Number(value).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1') + 'Pd.';
+        };
+        var unitTotalLabelPlugin = {
+            id: 'lessonUnitTotalLabels',
+            afterDatasetsDraw: function (chart) {
+                // 与模式一一致：数据过密（超过 42 项）或数值为 0 时不绘制顶部数字。
+                if (!hasUnitData || data.labels.length > 42) return;
+                var drawCtx = chart.ctx;
+                var meta = chart.getDatasetMeta(0);
+                drawCtx.save();
+                drawCtx.fillStyle = isDark ? '#e2e8f0' : '#344054';
+                drawCtx.font = '700 10px sans-serif';
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'bottom';
+                unitData.forEach(function (value, index) {
+                    var bar = meta.data[index];
+                    if (!bar || value <= 0) return;
+                    drawCtx.fillText(Number(value).toFixed(1), bar.x, Math.max(chart.chartArea.top + 11, bar.y - 5));
+                });
+                drawCtx.restore();
+            }
+        };
+        var unitChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: '总耗课',
+                    data: unitData,
+                    backgroundColor: unitBarGradient,
+                    borderColor: 'rgb(' + primaryRgb + ')',
+                    borderWidth: 0,
+                    borderRadius: 5,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                onHover: function (_event, elements, chart) {
+                    chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+                    if (onBarHover) onBarHover(elements.length ? elements[0].index : null);
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function (item) { return '总耗课: ' + formatPd(item.parsed.y); } } }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: { color: textColor, callback: function (value) { return value + 'Pd.'; } }
+                    }
+                }
+            },
+            plugins: [unitTotalLabelPlugin]
+        });
+        var unitLegend = document.getElementById('barChartTitleLegend');
+        if (unitLegend) unitLegend.innerHTML = '';
+        this.setChartLegendNote(hasUnitData ? '' : '暂无课时数据');
+        return unitChart;
+    }
+
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
     var catColors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
     var typeLabels = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
@@ -1850,6 +1964,58 @@ TimetableApp.prototype.renderDurationLineChart = function (ctx, data, onPointHov
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
 
+    if (this._durationUnitMode) {
+        var unitData = data.totalMinutesData.map(function (minutes) { return minutes / 40; });
+        var hasUnitData = unitData.some(function (value) { return value > 0; });
+        var themeStyles = getComputedStyle(document.body);
+        var primaryRgb = themeStyles.getPropertyValue('--primary-rgb').trim() || '22, 119, 255';
+        var themeLineColor = 'rgb(' + primaryRgb + ')';
+        var themeLineFill = 'rgba(' + primaryRgb + ', .12)';
+        var unitChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: '总耗课',
+                    data: unitData,
+                    borderColor: themeLineColor,
+                    backgroundColor: themeLineFill,
+                    borderWidth: 2.5,
+                    pointRadius: data.labels.length > 31 ? 0 : 2.5,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: themeLineColor,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                onHover: function (_event, elements, chart) {
+                    chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+                    if (onPointHover) onPointHover(elements.length ? elements[0].index : null);
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function (item) { return '总耗课: ' + item.parsed.y.toFixed(2) + 'Pd.'; } } }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: { color: textColor, callback: function (value) { return value + 'Pd.'; } }
+                    }
+                }
+            }
+        });
+        var unitLegend = document.getElementById('lineChartTitleLegend');
+        if (unitLegend) unitLegend.innerHTML = '';
+        this.setChartLegendNote(hasUnitData ? '' : '暂无课时数据');
+        return unitChart;
+    }
+
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
     var catColors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
     var pointSizes = this.getLinePointSizes(data.labels.length);
@@ -1968,6 +2134,12 @@ TimetableApp.prototype.openStatsModal = function (date, showCharts) {
 
     this._statsDate = date || new Date();
     this._statsShowCharts = true;
+    this._currentChartCategory = 'duration';
+    this._durationUnitMode = false;
+    document.querySelectorAll('.chart-category-tab').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.category === 'duration');
+        btn.classList.remove('lesson-unit-active');
+    });
     var now = new Date();
     this.setStatsDateRange(
         new Date(now.getFullYear(), now.getMonth(), 1),
@@ -2015,6 +2187,15 @@ TimetableApp.prototype.updateStatsHeader = function (title, subtitle) {
 TimetableApp.prototype.updateStatsOverview = function (summary, startDate, endDate) {
     var noteEl = document.getElementById('statsOverviewNote');
     var detailEl = document.getElementById('statsDetailSummary');
+
+    if (this._durationUnitMode) {
+        var unitRangeLabel = this.formatStatsHeaderDate(startDate) + ' - ' + this.formatStatsHeaderDate(endDate);
+        if (noteEl) noteEl.textContent = summary && !summary.empty
+            ? unitRangeLabel + ' · 总耗课 ' + summary.totalHours + 'Pd.（40分钟/Pd.）。'
+            : unitRangeLabel + ' · 暂无可统计耗课。';
+        if (detailEl) detailEl.textContent = '';
+        return;
+    }
 
     if (!summary || summary.empty) {
         if (noteEl) noteEl.textContent = '当前时间范围内还没有可统计的课程记录。';
@@ -2102,6 +2283,31 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var validLessons = lessons.filter(function (lesson) {
         return (lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0)) > 0;
     });
+
+    if (!config.legacy && container.id === 'statsCards' && this._durationUnitMode) {
+        var totalUnitMinutes = validLessons.reduce(function (sum, lesson) {
+            return sum + this.getLessonStudentMinutesForUnitStats(lesson) * (lesson.lessonCount || 1);
+        }.bind(this), 0);
+        var totalUnits = totalUnitMinutes / 40;
+        container.classList.add('lesson-unit-summary-grid');
+        container.innerHTML = '<div class="stats-card stats-card-hours"><div class="stats-card-copy">'
+            + '<div class="st-label">总耗课（40分钟/Pd.）</div>'
+            + '<div class="st-num">' + (totalUnitMinutes ? totalUnits.toFixed(2) : '-') + '</div>'
+            + '</div></div>';
+        this.animateStatsCards(container, !totalUnitMinutes);
+        return {
+            empty: !totalUnitMinutes,
+            lessonCount: validLessons.length,
+            totalPresentStudents: 0,
+            totalScheduledStudents: 0,
+            totalHours: totalUnits.toFixed(2),
+            totalAuditionCount: 0,
+            classDays: 0,
+            topType: '',
+            typeEntries: []
+        };
+    }
+    container.classList.remove('lesson-unit-summary-grid');
 
     if (validLessons.length === 0) {
         if (config.legacy) {
@@ -2544,6 +2750,9 @@ TimetableApp.prototype.getChartPanelCopy = function (category, granularity, focu
 };
 
 TimetableApp.prototype.applyMainChartFilters = function (category, data) {
+    // 模式二只看每天/周/月/年的实际总课时，不再让班型筛选重算总分钟。
+    if (this._durationUnitMode && category === 'duration') return data;
+
     var barChart = this._chartInstances && this._chartInstances.bar;
     if (!barChart || !data) return data;
 
@@ -2674,8 +2883,9 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
 
     var statsCards = document.getElementById('statsCards');
     var detailSection = document.getElementById('statsDetailSection');
-    if (statsCards) statsCards.style.display = '';
-    if (detailSection) detailSection.style.display = '';
+    chartSection.classList.toggle('lesson-unit-mode', !!this._durationUnitMode);
+    if (statsCards) statsCards.style.display = this._durationUnitMode ? 'none' : '';
+    if (detailSection) detailSection.style.display = this._durationUnitMode ? 'none' : '';
 
     if (typeof Chart === 'undefined') {
         chartSection.style.display = 'none';
@@ -2693,7 +2903,13 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     if (cat === 'student' && titleLegend) titleLegend.innerHTML = '';
     var lineTitleLegend = document.getElementById('lineChartTitleLegend');
     if (cat === 'student' && lineTitleLegend) lineTitleLegend.innerHTML = '';
-    var copy = this.getChartPanelCopy(cat, seriesData.granularity, null);
+    var copy = this._durationUnitMode ? {
+        barTitle: '总耗课',
+        barSubtitle: '按' + this.getStatsGranularityLabel(seriesData.granularity) + '汇总，40分钟计为1Pd.。',
+        lineTitle: '总耗课趋势',
+        lineSubtitle: '查看所选日、周、月或年范围内的总耗课变化。',
+        pieTitle: '', pieSubtitle: ''
+    } : this.getChartPanelCopy(cat, seriesData.granularity, null);
     this.setChartPanelText('barChartTitle', 'barChartSubtitle', copy.barTitle, copy.barSubtitle);
     this.setChartPanelText('lineChartTitle', 'lineChartSubtitle', copy.lineTitle, copy.lineSubtitle);
     this.setChartPanelText('pieChartTitle', 'pieChartSubtitle', copy.pieTitle, copy.pieSubtitle);

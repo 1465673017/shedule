@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <!-- saved from url=(0037)https://2hanzi.com/kebiao/kebiao.html -->
-<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    
+<html lang="zh-CN">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>A大橙子课时统计（内测版）</title>
     <link rel="icon" type="image/png" href="./icon/orange.png">
@@ -22,12 +25,16 @@
             </div>
         </div>
         <div class="electron-window-controls" aria-label="窗口控制">
-            <button type="button" aria-label="最小化" title="最小化" onclick="window.electronAPI.windowControl('minimize')">&#8722;</button>
-            <button type="button" aria-label="最大化或还原" title="最大化或还原" onclick="window.electronAPI.windowControl('maximize')">&#9633;</button>
-            <button type="button" class="electron-window-close" aria-label="关闭" title="关闭" onclick="window.electronAPI.windowControl('close')">&#215;</button>
+            <button type="button" aria-label="最小化" title="最小化"
+                onclick="window.electronAPI.windowControl('minimize')">&#8722;</button>
+            <button type="button" aria-label="最大化或还原" title="最大化或还原"
+                onclick="window.electronAPI.windowControl('maximize')">&#9633;</button>
+            <button type="button" class="electron-window-close" aria-label="关闭" title="关闭"
+                onclick="window.electronAPI.windowControl('close')">&#215;</button>
         </div>
     </header>
-    <div id="appMessageModal" class="modal app-message-modal" role="dialog" aria-modal="true" aria-labelledby="appMessageTitle">
+    <div id="appMessageModal" class="modal app-message-modal" role="dialog" aria-modal="true"
+        aria-labelledby="appMessageTitle">
         <div class="app-message-dialog">
             <div class="app-message-heading">
                 <img src="./icon/orange.png" alt="" class="app-message-logo">
@@ -51,7 +58,7 @@
                 <div class="sidebar-actions">
                     <button id="exportBtn" class="btn primary">导出数据</button>
                     <button id="resetBtn" class="btn secondary">重置课表</button>
-                    <button id="tutorialBtn" class="btn tertiary">查看教程</button>
+                    <button id="tutorialBtn" class="btn tertiary">快速开始</button>
                     <button id="settingsBtn" class="btn tertiary">基础设置</button>
                     <button id="importCourseDataBtn" class="btn tertiary">导入课程数据</button>
                 </div>
@@ -71,151 +78,472 @@
                         <button class="filter-btn" data-filter="completed">已结课</button>
                         <button class="filter-btn" data-filter="audition">试听</button>
                     </div>
-                    <div id="subjectPool" class="subjects"><div class="subject-card" draggable="true" data-subject-id="1" style="border-left: 4px solid rgb(255, 0, 0);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">语文</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="2" style="border-left: 4px solid rgb(0, 0, 255);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">数学</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="3" style="border-left: 4px solid rgb(255, 105, 180);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">英语</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="4" style="border-left: 4px solid rgb(255, 165, 0);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">美术</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="5" style="border-left: 4px solid rgb(128, 0, 128);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">健康与体育</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="6" style="border-left: 4px solid rgb(184, 134, 11);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">道德与法制</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="7" style="border-left: 4px solid rgb(255, 69, 0);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">音乐</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="8" style="border-left: 4px solid rgb(128, 128, 128);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">劳动</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="9" style="border-left: 4px solid rgb(102, 51, 153);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">班队会</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="10" style="border-left: 4px solid rgb(0, 100, 0);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">值日</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="11" style="border-left: 4px solid rgb(0, 0, 128);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">历史</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="12" style="border-left: 4px solid rgb(75, 0, 130);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">地理</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="13" style="border-left: 4px solid rgb(139, 0, 0);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">政治</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="14" style="border-left: 4px solid rgb(160, 82, 45);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">物理</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="15" style="border-left: 4px solid rgb(47, 79, 79);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">化学</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div><div class="subject-card" draggable="true" data-subject-id="16" style="border-left: 4px solid rgb(255, 107, 107);">
-                <div class="subject-info">
-                    <div class="subject-name" style="line-height: 40px;">生物</div>
-                    
-                </div>
-                <div class="subject-actions">
-                    <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                </div>
-            </div></div>
+                    <div id="subjectPool" class="subjects">
+                        <div class="subject-card" draggable="true" data-subject-id="1"
+                            style="border-left: 4px solid rgb(255, 0, 0);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">语文</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="2"
+                            style="border-left: 4px solid rgb(0, 0, 255);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">数学</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="3"
+                            style="border-left: 4px solid rgb(255, 105, 180);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">英语</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="4"
+                            style="border-left: 4px solid rgb(255, 165, 0);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">美术</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="5"
+                            style="border-left: 4px solid rgb(128, 0, 128);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">健康与体育</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="6"
+                            style="border-left: 4px solid rgb(184, 134, 11);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">道德与法制</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="7"
+                            style="border-left: 4px solid rgb(255, 69, 0);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">音乐</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="8"
+                            style="border-left: 4px solid rgb(128, 128, 128);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">劳动</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="9"
+                            style="border-left: 4px solid rgb(102, 51, 153);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">班队会</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="10"
+                            style="border-left: 4px solid rgb(0, 100, 0);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">值日</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="11"
+                            style="border-left: 4px solid rgb(0, 0, 128);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">历史</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="12"
+                            style="border-left: 4px solid rgb(75, 0, 130);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">地理</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="13"
+                            style="border-left: 4px solid rgb(139, 0, 0);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">政治</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="14"
+                            style="border-left: 4px solid rgb(160, 82, 45);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">物理</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="15"
+                            style="border-left: 4px solid rgb(47, 79, 79);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">化学</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="subject-card" draggable="true" data-subject-id="16"
+                            style="border-left: 4px solid rgb(255, 107, 107);">
+                            <div class="subject-info">
+                                <div class="subject-name" style="line-height: 40px;">生物</div>
+
+                            </div>
+                            <div class="subject-actions">
+                                <button class="btn-icon edit-btn" title="编辑" data-action="edit"><svg viewBox="0 0 24 24"
+                                        fill="none" aria-hidden="true">
+                                        <path d="M12 20H21" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                    </svg></button>
+                                <button class="btn-icon delete-btn" title="删除" data-action="delete"><svg
+                                        viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" />
+                                        <path
+                                            d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7"
+                                            stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                                        <path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2"
+                                            stroke-linejoin="round" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -233,7 +561,15 @@
                             </div>
                         </div>
                         <div class="date-display">
-                            <label class="date-picker-shell" for="datePicker"><span class="calendar-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><input type="date" id="datePicker" class="date-picker"></label>
+                            <label class="date-picker-shell" for="datePicker"><span class="calendar-icon"
+                                    aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
+                                        <path
+                                            d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
+                                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                        <path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor"
+                                            stroke-width="1.8" stroke-linecap="round" />
+                                    </svg></span><input type="date" id="datePicker" class="date-picker"></label>
                             <button type="button" id="todayBtn" class="today-btn">今天</button>
                         </div>
                     </div>
@@ -242,13 +578,22 @@
                             <thead>
                                 <tr>
                                     <th class="period-header">节次/时间</th>
-                                    <th class="weekday-col" data-day-header="1">周一<br><span class="date-span" id="dateCell1">7/7</span></th>
-                                    <th class="weekday-col" data-day-header="2">周二<br><span class="date-span" id="dateCell2">7/8</span></th>
-                                    <th class="weekday-col" data-day-header="3">周三<br><span class="date-span" id="dateCell3">7/9</span></th>
-                                    <th class="weekday-col" data-day-header="4">周四<br><span class="date-span" id="dateCell4">7/10</span></th>
-                                    <th class="weekday-col" data-day-header="5">周五<br><span class="date-span" id="dateCell5">7/11</span></th>
-                                    <th class="weekend-col" id="saturdayCol" data-day-header="6" style="display: table-cell;">周六<br><span class="date-span" id="dateCell6">7/12</span></th>
-                                    <th class="weekend-col" id="sundayCol" data-day-header="7" style="display: table-cell;">周日<br><span class="date-span" id="dateCell7">7/13</span></th>
+                                    <th class="weekday-col" data-day-header="1">周一<br><span class="date-span"
+                                            id="dateCell1">7/7</span></th>
+                                    <th class="weekday-col" data-day-header="2">周二<br><span class="date-span"
+                                            id="dateCell2">7/8</span></th>
+                                    <th class="weekday-col" data-day-header="3">周三<br><span class="date-span"
+                                            id="dateCell3">7/9</span></th>
+                                    <th class="weekday-col" data-day-header="4">周四<br><span class="date-span"
+                                            id="dateCell4">7/10</span></th>
+                                    <th class="weekday-col" data-day-header="5">周五<br><span class="date-span"
+                                            id="dateCell5">7/11</span></th>
+                                    <th class="weekend-col" id="saturdayCol" data-day-header="6"
+                                        style="display: table-cell;">周六<br><span class="date-span"
+                                            id="dateCell6">7/12</span></th>
+                                    <th class="weekend-col" id="sundayCol" data-day-header="7"
+                                        style="display: table-cell;">周日<br><span class="date-span"
+                                            id="dateCell7">7/13</span></th>
                                 </tr>
                             </thead>
                             <tbody id="timetableBody"></tbody>
@@ -275,20 +620,24 @@
                         <div class="form-group">
                             <label id="nameLabel">科目名称</label>
                             <div class="entity-name-input-wrap">
-                                <input type="text" id="subjectName" required="" autocomplete="off" maxlength="20" placeholder="请输入科目名称（如：语文）">
+                                <input type="text" id="subjectName" required="" autocomplete="off" maxlength="20"
+                                    placeholder="请输入科目名称（如：语文）">
                                 <span id="subjectNameCount" class="entity-name-count">0 / 20</span>
                             </div>
                         </div>
                     </div>
-                    <div id="oneV1Toggle" class="modal-section student-type-section one-v1-toggle" style="display: none;">
+                    <div id="oneV1Toggle" class="modal-section student-type-section one-v1-toggle"
+                        style="display: none;">
                         <div class="section-heading-row">
                             <div>
                                 <div class="section-title">学生类型</div>
                                 <div class="section-hint">普通学生无需选择；1v1 与试听不可同时启用</div>
                             </div>
                             <div class="student-type-actions">
-                            <button type="button" id="oneV1Btn" class="one-v1-btn" onclick="app.toggleOneV1()">1v1</button>
-                            <button type="button" id="auditionBtn" class="one-v1-btn" onclick="app.toggleAudition()">试听</button>
+                                <button type="button" id="oneV1Btn" class="one-v1-btn"
+                                    onclick="app.toggleOneV1()">1v1</button>
+                                <button type="button" id="auditionBtn" class="one-v1-btn"
+                                    onclick="app.toggleAudition()">试听</button>
                             </div>
                         </div>
                     </div>
@@ -302,37 +651,50 @@
                     <div id="colorFormGroup" class="modal-section form-group">
                         <label>显示颜色</label>
                         <div class="color-options">
-                        <div class="preset-colors">
-                            <div class="color-option" data-color="#FFE4E1" style="background: #FFE4E1" title="浅红"></div>
-                            <div class="color-option" data-color="#E3F2FD" style="background: #E3F2FD" title="浅蓝"></div>
-                            <div class="color-option" data-color="#FCE4EC" style="background: #FCE4EC" title="浅粉"></div>
-                            <div class="color-option" data-color="#FFF3E0" style="background: #FFF3E0" title="浅橙"></div>
-                            <div class="color-option" data-color="#E8EAF6" style="background: #E8EAF6" title="浅紫"></div>
-                            <div class="color-option" data-color="#FEF9E7" style="background: #FEF9E7" title="浅金">
+                            <div class="preset-colors">
+                                <div class="color-option" data-color="#FFE4E1" style="background: #FFE4E1" title="浅红">
+                                </div>
+                                <div class="color-option" data-color="#E3F2FD" style="background: #E3F2FD" title="浅蓝">
+                                </div>
+                                <div class="color-option" data-color="#FCE4EC" style="background: #FCE4EC" title="浅粉">
+                                </div>
+                                <div class="color-option" data-color="#FFF3E0" style="background: #FFF3E0" title="浅橙">
+                                </div>
+                                <div class="color-option" data-color="#E8EAF6" style="background: #E8EAF6" title="浅紫">
+                                </div>
+                                <div class="color-option" data-color="#FEF9E7" style="background: #FEF9E7" title="浅金">
+                                </div>
+                                <div class="color-option" data-color="#FFECB3" style="background: #FFECB3" title="浅黄">
+                                </div>
+                                <div class="color-option" data-color="#F5F5F5" style="background: #F5F5F5" title="浅灰">
+                                </div>
+                                <div class="color-option" data-color="#F3E5F5" style="background: #F3E5F5" title="浅紫">
+                                </div>
+                                <div class="color-option" data-color="#FFE0B2" style="background: #FFE0B2" title="浅橙黄">
+                                </div>
+                                <div class="color-option" data-color="#FFCDBA" style="background: #FFCDBA" title="浅杏色">
+                                </div>
+                                <div class="color-option" data-color="#D1C4E9" style="background: #D1C4E9" title="浅紫罗兰">
+                                </div>
+                                <div class="color-option" data-color="#B3E5FC" style="background: #B3E5FC" title="浅天蓝">
+                                </div>
+                                <div class="color-option" data-color="#F8BBD9" style="background: #F8BBD9" title="浅粉紫">
+                                </div>
+                                <div class="color-option" data-color="#FFCDD2" style="background: #FFCDD2" title="浅珊瑚">
+                                </div>
                             </div>
-                            <div class="color-option" data-color="#FFECB3" style="background: #FFECB3" title="浅黄">
+                            <div class="custom-color">
+                                <label>自定义颜色</label>
+                                <input type="color" id="customColor" value="#FF6B6B">
+                                <input type="text" id="customColorText" placeholder="#FF6B6B" maxlength="7">
                             </div>
-                            <div class="color-option" data-color="#F5F5F5" style="background: #F5F5F5" title="浅灰"></div>
-                            <div class="color-option" data-color="#F3E5F5" style="background: #F3E5F5" title="浅紫">
-                            </div>
-                            <div class="color-option" data-color="#FFE0B2" style="background: #FFE0B2" title="浅橙黄"></div>
-                            <div class="color-option" data-color="#FFCDBA" style="background: #FFCDBA" title="浅杏色"></div>
-                            <div class="color-option" data-color="#D1C4E9" style="background: #D1C4E9" title="浅紫罗兰"></div>
-                            <div class="color-option" data-color="#B3E5FC" style="background: #B3E5FC" title="浅天蓝"></div>
-                            <div class="color-option" data-color="#F8BBD9" style="background: #F8BBD9" title="浅粉紫"></div>
-                            <div class="color-option" data-color="#FFCDD2" style="background: #FFCDD2" title="浅珊瑚"></div>
-                        </div>
-                        <div class="custom-color">
-                            <label>自定义颜色</label>
-                            <input type="color" id="customColor" value="#FF6B6B">
-                            <input type="text" id="customColorText" placeholder="#FF6B6B" maxlength="7">
-                        </div>
-                        <p class="entity-color-hint"><span aria-hidden="true">ⓘ</span> 选择颜色后将在课程卡片和相关界面中显示</p>
+                            <p class="entity-color-hint"><span aria-hidden="true">ⓘ</span> 选择颜色后将在课程卡片和相关界面中显示</p>
                         </div>
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button type="button" id="deleteSubjectBtn" class="btn danger action-leading" style="display: none;">删除</button>
+                    <button type="button" id="deleteSubjectBtn" class="btn danger action-leading"
+                        style="display: none;">删除</button>
                     <button type="button" id="cancelBtn" class="btn secondary">取消</button>
                     <button type="submit" class="btn primary">保存</button>
                 </div>
@@ -347,7 +709,8 @@
                     <h3>批量导入学生</h3>
                     <p class="modal-subtitle">选择统一年级，并用顿号分隔多个学生姓名</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeStudentBatchModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭"
+                    onclick="app.closeStudentBatchModal()">×</button>
             </div>
             <form id="studentBatchForm">
                 <div class="modal-body">
@@ -371,18 +734,31 @@
     <div id="courseDataImportModal" class="modal">
         <div class="modal-content standard-form-modal">
             <div class="modal-header">
-                <div class="modal-title-block"><h3>批量导入课程数据</h3><p class="modal-subtitle">支持完整接口响应、按教师 ID 分组的数据、课程数组或单条课程 JSON</p></div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeCourseDataImportModal()">×</button>
+                <div class="modal-title-block">
+                    <h3>批量导入课程数据</h3>
+                    <p class="modal-subtitle">支持完整接口响应、按教师 ID 分组的数据、课程数组或单条课程 JSON</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭"
+                    onclick="app.closeCourseDataImportModal()">×</button>
             </div>
             <form id="courseDataImportForm">
-                <div class="modal-body"><div class="modal-section form-group">
-                    <div class="course-import-label-row">
-                        <label for="courseDataImportText">课程 JSON</label>
-                        <button type="button" id="courseImportStageStartToggle" class="btn secondary course-import-stage-start" aria-pressed="false" onclick="app.toggleCourseImportStageStart()">阶段导入</button>
+                <div class="modal-body">
+                    <div class="modal-section form-group">
+                        <div class="course-import-label-row">
+                            <label for="courseDataImportText">课程 JSON</label>
+                            <button type="button" id="courseImportStageStartToggle"
+                                class="btn secondary course-import-stage-start" aria-pressed="false"
+                                onclick="app.toggleCourseImportStageStart()">阶段导入</button>
+                        </div>
+                        <textarea id="courseDataImportText" required rows="14"
+                            placeholder="可直接粘贴完整接口返回 JSON，系统会递归识别其中的全部课程"></textarea>
                     </div>
-                    <textarea id="courseDataImportText" required rows="14" placeholder="可直接粘贴完整接口返回 JSON，系统会递归识别其中的全部课程"></textarea>
-                </div><div id="courseDataImportMessage" class="modal-subtitle"></div></div>
-                <div class="form-actions"><button type="button" class="btn secondary" onclick="app.clearCourseDataImportText()">清空</button><button type="button" class="btn secondary" onclick="app.pasteCourseDataImportText()">粘贴</button><button type="submit" class="btn primary">识别并导入</button></div>
+                    <div id="courseDataImportMessage" class="modal-subtitle"></div>
+                </div>
+                <div class="form-actions"><button type="button" class="btn secondary"
+                        onclick="app.clearCourseDataImportText()">清空</button><button type="button" class="btn secondary"
+                        onclick="app.pasteCourseDataImportText()">粘贴</button><button type="submit"
+                        class="btn primary">识别并导入</button></div>
             </form>
         </div>
     </div>
@@ -399,34 +775,92 @@
             </div>
             <form id="timeForm">
                 <div class="modal-body">
-                <div class="modal-section form-group">
-                    <label>课时名称</label>
-                    <input type="text" id="periodName" required="" placeholder="第1课时">
-                </div>
-                <div class="modal-section form-group">
-                    <label>开始时间</label>
-                    <div class="time-select-row">
-                        <select id="startHour">
-                            <option value="">时</option>
-                        <option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option></select>
-                        <span>:</span>
-                        <select id="startMinute">
-                            <option value="">分</option>
-                        <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
+                    <div class="modal-section form-group">
+                        <label>课时名称</label>
+                        <input type="text" id="periodName" required="" placeholder="第1课时">
                     </div>
-                </div>
-                <div class="modal-section form-group">
-                    <label>结束时间</label>
-                    <div class="time-select-row">
-                        <select id="endHour">
-                            <option value="">时</option>
-                        <option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option></select>
-                        <span>:</span>
-                        <select id="endMinute">
-                            <option value="">分</option>
-                        <option value="00">00</option><option value="05">05</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option></select>
+                    <div class="modal-section form-group">
+                        <label>开始时间</label>
+                        <div class="time-select-row">
+                            <select id="startHour">
+                                <option value="">时</option>
+                                <option value="06">06</option>
+                                <option value="07">07</option>
+                                <option value="08">08</option>
+                                <option value="09">09</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                                <option value="16">16</option>
+                                <option value="17">17</option>
+                                <option value="18">18</option>
+                                <option value="19">19</option>
+                                <option value="20">20</option>
+                                <option value="21">21</option>
+                                <option value="22">22</option>
+                            </select>
+                            <span>:</span>
+                            <select id="startMinute">
+                                <option value="">分</option>
+                                <option value="00">00</option>
+                                <option value="05">05</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="25">25</option>
+                                <option value="30">30</option>
+                                <option value="35">35</option>
+                                <option value="40">40</option>
+                                <option value="45">45</option>
+                                <option value="50">50</option>
+                                <option value="55">55</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
+                    <div class="modal-section form-group">
+                        <label>结束时间</label>
+                        <div class="time-select-row">
+                            <select id="endHour">
+                                <option value="">时</option>
+                                <option value="06">06</option>
+                                <option value="07">07</option>
+                                <option value="08">08</option>
+                                <option value="09">09</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                                <option value="16">16</option>
+                                <option value="17">17</option>
+                                <option value="18">18</option>
+                                <option value="19">19</option>
+                                <option value="20">20</option>
+                                <option value="21">21</option>
+                                <option value="22">22</option>
+                            </select>
+                            <span>:</span>
+                            <select id="endMinute">
+                                <option value="">分</option>
+                                <option value="00">00</option>
+                                <option value="05">05</option>
+                                <option value="10">10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="25">25</option>
+                                <option value="30">30</option>
+                                <option value="35">35</option>
+                                <option value="40">40</option>
+                                <option value="45">45</option>
+                                <option value="50">50</option>
+                                <option value="55">55</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="cancelTimeBtn" class="btn secondary">取消</button>
@@ -481,10 +915,13 @@
                     <h3 id="attendanceTitle">学生点名</h3>
                     <p class="modal-subtitle">记录本节课的学生出勤情况</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeAttendanceModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭"
+                    onclick="app.closeAttendanceModal()">×</button>
             </div>
             <div id="attendanceContent" class="modal-body">
-                <div id="attendanceLessonInfo" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; font-size: 14px; color: #666;"></div>
+                <div id="attendanceLessonInfo"
+                    style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; font-size: 14px; color: #666;">
+                </div>
                 <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #444;">出勤记录</div>
                 <div id="attendanceRecords"></div>
                 <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 14px;">
@@ -507,7 +944,8 @@
             </div>
             <div class="stats-tabs" id="statsTabs">
                 <button class="stats-tab active" data-tab="day" onclick="app.switchStatsTab('day')">日统计</button>
-                <button class="stats-tab stats-tab-week" data-tab="week" onclick="app.switchStatsTab('week')">周统计<span class="stats-week-mode-badge" id="statsWeekModeBadge" hidden>自</span></button>
+                <button class="stats-tab stats-tab-week" data-tab="week" onclick="app.switchStatsTab('week')">周统计<span
+                        class="stats-week-mode-badge" id="statsWeekModeBadge" hidden>自</span></button>
                 <button class="stats-tab" data-tab="month" onclick="app.switchStatsTab('month')">月统计</button>
                 <button class="stats-tab" data-tab="year" onclick="app.switchStatsTab('year')">年统计</button>
             </div>
@@ -516,15 +954,24 @@
                     <input type="hidden" id="statsStartDate">
                     <input type="hidden" id="statsEndDate">
                     <button type="button" class="stats-date-range-picker" onclick="app.toggleStatsDatePicker()">
-                        <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                        <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
+                                    stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8"
+                                    stroke-linecap="round" />
+                            </svg></span>
                         <span class="stats-date-range-value" id="statsDateRangeText">请选择日期范围</span>
                         <span class="stats-date-range-caret">&#9662;</span>
                     </button>
                     <div class="stats-date-popover" id="statsDatePopover" style="display:none;">
                         <div class="stats-calendar-header">
-                            <button type="button" class="stats-calendar-nav" onclick="app.changeStatsCalendarMonth(-1)">&#8249;</button>
+                            <button type="button" class="stats-calendar-nav"
+                                onclick="app.changeStatsCalendarMonth(-1)">&#8249;</button>
                             <div class="stats-calendar-title" id="statsCalendarTitle"></div>
-                            <button type="button" class="stats-calendar-nav" onclick="app.changeStatsCalendarMonth(1)">&#8250;</button>
+                            <button type="button" class="stats-calendar-nav"
+                                onclick="app.changeStatsCalendarMonth(1)">&#8250;</button>
                         </div>
                         <div class="stats-calendar-weekdays">
                             <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
@@ -534,8 +981,10 @@
                 </div>
                 <div class="chart-category-tabs">
                     <span class="chart-category-label">统计视图</span>
-                    <button class="chart-category-tab active" data-category="duration" onclick="app.switchChartCategory('duration')">课时统计</button>
-                    <button class="chart-category-tab" data-category="student" onclick="app.switchChartCategory('student')">人数统计</button>
+                    <button class="chart-category-tab active" data-category="duration"
+                        onclick="app.switchChartCategory('duration')">课时统计</button>
+                    <button class="chart-category-tab" data-category="student"
+                        onclick="app.switchChartCategory('student')">人数统计</button>
                 </div>
             </div>
             <div id="statsContent">
@@ -594,7 +1043,8 @@
                     </div>
                 </div>
                 <div class="stats-detail-section" id="statsDetailSection">
-                    <button type="button" class="stats-detail-toggle" id="statsDetailToggle" onclick="app.toggleStatsDetails()">
+                    <button type="button" class="stats-detail-toggle" id="statsDetailToggle"
+                        onclick="app.toggleStatsDetails()">
                         <span class="stats-detail-toggle-copy">
                             <span class="stats-detail-toggle-title">课程明细</span>
                             <span class="stats-detail-toggle-subtitle" id="statsDetailSummary">展开查看详细记录</span>
@@ -619,17 +1069,20 @@
                 </div>
                 <div class="text-stats-header-tools">
                     <div class="text-stats-range-row">
-                    <div class="text-stats-navigator">
-                        <button type="button" class="text-stats-nav-btn" id="textStatsPrevBtn" aria-label="上一项" title="上一项" onclick="app.changeTextStatsRange(-1)">
-                            <span class="text-stats-nav-icon" aria-hidden="true">‹</span>
-                        </button>
-                        <div class="text-stats-range-center">
-                            <input type="date" class="text-stats-date-input" id="textStatsDateInput" aria-label="选择统计日期" onchange="app.setTextStatsDate(this.value)">
+                        <div class="text-stats-navigator">
+                            <button type="button" class="text-stats-nav-btn" id="textStatsPrevBtn" aria-label="上一项"
+                                title="上一项" onclick="app.changeTextStatsRange(-1)">
+                                <span class="text-stats-nav-icon" aria-hidden="true">‹</span>
+                            </button>
+                            <div class="text-stats-range-center">
+                                <input type="date" class="text-stats-date-input" id="textStatsDateInput"
+                                    aria-label="选择统计日期" onchange="app.setTextStatsDate(this.value)">
+                            </div>
+                            <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" aria-label="下一项"
+                                title="下一项" onclick="app.changeTextStatsRange(1)">
+                                <span class="text-stats-nav-icon" aria-hidden="true">›</span>
+                            </button>
                         </div>
-                        <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" aria-label="下一项" title="下一项" onclick="app.changeTextStatsRange(1)">
-                            <span class="text-stats-nav-icon" aria-hidden="true">›</span>
-                        </button>
-                    </div>
                     </div>
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTextStatsModal()">×</button>
@@ -682,14 +1135,16 @@
                                 <h4>历史数据保护</h4>
                                 <p class="setting-description">开启后，今天以前的排课和出勤数据将无法修改。</p>
                             </div>
-                            <button type="button" id="historyProtectionToggle" class="toggle-switch" onclick="app.toggleHistoryProtection()">已关闭</button>
+                            <button type="button" id="historyProtectionToggle" class="toggle-switch"
+                                onclick="app.toggleHistoryProtection()">已关闭</button>
                         </div>
                         <div class="basic-setting-row">
                             <div>
                                 <label for="themeSelect">主题</label>
                                 <p class="setting-description">选择应用界面的整体配色。</p>
                             </div>
-                            <select id="themeSelect" class="setting-input" onchange="app.applyPredefinedTheme(this.value)">
+                            <select id="themeSelect" class="setting-input"
+                                onchange="app.applyPredefinedTheme(this.value)">
                                 <option value="default">默认主题</option>
                                 <option value="dark">暗色主题</option>
                                 <option value="mint">浅绿色主题</option>
@@ -701,7 +1156,8 @@
                                 <p class="setting-description">调节整个应用界面的显示大小。</p>
                             </div>
                             <div class="zoom-setting-control">
-                                <input type="range" id="pageZoomRange" min="75" max="125" step="5" value="100" oninput="app.setPageZoom(this.value)">
+                                <input type="range" id="pageZoomRange" min="75" max="125" step="5" value="100"
+                                    oninput="app.setPageZoom(this.value)">
                                 <output id="pageZoomValue" for="pageZoomRange">100%</output>
                             </div>
                         </div>
@@ -710,7 +1166,8 @@
                                 <label for="teacherSubjectSelect">教师类型</label>
                                 <p class="setting-description">无学科背景的课程默认归入所选科目；不选择时归为未分类。</p>
                             </div>
-                            <select id="teacherSubjectSelect" class="setting-input" onchange="app.setTeacherSubject(this.value)">
+                            <select id="teacherSubjectSelect" class="setting-input"
+                                onchange="app.setTeacherSubject(this.value)">
                                 <option value="">未选择（未分类）</option>
                             </select>
                         </div>
@@ -727,37 +1184,58 @@
                             <div class="predefined-themes-grid">
                                 <button class="theme-option" data-theme="default">
                                     <span class="theme-color-palette" aria-label="默认主题配色">
-                                        <span class="theme-color-block" style="background-color: #ffffff;" title="菜单背景"></span>
-                                        <span class="theme-color-block" style="background-color: #ffffff;" title="课表背景"></span>
-                                        <span class="theme-color-block" style="background-color: #f0f7ff;" title="页面背景"></span>
-                                        <span class="theme-color-block" style="background-color: #e0f2fe;" title="主题浅色背景"></span>
-                                        <span class="theme-color-block" style="background-color: #93c5fd;" title="悬停色"></span>
-                                        <span class="theme-color-block" style="background-color: #60a5fa;" title="主题色"></span>
-                                        <span class="theme-color-block" style="background-color: #3b82f6;" title="按下色"></span>
+                                        <span class="theme-color-block" style="background-color: #ffffff;"
+                                            title="菜单背景"></span>
+                                        <span class="theme-color-block" style="background-color: #ffffff;"
+                                            title="课表背景"></span>
+                                        <span class="theme-color-block" style="background-color: #f0f7ff;"
+                                            title="页面背景"></span>
+                                        <span class="theme-color-block" style="background-color: #e0f2fe;"
+                                            title="主题浅色背景"></span>
+                                        <span class="theme-color-block" style="background-color: #93c5fd;"
+                                            title="悬停色"></span>
+                                        <span class="theme-color-block" style="background-color: #60a5fa;"
+                                            title="主题色"></span>
+                                        <span class="theme-color-block" style="background-color: #3b82f6;"
+                                            title="按下色"></span>
                                     </span>
                                     <span class="theme-option-name">默认主题</span>
                                 </button>
                                 <button class="theme-option" data-theme="dark">
                                     <span class="theme-color-palette" aria-label="暗色主题配色">
-                                        <span class="theme-color-block" style="background-color: #818cf8;" title="主题色"></span>
-                                        <span class="theme-color-block" style="background-color: #6366f1;" title="悬停色"></span>
-                                        <span class="theme-color-block" style="background-color: #4f46e5;" title="按下色"></span>
-                                        <span class="theme-color-block" style="background-color: rgba(99, 102, 241, .2);" title="主题浅色背景"></span>
-                                        <span class="theme-color-block" style="background-color: #1e293b;" title="菜单背景"></span>
-                                        <span class="theme-color-block" style="background-color: #1a1a2e;" title="课表背景"></span>
-                                        <span class="theme-color-block" style="background-color: #0f172a;" title="页面背景"></span>
+                                        <span class="theme-color-block" style="background-color: #818cf8;"
+                                            title="主题色"></span>
+                                        <span class="theme-color-block" style="background-color: #6366f1;"
+                                            title="悬停色"></span>
+                                        <span class="theme-color-block" style="background-color: #4f46e5;"
+                                            title="按下色"></span>
+                                        <span class="theme-color-block"
+                                            style="background-color: rgba(99, 102, 241, .2);" title="主题浅色背景"></span>
+                                        <span class="theme-color-block" style="background-color: #1e293b;"
+                                            title="菜单背景"></span>
+                                        <span class="theme-color-block" style="background-color: #1a1a2e;"
+                                            title="课表背景"></span>
+                                        <span class="theme-color-block" style="background-color: #0f172a;"
+                                            title="页面背景"></span>
                                     </span>
                                     <span class="theme-option-name">暗色主题</span>
                                 </button>
                                 <button class="theme-option" data-theme="mint">
                                     <span class="theme-color-palette" aria-label="浅绿色主题配色">
-                                        <span class="theme-color-block" style="background-color: #ffffff;" title="课表背景"></span>
-                                        <span class="theme-color-block" style="background-color: #f8fbf8;" title="菜单背景"></span>
-                                        <span class="theme-color-block" style="background-color: #eef6f1;" title="页面背景"></span>
-                                        <span class="theme-color-block" style="background-color: #dcefe3;" title="主题浅色背景"></span>
-                                        <span class="theme-color-block" style="background-color: #5f9f79;" title="悬停色"></span>
-                                        <span class="theme-color-block" style="background-color: #367a59;" title="主题色"></span>
-                                        <span class="theme-color-block" style="background-color: #285f45;" title="按下色"></span>
+                                        <span class="theme-color-block" style="background-color: #ffffff;"
+                                            title="课表背景"></span>
+                                        <span class="theme-color-block" style="background-color: #f8fbf8;"
+                                            title="菜单背景"></span>
+                                        <span class="theme-color-block" style="background-color: #eef6f1;"
+                                            title="页面背景"></span>
+                                        <span class="theme-color-block" style="background-color: #dcefe3;"
+                                            title="主题浅色背景"></span>
+                                        <span class="theme-color-block" style="background-color: #5f9f79;"
+                                            title="悬停色"></span>
+                                        <span class="theme-color-block" style="background-color: #367a59;"
+                                            title="主题色"></span>
+                                        <span class="theme-color-block" style="background-color: #285f45;"
+                                            title="按下色"></span>
                                     </span>
                                     <span class="theme-option-name">浅绿色主题</span>
                                 </button>
@@ -787,33 +1265,42 @@
                         <div class="quick-settings stage-quick-settings">
                             <div class="quick-settings-header">
                                 <h4>快速设置</h4>
-                                <button type="button" id="segmentedSchedulingToggle" class="toggle-switch stage-scheduling-toggle" onclick="app.toggleSegmentedScheduling()">开启分段排课</button>
+                                <button type="button" id="segmentedSchedulingToggle"
+                                    class="toggle-switch stage-scheduling-toggle"
+                                    onclick="app.toggleSegmentedScheduling()">开启分段排课</button>
                             </div>
                             <div class="stage-quick-control-row">
                                 <div class="form-group">
                                     <label for="stageCountInput">全年分段数量</label>
-                                    <input type="number" id="stageCountInput" value="4" min="1" max="12" class="setting-input" onchange="app.setStageCount(this.value)">
+                                    <input type="number" id="stageCountInput" value="4" min="1" max="12"
+                                        class="setting-input" onchange="app.setStageCount(this.value)">
                                 </div>
                                 <div class="form-group">
                                     <label for="firstStageStartDate">第一阶段起始日期</label>
-                                    <input type="date" id="firstStageStartDate" class="setting-input" onchange="app.recalculateStageRanges()">
+                                    <input type="date" id="firstStageStartDate" class="setting-input"
+                                        onchange="app.recalculateStageRanges()">
                                 </div>
                             </div>
                             <div id="stageMonthRanges" class="stage-month-ranges"></div>
                             <div id="stageQuickMessage" class="stage-quick-message" aria-live="polite"></div>
-                            <button type="button" id="stageQuickApplyBtn" class="btn primary stage-quick-apply" onclick="app.applyStageQuickSettings()">应用快速设置</button>
+                            <button type="button" id="stageQuickApplyBtn" class="btn primary stage-quick-apply"
+                                onclick="app.applyStageQuickSettings()">应用快速设置</button>
                         </div>
-                        <button type="button" class="advanced-settings-toggle stage-advanced-toggle" aria-expanded="false" aria-controls="stageAdvancedSettings" onclick="app.toggleStageAdvancedSettings()">
+                        <button type="button" class="advanced-settings-toggle stage-advanced-toggle"
+                            aria-expanded="false" aria-controls="stageAdvancedSettings"
+                            onclick="app.toggleStageAdvancedSettings()">
                             <span>高级设置 <small>分时间段设置</small></span>
                             <span class="toggle-icon" aria-hidden="true"></span>
                         </button>
                         <div class="advanced-settings stage-advanced-settings" id="stageAdvancedSettings">
                             <div id="stagesList" class="stages-list"></div>
-                            <button type="button" id="stageAddZone" class="period-add-zone stage-add-zone" onclick="app.addStage()">
+                            <button type="button" id="stageAddZone" class="period-add-zone stage-add-zone"
+                                onclick="app.addStage()">
                                 <span>+ 添加阶段</span>
                             </button>
                         </div>
-                        <div class="form-actions stage-settings-footer" id="stageAdvancedSaveActions" style="display:none;">
+                        <div class="form-actions stage-settings-footer" id="stageAdvancedSaveActions"
+                            style="display:none;">
                             <span id="stageSettingsMessage" class="stage-settings-message" aria-live="polite"></span>
                             <button type="button" class="btn primary" onclick="app.saveStageSettings()">保存</button>
                         </div>
@@ -826,14 +1313,16 @@
                             <div class="quick-settings">
                                 <div class="quick-settings-header">
                                     <h4>快速设置</h4>
-                                    <button id="showPeriodTimeToggle" class="toggle-switch" onclick="app.toggleShowPeriodTime()">
+                                    <button id="showPeriodTimeToggle" class="toggle-switch"
+                                        onclick="app.toggleShowPeriodTime()">
                                         显示课时时间
                                     </button>
                                 </div>
                                 <div class="quick-setting-grid">
                                     <div class="form-group">
                                         <label>每日节次数量</label>
-                                        <input type="number" id="totalPeriodCount" value="7" min="1" max="12" class="setting-input">
+                                        <input type="number" id="totalPeriodCount" value="7" min="1" max="12"
+                                            class="setting-input">
                                     </div>
                                     <div class="form-group">
                                         <label>第一节开始时间</label>
@@ -841,11 +1330,13 @@
                                     </div>
                                     <div class="form-group">
                                         <label>单节课时长(分钟)</label>
-                                        <input type="number" id="periodDuration" value="40" min="10" max="120" class="setting-input">
+                                        <input type="number" id="periodDuration" value="40" min="10" max="120"
+                                            class="setting-input">
                                     </div>
                                     <div class="form-group">
                                         <label>课间时长(分钟)</label>
-                                        <input type="number" id="breakDuration" value="10" min="0" max="60" class="setting-input">
+                                        <input type="number" id="breakDuration" value="10" min="0" max="60"
+                                            class="setting-input">
                                     </div>
                                     <div class="form-group">
                                         <label>休息1插入位置</label>
@@ -853,7 +1344,8 @@
                                     </div>
                                     <div class="form-group">
                                         <label>休息1时长(分钟)</label>
-                                        <input type="number" id="lunchBreakDuration" value="120" min="30" max="180" class="setting-input">
+                                        <input type="number" id="lunchBreakDuration" value="120" min="30" max="180"
+                                            class="setting-input">
                                     </div>
                                     <div class="form-group">
                                         <label>休息2插入位置</label>
@@ -861,13 +1353,16 @@
                                     </div>
                                     <div class="form-group">
                                         <label>休息2时长(分钟)</label>
-                                        <input type="number" id="dinnerBreakDuration" value="60" min="30" max="120" class="setting-input">
+                                        <input type="number" id="dinnerBreakDuration" value="60" min="30" max="120"
+                                            class="setting-input">
                                     </div>
                                 </div>
-                                <button onclick="app.applyQuickSettings()" class="btn primary" style="margin-top: 12px; width: 100%;">应用快速设置</button>
+                                <button onclick="app.applyQuickSettings()" class="btn primary"
+                                    style="margin-top: 12px; width: 100%;">应用快速设置</button>
                             </div>
 
-                            <button type="button" class="advanced-settings-toggle" aria-expanded="false" aria-controls="advancedSettings" onclick="app.toggleAdvancedSettings()">
+                            <button type="button" class="advanced-settings-toggle" aria-expanded="false"
+                                aria-controls="advancedSettings" onclick="app.toggleAdvancedSettings()">
                                 <span>高级设置 <small>自定义课时</small></span>
                                 <span class="toggle-icon" aria-hidden="true"></span>
                             </button>
@@ -875,7 +1370,8 @@
                                 <div class="time-periods-list" id="periodsList"></div>
                             </div>
                         </div>
-                        <div class="form-actions time-settings-footer" id="timeAdvancedSaveActions" style="display: none;">
+                        <div class="form-actions time-settings-footer" id="timeAdvancedSaveActions"
+                            style="display: none;">
                             <button onclick="app.saveTimeManagement()" class="btn primary">保存</button>
                         </div>
                     </div>
@@ -896,40 +1392,56 @@
             </div>
             <form id="gradeForm">
                 <div class="modal-body">
-                <div class="modal-section form-group">
-                    <label>年级名称</label>
-                    <input type="text" id="gradeName" required="" placeholder="如：一年级">
-                </div>
-                <div class="modal-section form-group">
-                    <label>颜色</label>
-                    <div class="color-options">
-                        <div class="preset-colors">
-                            <div class="color-option" data-color="#FFE4E1" style="background: #FFE4E1" title="浅红"></div>
-                            <div class="color-option" data-color="#E3F2FD" style="background: #E3F2FD" title="浅蓝"></div>
-                            <div class="color-option" data-color="#FCE4EC" style="background: #FCE4EC" title="浅粉"></div>
-                            <div class="color-option" data-color="#FFF3E0" style="background: #FFF3E0" title="浅橙"></div>
-                            <div class="color-option" data-color="#E8EAF6" style="background: #E8EAF6" title="浅紫"></div>
-                            <div class="color-option" data-color="#FEF9E7" style="background: #FEF9E7" title="浅金"></div>
-                            <div class="color-option" data-color="#FFECB3" style="background: #FFECB3" title="浅黄"></div>
-                            <div class="color-option" data-color="#F5F5F5" style="background: #F5F5F5" title="浅灰"></div>
-                            <div class="color-option" data-color="#F3E5F5" style="background: #F3E5F5" title="浅紫"></div>
-                            <div class="color-option" data-color="#FFE0B2" style="background: #FFE0B2" title="浅橙黄"></div>
-                            <div class="color-option" data-color="#FFCDBA" style="background: #FFCDBA" title="浅杏色"></div>
-                            <div class="color-option" data-color="#D1C4E9" style="background: #D1C4E9" title="浅紫罗兰"></div>
-                            <div class="color-option" data-color="#B3E5FC" style="background: #B3E5FC" title="浅天蓝"></div>
-                            <div class="color-option" data-color="#F8BBD9" style="background: #F8BBD9" title="浅粉紫"></div>
-                            <div class="color-option" data-color="#FFCDD2" style="background: #FFCDD2" title="浅珊瑚"></div>
-                        </div>
-                        <div class="custom-color">
-                            <label>自定义HEX</label>
-                            <input type="color" id="gradeCustomColor" value="#FF6B6B">
-                            <input type="text" id="gradeCustomColorText" placeholder="#FF6B6B" maxlength="7">
+                    <div class="modal-section form-group">
+                        <label>年级名称</label>
+                        <input type="text" id="gradeName" required="" placeholder="如：一年级">
+                    </div>
+                    <div class="modal-section form-group">
+                        <label>颜色</label>
+                        <div class="color-options">
+                            <div class="preset-colors">
+                                <div class="color-option" data-color="#FFE4E1" style="background: #FFE4E1" title="浅红">
+                                </div>
+                                <div class="color-option" data-color="#E3F2FD" style="background: #E3F2FD" title="浅蓝">
+                                </div>
+                                <div class="color-option" data-color="#FCE4EC" style="background: #FCE4EC" title="浅粉">
+                                </div>
+                                <div class="color-option" data-color="#FFF3E0" style="background: #FFF3E0" title="浅橙">
+                                </div>
+                                <div class="color-option" data-color="#E8EAF6" style="background: #E8EAF6" title="浅紫">
+                                </div>
+                                <div class="color-option" data-color="#FEF9E7" style="background: #FEF9E7" title="浅金">
+                                </div>
+                                <div class="color-option" data-color="#FFECB3" style="background: #FFECB3" title="浅黄">
+                                </div>
+                                <div class="color-option" data-color="#F5F5F5" style="background: #F5F5F5" title="浅灰">
+                                </div>
+                                <div class="color-option" data-color="#F3E5F5" style="background: #F3E5F5" title="浅紫">
+                                </div>
+                                <div class="color-option" data-color="#FFE0B2" style="background: #FFE0B2" title="浅橙黄">
+                                </div>
+                                <div class="color-option" data-color="#FFCDBA" style="background: #FFCDBA" title="浅杏色">
+                                </div>
+                                <div class="color-option" data-color="#D1C4E9" style="background: #D1C4E9" title="浅紫罗兰">
+                                </div>
+                                <div class="color-option" data-color="#B3E5FC" style="background: #B3E5FC" title="浅天蓝">
+                                </div>
+                                <div class="color-option" data-color="#F8BBD9" style="background: #F8BBD9" title="浅粉紫">
+                                </div>
+                                <div class="color-option" data-color="#FFCDD2" style="background: #FFCDD2" title="浅珊瑚">
+                                </div>
+                            </div>
+                            <div class="custom-color">
+                                <label>自定义HEX</label>
+                                <input type="color" id="gradeCustomColor" value="#FF6B6B">
+                                <input type="text" id="gradeCustomColorText" placeholder="#FF6B6B" maxlength="7">
+                            </div>
                         </div>
                     </div>
                 </div>
-                </div>
                 <div class="form-actions">
-                    <button type="button" id="deleteGradeBtn" class="btn danger action-leading" style="display: none;">删除</button>
+                    <button type="button" id="deleteGradeBtn" class="btn danger action-leading"
+                        style="display: none;">删除</button>
                     <button type="button" id="cancelGradeBtn" class="btn secondary">取消</button>
                     <button type="submit" class="btn primary">保存</button>
                 </div>
@@ -951,8 +1463,10 @@
                 请选择要执行的重置范围。
             </div>
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button type="button" class="btn danger" onclick="app.resetTimetable()" style="width: 100%;">全部重置</button>
-                <button type="button" class="btn secondary" onclick="app.resetScheduleOnly()" style="width: 100%;">重置课表</button>
+                <button type="button" class="btn danger" onclick="app.resetTimetable()"
+                    style="width: 100%;">全部重置</button>
+                <button type="button" class="btn secondary" onclick="app.resetScheduleOnly()"
+                    style="width: 100%;">重置课表</button>
             </div>
             <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee;">
                 <div style="font-size: 14px; font-weight: 600; color: #444; margin-bottom: 10px;">自定义重置</div>
@@ -960,22 +1474,35 @@
                     <div class="shared-date-range-picker" id="resetDateRangePicker">
                         <input type="hidden" id="customResetStartDate">
                         <input type="hidden" id="customResetEndDate">
-                        <button type="button" class="stats-date-range-picker" onclick="app.toggleSharedDateRangePicker('reset')">
-                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                        <button type="button" class="stats-date-range-picker"
+                            onclick="app.toggleSharedDateRangePicker('reset')">
+                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
+                                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor"
+                                        stroke-width="1.8" stroke-linecap="round" />
+                                </svg></span>
                             <span class="stats-date-range-value" id="resetDateRangeText">请选择日期范围</span>
                             <span class="stats-date-range-caret">&#9662;</span>
                         </button>
                         <div class="stats-date-popover" id="resetDatePopover" style="display:none;">
                             <div class="stats-calendar-header">
-                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('reset', -1)">&#8249;</button>
+                                <button type="button" class="stats-calendar-nav"
+                                    onclick="app.changeSharedCalendarMonth('reset', -1)">&#8249;</button>
                                 <div class="stats-calendar-title" id="resetCalendarTitle"></div>
-                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('reset', 1)">&#8250;</button>
+                                <button type="button" class="stats-calendar-nav"
+                                    onclick="app.changeSharedCalendarMonth('reset', 1)">&#8250;</button>
                             </div>
-                            <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                            <div class="stats-calendar-weekdays">
+                                <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                            </div>
                             <div class="stats-calendar-grid" id="resetCalendarGrid"></div>
                         </div>
                     </div>
-                    <button type="button" class="btn danger reset-date-action-btn" onclick="app.resetScheduleByCustomRange()">按日期重置</button>
+                    <button type="button" class="btn danger reset-date-action-btn"
+                        onclick="app.resetScheduleByCustomRange()">按日期重置</button>
                 </div>
                 <div style="margin-top: 8px; color: #888; font-size: 12px; line-height: 1.6;">
                     依次选择起点和终点，只清除所选日期范围内的课程。
@@ -1006,22 +1533,35 @@
                     <div class="shared-date-range-picker" id="lessonSheetDateRangePicker">
                         <input type="hidden" id="lessonSheetStartDate">
                         <input type="hidden" id="lessonSheetEndDate">
-                        <button type="button" class="stats-date-range-picker" onclick="app.toggleSharedDateRangePicker('lessonSheet')">
-                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                        <button type="button" class="stats-date-range-picker"
+                            onclick="app.toggleSharedDateRangePicker('lessonSheet')">
+                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
+                                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor"
+                                        stroke-width="1.8" stroke-linecap="round" />
+                                </svg></span>
                             <span class="stats-date-range-value" id="lessonSheetDateRangeText">请选择日期范围</span>
                             <span class="stats-date-range-caret">&#9662;</span>
                         </button>
                         <div class="stats-date-popover" id="lessonSheetDatePopover" style="display:none;">
                             <div class="stats-calendar-header">
-                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
+                                <button type="button" class="stats-calendar-nav"
+                                    onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
                                 <div class="stats-calendar-title" id="lessonSheetCalendarTitle"></div>
-                                <button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
+                                <button type="button" class="stats-calendar-nav"
+                                    onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
                             </div>
-                            <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                            <div class="stats-calendar-weekdays">
+                                <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                            </div>
                             <div class="stats-calendar-grid" id="lessonSheetCalendarGrid"></div>
                         </div>
                     </div>
-                    <button type="button" class="export-option-card export-lesson-sheet-action" onclick="app.handleExportOption('lessonSheetExcel')">
+                    <button type="button" class="export-option-card export-lesson-sheet-action"
+                        onclick="app.handleExportOption('lessonSheetExcel')">
                         <span class="export-option-title">导出课时表 Excel</span>
                         <span class="export-option-desc">按所选日期范围导出课时、学生、出勤和实际上课时长。</span>
                     </button>
@@ -1046,284 +1586,49 @@
         </div>
     </div>
 
-    <div id="tutorialModal" class="modal tutorial-modal" onclick="if(event.target===this)app.closeTutorialModal()">
-        <div class="modal-content tutorial-modal-content">
+    <div id="quickStartModal" class="modal tutorial-modal" onclick="if(event.target===this)app.closeQuickStartModal()">
+        <div class="modal-content tutorial-modal-content quick-start-modal-content">
             <div class="modal-header">
                 <div class="modal-title-block">
-                    <h3>课程表完整使用教程</h3>
-                    <p class="modal-subtitle">覆盖阶段设置、时间设置、日常排课、出勤统计与数据导出</p>
+                    <h3>快速开始</h3>
+                    <p class="modal-subtitle">按照下面的流程完成首次配置与排课</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTutorialModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭"
+                    onclick="app.closeQuickStartModal()">×</button>
             </div>
-            <div class="tutorial-content">
-                <div class="tutorial-guide-content">
-                    <div class="tutorial-intro">
-                        <strong>建议按这个顺序完成首次配置</strong>
-                        <span>年级与主题 → 阶段设置 → 时间设置 → 科目和学生 → 排课与出勤 → 统计和导出</span>
-                    </div>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">1</div>
-                        <div class="tutorial-step-body">
-                            <h4>进入基础设置，准备基础资料</h4>
-                            <p>点击左侧“基础设置”，通过顶部标签切换不同配置页面。</p>
-                            <ul>
-                                <li><strong>主题设置：</strong>选择默认、暗色或浅绿色主题。</li>
-                                <li><strong>年级设置：</strong>添加实际使用的年级，调整名称和识别颜色。</li>
-                                <li>推荐先完成阶段和时间设置，再建立科目与学生并开始排课。</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">2</div>
-                        <div class="tutorial-step-body">
-                            <h4>配置阶段设置</h4>
-                            <p>“阶段设置”用于按学期、季度、寒暑期或自定义周期管理排课。</p>
-                            <ul>
-                                <li><strong>快速设置：</strong>填写全年分段数量、第一阶段开始日期和各阶段月份范围。</li>
-                                <li>月份范围不能重叠；出现红色提示时，修正后再点击“应用快速设置”。</li>
-                                <li><strong>高级设置：</strong>可修改阶段名称和精确起止日期、添加阶段，并调整阶段顺序。</li>
-                                <li>高级设置完成后点击底部“保存”，阶段日期必须完整且不能相互重叠。</li>
-                                <li>需要按阶段处理学生状态与排课时，点击“开启分段排课”；不需要则保持关闭。</li>
-                            </ul>
-                            <p class="tutorial-note">跨年阶段可以直接设置完整日期。先确认所有阶段范围，再开启分段排课。</p>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">3</div>
-                        <div class="tutorial-step-body">
-                            <h4>配置时间设置</h4>
-                            <ul>
-                                <li>在快速设置中填写每日节数、第一节开始时间、单节时长和普通课间时长。</li>
-                                <li>需要午休或晚间休息时，选择插入位置并填写分钟数；不需要则选择“不插入休息”。</li>
-                                <li>点击“应用快速设置”，系统会自动计算所有课时的起止时间。</li>
-                                <li>打开<strong>高级设置</strong>可逐节修改名称和时间，也可以新增或删除课时。</li>
-                                <li>高级设置完成后点击底部“保存”；“显示课时时间”控制主课表是否展示时间。</li>
-                            </ul>
-                            <p class="tutorial-note">快速设置适合整体生成，高级设置适合特殊节次、不等长课程和精确微调。</p>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">4</div>
-                        <div class="tutorial-step-body">
-                            <h4>建立科目池和学生池</h4>
-                            <ul>
-                                <li>在“科目池”点击“添加科目”，填写名称、可选教师和课程颜色。</li>
-                                <li>在“学生池”点击“添加学生”，填写姓名并选择年级；按需标记为 <strong>1v1</strong> 或 <strong>试听</strong>。</li>
-                                <li>学生较多时使用“批量导入”；已有课程 JSON 时可使用“导入课程数据”。</li>
-                                <li>通过“全部、进行中、已结课、试听”筛选学生，并用卡片按钮维护资料。</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">5</div>
-                        <div class="tutorial-step-body">
-                            <h4>按正常流程安排课程</h4>
-                            <ul>
-                                <li>先用上一周、下一周、日期选择器或“今天”切换目标周，核对顶部日期范围。</li>
-                                <li>把科目卡片拖到目标日期和节次，打开“添加课程”。</li>
-                                <li>确认科目，搜索并勾选本节课学生，根据需要设置循环状态，然后保存。</li>
-                                <li>也可以把学生卡片拖入已有课程，或在课程编辑窗口调整学生名单。</li>
-                                <li>课程按实际日期保存；循环课程会按照当前循环规则延续到后续日期。</li>
-                            </ul>
-                            <p class="tutorial-note">建议先排好一个标准周并核对，再继续处理循环、调课和临时课程。</p>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">6</div>
-                        <div class="tutorial-step-body">
-                            <h4>调课、修改课程并记录出勤</h4>
-                            <ul>
-                                <li>点击课表中的课程卡片，查看课程信息、学生名单和当前状态。</li>
-                                <li>需要调整时可编辑课程和学生；不再需要的课程可以删除。</li>
-                                <li>临时换课或只修改当前日期时，选择临时方式，避免影响后续循环课程。</li>
-                                <li>课后及时登记出勤、请假或缺勤，这些记录会参与人数和实际课时统计。</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">7</div>
-                        <div class="tutorial-step-body">
-                            <h4>查看统计并核对数据</h4>
-                            <ul>
-                                <li><strong>课时统计：</strong>快速查看日、周、月、年课时和课程明细。</li>
-                                <li><strong>课时统计总览：</strong>在课时与人数视图间切换，按日期范围查看趋势和班型对比。</li>
-                                <li>展开课程明细，核对课程时长、学生和出勤；发现问题后返回课表修正。</li>
-                                <li>日期范围较长时选择合适的统计粒度，让横轴和趋势更容易阅读。</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section">
-                        <div class="tutorial-step-number">8</div>
-                        <div class="tutorial-step-body">
-                            <h4>导出课表和课时单</h4>
-                            <ul>
-                                <li>点击“导出数据”，可导出当前周课表的 PNG 图片或 Excel。</li>
-                                <li>选择开始与结束日期，可导出对应范围的课时单 Excel 明细。</li>
-                                <li>导出前确认当前周、日期范围、课程时长和出勤记录。</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section class="tutorial-section tutorial-section-warning">
-                        <div class="tutorial-step-number">9</div>
-                        <div class="tutorial-step-body">
-                            <h4>保存、备份与重置</h4>
-                            <ul>
-                                <li>课程、科目、学生、阶段和时间设置会保存在当前软件或浏览器环境中。</li>
-                                <li>更换设备、清理应用数据或重新安装前，请先导出重要课表和课时单留档。</li>
-                                <li>“重置课表”可清空课程、全部重置或按日期范围清除；执行前务必核对范围。</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <div class="tutorial-shortcuts">
-                        <h4>日常使用小建议</h4>
-                        <div class="tutorial-shortcut-grid">
-                            <span>阶段和时间设置完成后再集中排课</span>
-                            <span>每次排课前先核对当前周和日期</span>
-                            <span>课后及时登记出勤、请假和缺勤</span>
-                            <span>定期导出 Excel，重置前先备份</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tutorial-legacy-content" aria-hidden="true">
-                <div class="tutorial-intro">
-                    <strong>推荐使用顺序</strong>
-                    <span>基础设置 → 添加科目和学生 → 安排课程 → 记录出勤 → 查看统计 → 导出归档</span>
-                </div>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">1</div>
-                    <div class="tutorial-step-body">
-                        <h4>完成基础设置</h4>
-                        <p>点击左侧的“基础设置”，先完成下面三项配置：</p>
-                        <ul>
-                            <li><strong>主题设置：</strong>可在默认、暗色与浅绿色主题之间切换。</li>
-                            <li><strong>年级设置：</strong>添加、编辑年级并设置识别颜色，学生资料会使用这些年级。</li>
-                            <li><strong>时间设置：</strong>设置每日节数、第一节开始时间、单节时长、课间及休息时段。</li>
-                        </ul>
-                        <p class="tutorial-note">需要逐节微调时，展开“高级设置”，可以单独修改每一节的名称与时间。修改后记得保存。</p>
-                    </div>
-                </section>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">2</div>
-                    <div class="tutorial-step-body">
-                        <h4>建立科目池</h4>
-                        <ul>
-                            <li>切换到左侧“科目池”，点击“添加科目”。</li>
-                            <li>填写科目名称；教师姓名为可选项。</li>
-                            <li>选择显示颜色后保存，该颜色会用于课表中的课程识别。</li>
-                            <li>将鼠标移到科目卡片上，可使用编辑、复制或删除操作。</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">3</div>
-                    <div class="tutorial-step-body">
-                        <h4>添加和管理学生</h4>
-                        <ul>
-                            <li>切换到“学生池”，点击“添加学生”，填写姓名并选择年级。</li>
-                            <li>可按实际情况标记为 <strong>1v1</strong> 或 <strong>试听</strong>；两种类型不能同时启用。</li>
-                            <li>人数较多时使用“批量导入”，选择统一年级后用顿号“、”分隔姓名。</li>
-                            <li>使用“全部、进行中、已结课、试听”快速筛选学生。</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">4</div>
-                    <div class="tutorial-step-body">
-                        <h4>选择日期并安排课程</h4>
-                        <ul>
-                            <li>使用课表顶部的上一周、下一周、日期选择器或“今天”切换目标周。</li>
-                            <li>把科目从科目池拖到课表中的目标日期和节次，即可打开“添加课程”。</li>
-                            <li>确认科目，搜索并勾选参与本节课的学生，然后保存。</li>
-                            <li>课程安排按具体日期保存，切换周次不会覆盖其他周的数据。</li>
-                        </ul>
-                        <p class="tutorial-note">建议先设置好节次时间、科目和学生，再开始集中排课，操作会更顺畅。</p>
-                    </div>
-                </section>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">5</div>
-                    <div class="tutorial-step-body">
-                        <h4>修改课程与记录出勤</h4>
-                        <ul>
-                            <li>点击课表中的课程卡片，可查看这节课的课程信息和学生名单。</li>
-                            <li>在课程明细中对学生执行出勤或请假操作；弹窗会保持展开，方便连续处理多人。</li>
-                            <li>需要调整课程时，重新编辑科目或学生；不再需要的课程可直接删除。</li>
-                            <li>出勤记录会参与实际课时与学生相关统计，请在上课后及时确认。</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">6</div>
-                    <div class="tutorial-step-body">
-                        <h4>查看课时统计</h4>
-                        <ul>
-                            <li><strong>课时统计：</strong>适合快速查看日、周、月、年各班型的课时汇总。</li>
-                            <li><strong>课时统计总览：</strong>可在课时与人数视图间切换，并选择日期范围查看趋势和对比。</li>
-                            <li>展开“课程明细”可核对每条课程记录及学生出勤情况。</li>
-                            <li>无数据的班型仍会保留位置并显示“-”，便于横向比较。</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <section class="tutorial-section">
-                    <div class="tutorial-step-number">7</div>
-                    <div class="tutorial-step-body">
-                        <h4>导出课表和课时单</h4>
-                        <ul>
-                            <li>点击“导出数据”，可在同一页面导出课表 PNG 图片或 Excel。</li>
-                            <li>选择开始与结束日期后，可导出对应范围的课时单 Excel 明细。</li>
-                            <li>导出前先切换到正确的周次或日期范围，并检查课程与出勤数据。</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <section class="tutorial-section tutorial-section-warning">
-                    <div class="tutorial-step-number">8</div>
-                    <div class="tutorial-step-body">
-                        <h4>保存与重置数据</h4>
-                        <ul>
-                            <li>课程、科目、学生及设置会自动保存在当前浏览器中。</li>
-                            <li>更换浏览器、设备或清理浏览器数据后，原数据不会自动同步回来，请提前导出留档。</li>
-                            <li>“重置课表”支持清空课程、全部重置或按日期范围清除；执行前请认真确认范围。</li>
-                        </ul>
-                    </div>
-                </section>
-
-                <div class="tutorial-shortcuts">
-                    <h4>日常使用小建议</h4>
-                    <div class="tutorial-shortcut-grid">
-                        <span>先核对当前周，再开始排课</span>
-                        <span>课后及时登记请假与出勤</span>
-                        <span>定期导出 Excel 用于归档</span>
-                        <span>重置前先导出重要数据</span>
-                    </div>
-                </div>
-                </div>
-
-                <div class="tutorial-start-row">
-                    <button onclick="app.startCreatingTimetable()" class="btn primary tutorial-start-btn">
-                        开始使用课程表
-                    </button>
-                </div>
+            <div class="tutorial-content quick-start-content">
+                <ol class="quick-start-steps">
+                    <li>
+                        <strong>打开设置</strong>
+                        <span>点击左侧操作区的“基础设置”。弹窗顶部包含“基础设置、年级设置、阶段设置、时间设置”四个标签，后续配置都从这里完成。</span>
+                    </li>
+                    <li>
+                        <strong>配置教师类型</strong>
+                        <span>在“基础设置”中找到“教师类型”，选择当前教师主要教授的科目。没有学科背景的课程会默认归入该科目；暂不选择时会归入“未分类”。</span>
+                    </li>
+                    <li>
+                        <strong>配置阶段设置</strong>
+                        <span>切换到“阶段设置”，根据学期、季度或寒暑期填写阶段名称和起止日期。各阶段日期不要重叠；需要让排课按阶段独立管理时，再开启分段排课并保存。</span>
+                    </li>
+                    <li>
+                        <strong>配置时间设置</strong>
+                        <span>切换到“时间设置”，填写每日节数、第一节开始时间、单节时长和课间时长。需要午休或晚间休息时选择插入位置；应用快速设置后，可在高级设置中逐节微调并保存。</span>
+                    </li>
+                    <li>
+                        <strong>添加学生并完善资料</strong>
+                        <span>关闭设置后切换左侧“学生池”，点击“添加学生”填写姓名。按实际情况设置学生类型（普通、1v1 或试听）并选择年级；已有学生可通过卡片上的编辑按钮再次修改。</span>
+                    </li>
+                    <li>
+                        <strong>拖拽完成排课</strong>
+                        <span>先切换到要排课的周次，再将科目卡片拖到目标日期和节次。在弹窗中确认科目、勾选学生并设置循环方式后保存；也可以把学生卡片拖入已有课程。</span>
+                    </li>
+                </ol>
+                <div class="quick-start-docs">高级使用技巧请看<a class="quick-start-docs-link"
+                        href="https://docs.qq.com/aio/DVnpaSm53dUdqRFpR?no_promotion=1&amp;is_blank_or_template=blank&amp;p=7mo3gGimhi0KfukspTImsd" target="_blank" rel="noopener noreferrer">使用说明</a></div>
             </div>
         </div>
     </div>
+
     <script src="./chart.umd.min.js"></script>
     <script src="./html2canvas.min.js"></script>
     <script src="./js/app-dialogs.js"></script>
@@ -1341,4 +1646,6 @@
     <script src="./js/app-export.js"></script>
 
 
-</body></html>
+</body>
+
+</html>

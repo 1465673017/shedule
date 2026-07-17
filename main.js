@@ -18,6 +18,22 @@ function requireAppIcon() {
     return false;
 }
 
+// Apply the branded icon to every window opened by a link, including links
+// opened from an existing external document window.
+app.on('web-contents-created', (_event, contents) => {
+    contents.setWindowOpenHandler(() => ({
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+            icon: appIconPath,
+            autoHideMenuBar: true
+        }
+    }));
+
+    contents.on('did-create-window', childWindow => {
+        if (!childWindow.isDestroyed()) childWindow.setIcon(appIconPath);
+    });
+});
+
 function createWindow() {
     if (!requireAppIcon()) {
         app.quit();

@@ -27,7 +27,7 @@ const views = [
     { name: 'grade-add', title: '添加年级', action: 'grade' },
     { name: 'reset', title: '重置数据', action: 'reset' },
     { name: 'export', title: '导出数据', action: 'export' },
-    { name: 'tutorial', title: '使用教程', action: 'tutorial' },
+    { name: 'quick-start', title: '快速开始', action: 'quickStart' },
     { name: 'message', title: '应用消息', action: 'message' }
 ];
 
@@ -100,8 +100,8 @@ async function prepareView(page, view) {
         case 'export':
             safely(() => app.openExportModal(), 'exportModal', 'block');
             break;
-        case 'tutorial':
-            safely(() => app.openTutorialModal(), 'tutorialModal', 'flex');
+        case 'quickStart':
+            safely(() => app.openQuickStartModal(), 'quickStartModal', 'flex');
             break;
         case 'message': {
             const title = document.getElementById('appMessageTitle');

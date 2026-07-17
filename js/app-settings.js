@@ -1,12 +1,12 @@
 // app-settings.js - Settings, themes, grades
 // Auto-split from script.js
 
-TimetableApp.prototype.openTutorialModal = function() {
-        document.getElementById('tutorialModal').style.display = 'flex';
+TimetableApp.prototype.openQuickStartModal = function() {
+        document.getElementById('quickStartModal').style.display = 'flex';
     }
 
-TimetableApp.prototype.closeTutorialModal = function() {
-        document.getElementById('tutorialModal').style.display = 'none';
+TimetableApp.prototype.closeQuickStartModal = function() {
+        document.getElementById('quickStartModal').style.display = 'none';
     }
 
 TimetableApp.prototype.openSettingsModal = function(defaultTab = 'basic') {

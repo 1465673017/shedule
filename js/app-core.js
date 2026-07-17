@@ -186,7 +186,7 @@ class TimetableApp {
         this.initTimeSelectors();
         
         // 教程事件
-        bind('tutorialBtn', 'click', () => this.openTutorialModal());
+        bind('tutorialBtn', 'click', () => this.openQuickStartModal());
         
         bind('totalPeriodCount', 'change', (e) => {
             this.updateLunchBreakOptions(e.target.value);
@@ -294,7 +294,7 @@ class TimetableApp {
                 this.closeSubjectModal();
                 this.closeStudentBatchModal();
                 this.closeTimeModal();
-                this.closeTutorialModal();
+                this.closeQuickStartModal();
                 this.closeAddLessonModal();
                 this.closeAttendanceModal();
                 this.closeTimeManagementModal();
@@ -323,7 +323,7 @@ class TimetableApp {
             textStatsModal: () => this.closeTextStatsModal(),
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
-            tutorialModal: () => this.closeTutorialModal(),
+            quickStartModal: () => this.closeQuickStartModal(),
             studentBatchModal: () => this.closeStudentBatchModal(),
             courseDataImportModal: () => this.closeCourseDataImportModal(),
             resetModal: () => this.closeResetModal(),
