@@ -1,6 +1,6 @@
 {
   "name": "kebiao-app",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Timetable app",
   "author": "A大橙子",
   "main": "main.js",
@@ -36,7 +36,7 @@
     },
     "mac": {
       "icon": "icon/orange.png",
-      "artifactName": "kebiao-${version}-${arch}.dmg",
+      "artifactName": "A大橙子课时统计（${version}）-${arch}.${ext}",
       "target": [
         {
           "target": "dmg",

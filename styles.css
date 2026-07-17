@@ -184,6 +184,11 @@ body {
     min-width: 58px !important;
     width: 58px;
     height: 58px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 58px;
     padding: 0 !important;
     border-radius: 11px !important;
     background: #fff !important;
@@ -192,13 +197,6 @@ body {
     box-shadow: 0 2px 8px rgba(30, 58, 95, .03);
     font-size: 35px !important;
     line-height: 1;
-}
-
-#nextWeekBtn {
-    min-width: 46px !important;
-    width: 46px;
-    height: 48px;
-    font-size: 28px !important;
 }
 
 .date-picker-shell {
@@ -1469,6 +1467,44 @@ body {
 .app-message-actions .btn {
     min-width: 88px;
     min-height: 38px;
+}
+
+.app-top-toast {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    z-index: 5000;
+    min-width: 120px;
+    padding: 11px 22px;
+    border: 1px solid rgba(var(--primary-rgb), .24);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .96);
+    color: var(--primary-pressed);
+    box-shadow: 0 10px 30px rgba(30, 58, 95, .18);
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -12px);
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.app-top-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+body.dark-theme-active .app-top-toast {
+    border-color: rgba(var(--primary-rgb), .34);
+    background: rgba(17, 27, 45, .96);
+    color: var(--primary-color);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .38);
+}
+
+body.mint-theme-active .app-top-toast {
+    background: rgba(251, 254, 252, .97);
 }
 
 body.dark-theme-active .app-message-modal {
@@ -4210,7 +4246,34 @@ body *::-webkit-scrollbar-corner {
 
 .zoom-setting-control input[type="range"] {
     flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(to right,
+            var(--primary-color) 0%,
+            var(--primary-color) var(--zoom-range-progress, 50%),
+            rgba(var(--primary-rgb), .22) var(--zoom-range-progress, 50%),
+            rgba(var(--primary-rgb), .22) 100%);
+    appearance: none;
+    -webkit-appearance: none;
     accent-color: var(--primary-color);
+}
+
+.zoom-setting-control input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: transparent;
+}
+
+.zoom-setting-control input[type="range"]::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -6px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(var(--primary-rgb), .3);
+    appearance: none;
+    -webkit-appearance: none;
 }
 
 .zoom-setting-control output {
@@ -5245,6 +5308,18 @@ body.dark-theme-active .stage-month-field.invalid {
 
 .duration-editor-body {
     padding: 16px;
+}
+
+.student-duration-master-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 0 16px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, .18);
+}
+
+.student-duration-master-range {
+    width: 100%;
 }
 
 .duration-slider-group {
@@ -6413,6 +6488,10 @@ body.dark-theme-active .duration-editor-header {
 
 body.dark-theme-active .duration-slider-group label {
     color: var(--modal-text-soft, #cbd5e1);
+}
+
+body.dark-theme-active .student-duration-master-row {
+    border-bottom-color: var(--modal-border, #334155);
 }
 
 body.dark-theme-active .duration-range {
@@ -9411,19 +9490,17 @@ body.reference-main-ui #nextWeekBtn {
     min-width: 58px !important;
     width: 58px;
     height: 58px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 58px;
     padding: 0 !important;
     border-radius: 11px !important;
     background: #fff !important;
     color: #1a2940 !important;
     border: 1px solid #dce4ee !important;
     font-size: 35px !important;
-}
-
-body.reference-main-ui #nextWeekBtn {
-    min-width: 46px !important;
-    width: 46px;
-    height: 48px;
-    font-size: 28px !important;
 }
 
 body.reference-main-ui .date-picker-shell {
@@ -11162,6 +11239,7 @@ body.reference-main-ui .stats-grid#statsCards {
     min-height: 136px;
     max-height: 136px;
     grid-auto-rows: 136px;
+    gap: 0;
 }
 
 body.reference-main-ui .stats-grid#statsCards .stats-card {

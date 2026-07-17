@@ -44,6 +44,28 @@
     window.showAppConfirm = message => request('confirm', message);
     window.alert = message => { window.showAppAlert(message); };
 
+    let toastTimer = null;
+    window.showAppToast = (message, duration = 1800) => {
+        let toast = document.getElementById('appTopToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'appTopToast';
+            toast.className = 'app-top-toast';
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toast);
+        }
+        if (toastTimer) clearTimeout(toastTimer);
+        toast.textContent = String(message ?? '');
+        toast.classList.remove('show');
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+            toastTimer = null;
+        }, duration);
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         const elements = getElements();
         elements.confirm.addEventListener('click', () => respond(true));

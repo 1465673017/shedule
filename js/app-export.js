@@ -27,6 +27,23 @@ TimetableApp.prototype._saveFile = async function (data, encoding, defaultName, 
     return { canceled: false, filePath: defaultName || 'download' };
 }
 
+TimetableApp.prototype.getLocalizedExportError = function (error, fileType = '文件') {
+    const detail = String(error && error.message ? error.message : error || '');
+    if (/EBUSY|resource busy|locked|being used|open/i.test(detail)) {
+        return `导出${fileType}失败：目标文件正在被占用。请关闭已打开的同名文件后重试，或更换文件名保存。`;
+    }
+    if (/EACCES|EPERM|permission denied|operation not permitted/i.test(detail)) {
+        return `导出${fileType}失败：没有权限写入该位置。请选择其他保存位置后重试。`;
+    }
+    if (/ENOSPC|no space left/i.test(detail)) {
+        return `导出${fileType}失败：磁盘剩余空间不足，请清理空间后重试。`;
+    }
+    if (/ENOENT|no such file|path.*not found/i.test(detail)) {
+        return `导出${fileType}失败：保存位置不存在或已不可用，请重新选择保存位置。`;
+    }
+    return `导出${fileType}失败，请检查保存位置和文件状态后重试。`;
+}
+
 TimetableApp.prototype.openExportModal = function () {
     const modal = document.getElementById('exportModal');
     if (modal) {
@@ -142,6 +159,31 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                 Math.floor(durationMinutes / 60),
                 durationMinutes % 60
             );
+            const studentDetails = (lesson.students || []).map(student => {
+                const status = student && student.status ? student.status : null;
+                const studentMinutes = status === 'leave' || status === 'absent'
+                    ? 0
+                    : Math.max(0, Number(student && student.actualMinutes !== undefined
+                        ? student.actualMinutes
+                        : durationMinutes) || 0);
+                return {
+                    name: student && student.name ? student.name : '',
+                    status,
+                    isAudition: !!(student && student.isAudition),
+                    is1v1: !!(student && student.is1v1),
+                    grade: student && student.grade ? student.grade : '',
+                    actualMinutes: studentMinutes
+                };
+            }).filter(student => student.name);
+            const studentDurationDisplays = studentDetails.map(student => this.formatDuration(
+                Math.floor(student.actualMinutes / 60),
+                student.actualMinutes % 60
+            ));
+            const classGradeStudent = studentDetails.find(student => student.grade) || studentDetails[0];
+            const studentGrades = classGradeStudent && classGradeStudent.grade
+                ? classGradeStudent.grade
+                : '未设置';
+            const hasVariableStudentDurations = new Set(studentDetails.map(student => student.actualMinutes)).size > 1;
 
             rows.push({
                 dateKey,
@@ -151,12 +193,10 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                 periodIndex: this.getPeriodNumber(lesson.period),
                 time: lesson.time || '',
                 students: studentNames,
-                studentDetails: (lesson.students || []).map(student => ({
-                    name: student && student.name ? student.name : '',
-                    status: student && student.status ? student.status : null,
-                    isAudition: !!(student && student.isAudition),
-                    grade: student && student.grade ? student.grade : ''
-                })).filter(student => student.name),
+                studentGrades,
+                studentDetails,
+                studentDurationDisplays,
+                hasVariableStudentDurations,
                 durationMinutes,
                 scheduledStudents: (lesson.studentCount || 0) + (lesson.leaveCount || 0) + (lesson.absentCount || 0),
                 presentCount: lesson.studentCount || 0,
@@ -194,24 +234,35 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
         if (details.length === 0) {
             return [{
                 dateKey: row.dateKey,
+                studentGrade: '-',
                 subject: row.subject,
                 time: row.time,
                 studentName: '-',
                 attendanceStatus: '-',
                 typeLabel: mapTypeLabel(row.typeLabel),
-                actualDuration: row.actualDuration
+                actualDuration: row.actualDuration,
+                isUnderTwoHours: Number(row.durationMinutes || 0) < 120
             }];
         }
 
-        return details.map(student => ({
-            dateKey: row.dateKey,
-            subject: row.subject,
-            time: row.time,
-            studentName: student.name,
-            attendanceStatus: mapStatusLabel(student.status),
-            typeLabel: mapTypeLabel(row.typeLabel),
-            actualDuration: (student.status === 'leave' || student.status === 'absent') ? '0h' : row.actualDuration
-        }));
+        return details.map(student => {
+            const minutes = student.status === 'leave' || student.status === 'absent'
+                ? 0
+                : Math.max(0, Number(student.actualMinutes !== undefined
+                    ? student.actualMinutes
+                    : row.durationMinutes) || 0);
+            return {
+                dateKey: row.dateKey,
+                studentGrade: student.grade || '未设置',
+                subject: row.subject,
+                time: row.time,
+                studentName: student.name,
+                attendanceStatus: mapStatusLabel(student.status),
+                typeLabel: mapTypeLabel(row.typeLabel),
+                actualDuration: this.formatDuration(Math.floor(minutes / 60), minutes % 60),
+                isUnderTwoHours: minutes < 120
+            };
+        });
     });
 }
 
@@ -263,19 +314,28 @@ TimetableApp.prototype.getLessonSheetSummaryMatrix = function (rows) {
 
     rows.forEach(row => {
         const details = Array.isArray(row.studentDetails) ? row.studentDetails : [];
-        const typeKey = detectTypeKey(row.typeLabel);
-        if (!typeKey) return;
-
-        const referenceStudent = details.find(student => student.status !== 'leave' && student.status !== 'absent')
+        const presentStudents = details.filter(student =>
+            student && !student.isAudition && student.status !== 'leave' && student.status !== 'absent'
+        );
+        const referenceStudent = presentStudents[0]
             || details[0];
         const group = detectGroup(referenceStudent && referenceStudent.grade);
-        const minutes = Number(row.durationMinutes || 0);
-        const hours = minutes / 60;
-        if (!hours) return;
+        const presentDurations = presentStudents.map(student => Math.max(0, Number(
+            student.actualMinutes !== undefined ? student.actualMinutes : row.durationMinutes
+        ) || 0));
+        const shouldSegment = new Set(presentDurations).size > 1;
+        const allocations = shouldSegment
+            ? this.getLessonSegmentTypeStats({ students: presentStudents }).typeStats
+            : { [row.typeLabel]: Number(row.durationMinutes || 0) };
 
         const dayBucket = ensureBucket(byDate, row.dateKey);
-        dayBucket[group.key][typeKey] += hours;
-        totals[group.key][typeKey] += hours;
+        Object.entries(allocations).forEach(([typeLabel, minutes]) => {
+            const typeKey = detectTypeKey(typeLabel);
+            const hours = Number(minutes || 0) / 60;
+            if (!typeKey || !hours) return;
+            dayBucket[group.key][typeKey] += hours;
+            totals[group.key][typeKey] += hours;
+        });
     });
 
     const allDateKeys = rows.length > 0
@@ -404,7 +464,7 @@ TimetableApp.prototype.exportLessonSheetToWord = async function () {
         await this._saveFile('\ufeff' + wordContent, 'utf-8', `${title}.doc`, 'application/msword', 'doc');
     } catch (error) {
         console.error('导出 Word 失败:', error);
-        alert('导出 Word 失败: ' + (error && error.message ? error.message : error));
+        alert(this.getLocalizedExportError(error, 'Word'));
     }
 }
 
@@ -432,8 +492,11 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
         const makeRow = (cells, cellStyles = []) => `<Row>${cells.map((value, index) => makeCell(value, cellStyles[index] || 'Cell')).join('')}</Row>`;
         const makeMergedCell = (value, mergeAcross, styleId = 'Header') => `<Cell ss:StyleID="${styleId}" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
 
-        const summaryHeaders = ['日期', '科目', '时间', '学生', '应到', '实到', '请假', '缺课', '试听', '类型', '实际时长'];
-        const detailHeaders = ['日期', '科目', '时间', '学生', '出勤状态', '类型', '实际时长'];
+        const summaryHeaders = ['日期', '年级', '科目', '时间', '学生', '应到', '实到', '请假', '试听', '类型', '实际时长'];
+        const detailHeaders = ['日期', '年级', '科目', '时间', '学生', '出勤状态', '类型', '实际时长'];
+        const variableDurationColumnCount = rows.reduce((max, row) => row.hasVariableStudentDurations
+            ? Math.max(max, row.studentDurationDisplays.length)
+            : max, 0);
 
         let excelContent = `<?xml version="1.0" encoding="UTF-8"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
@@ -521,6 +584,28 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
    </Borders>
    <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
   </Style>
+  <Style ss:ID="CellYellow">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
+   <Interior ss:Color="#FFF200" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="CellLeftYellow">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10"/>
+   <Interior ss:Color="#FFF200" ss:Pattern="Solid"/>
+  </Style>
  </Styles>
  <Worksheet ss:Name="课时统计汇总">
   <Table ss:ExpandedColumnCount="${1 + (summaryMatrix.groups.length * summaryMatrix.typeKeys.length)}" ss:ExpandedRowCount="${summaryMatrix.dayRows.length + 3}" x:FullColumns="1" x:FullRows="1">
@@ -539,8 +624,9 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
   </WorksheetOptions>
  </Worksheet>
  <Worksheet ss:Name="课时统计1">
-  <Table ss:ExpandedColumnCount="11" ss:ExpandedRowCount="${rows.length + 1}" x:FullColumns="1" x:FullRows="1">
+  <Table ss:ExpandedColumnCount="${11 + variableDurationColumnCount}" ss:ExpandedRowCount="${rows.length + 1}" x:FullColumns="1" x:FullRows="1">
    <Column ss:Width="78"/>
+   <Column ss:Width="82"/>
    <Column ss:Width="74"/>
    <Column ss:Width="88"/>
    <Column ss:Width="180"/>
@@ -548,31 +634,41 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
    <Column ss:Width="42"/>
    <Column ss:Width="42"/>
    <Column ss:Width="42"/>
-   <Column ss:Width="42"/>
    <Column ss:Width="58"/>
    <Column ss:Width="68"/>
+   ${Array.from({ length: variableDurationColumnCount }, () => '<Column ss:Width="68"/>').join('')}
    ${makeRow(summaryHeaders, Array(summaryHeaders.length).fill('Header'))}
-   ${rows.map(row => makeRow([
+   ${rows.map(row => {
+        const extraDurations = row.hasVariableStudentDurations ? row.studentDurationDisplays : [];
+        const values = [
             row.dateKey,
+            row.studentGrades || '未设置',
             row.subject,
             row.time,
             row.students || '-',
             row.scheduledStudents,
             row.presentCount,
-            row.leaveCount,
-            row.absentCount,
+            row.leaveCount + row.absentCount,
             row.auditionCount,
             row.typeLabel,
-            row.actualDuration
-        ], ['Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell'])).join('')}
+            row.actualDuration,
+            ...extraDurations
+        ];
+        const highlightRow = row.hasVariableStudentDurations || Number(row.durationMinutes || 0) < 120;
+        const styles = highlightRow
+            ? values.map((value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
+            : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell'];
+        return makeRow(values, styles);
+    }).join('')}
   </Table>
   <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
    <DisplayGridlines/>
   </WorksheetOptions>
  </Worksheet>
  <Worksheet ss:Name="课时统计2">
-  <Table ss:ExpandedColumnCount="7" ss:ExpandedRowCount="${expandedRows.length + 1}" x:FullColumns="1" x:FullRows="1">
+  <Table ss:ExpandedColumnCount="8" ss:ExpandedRowCount="${expandedRows.length + 1}" x:FullColumns="1" x:FullRows="1">
    <Column ss:Width="78"/>
+   <Column ss:Width="82"/>
    <Column ss:Width="74"/>
    <Column ss:Width="88"/>
    <Column ss:Width="96"/>
@@ -580,15 +676,22 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
    <Column ss:Width="58"/>
    <Column ss:Width="68"/>
    ${makeRow(detailHeaders, Array(detailHeaders.length).fill('Header'))}
-   ${expandedRows.map(row => makeRow([
+   ${expandedRows.map(row => {
+        const values = [
             row.dateKey,
+            row.studentGrade,
             row.subject,
             row.time,
             row.studentName,
             row.attendanceStatus,
             row.typeLabel,
             row.actualDuration
-        ], ['Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell'])).join('')}
+        ];
+        const styles = row.isUnderTwoHours
+            ? values.map((value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
+            : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell'];
+        return makeRow(values, styles);
+    }).join('')}
   </Table>
   <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
    <DisplayGridlines/>
@@ -599,7 +702,7 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
         await this._saveFile('\ufeff' + excelContent, 'utf-8', `${title}.xls`, 'application/vnd.ms-excel', 'xls');
     } catch (error) {
         console.error('导出 Excel 失败:', error);
-        alert('导出 Excel 失败: ' + (error && error.message ? error.message : error));
+        alert(this.getLocalizedExportError(error, 'Excel'));
     }
 }
 
@@ -796,7 +899,7 @@ TimetableApp.prototype.saveAsImage = function () {
         });
     } catch (error) {
         console.error('保存图片出错:', error);
-        alert('保存图片出错: ' + (error && error.message ? error.message : error));
+        alert(this.getLocalizedExportError(error, '图片'));
     }
 }
 
@@ -904,7 +1007,7 @@ TimetableApp.prototype.exportToWord = async function () {
         await this._saveFile('\ufeff' + wordContent, 'utf-8', `${title}.doc`, 'application/msword', 'doc');
     } catch (error) {
         console.error('导出 Word 出错:', error);
-        alert('导出 Word 出错: ' + (error && error.message ? error.message : error));
+        alert(this.getLocalizedExportError(error, 'Word'));
     }
 }
 
@@ -1064,6 +1167,6 @@ TimetableApp.prototype.exportToExcel = async function () {
         await this._saveFile('\ufeff' + excelContent, 'utf-8', `${title}.xls`, 'application/vnd.ms-excel', 'xls');
     } catch (error) {
         console.error('导出 Excel 出错:', error);
-        alert('导出 Excel 出错: ' + (error && error.message ? error.message : error));
+        alert(this.getLocalizedExportError(error, 'Excel'));
     }
 }

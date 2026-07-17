@@ -715,6 +715,48 @@ assert.strictEqual(
 );
 assert.strictEqual(unweightedSummary.groups[3].label, '高三年级1.5系数', 'lesson-sheet headers should retain coefficient descriptions');
 
+const segmentedLessonSheetSummary = lessonSheetApp.getLessonSheetSummaryMatrix([{
+    dateKey: '2026-07-01',
+    durationMinutes: 120,
+    typeLabel: '1v4',
+    studentDetails: [
+        { name: 'A', grade: '高三', status: 'present', actualMinutes: 120 },
+        { name: 'B', grade: '高三', status: 'present', actualMinutes: 90 },
+        { name: 'C', grade: '高三', status: 'present', actualMinutes: 90 },
+        { name: 'D', grade: '高三', status: 'present', actualMinutes: 60 }
+    ]
+}]);
+const high3Offset = 3 * segmentedLessonSheetSummary.typeKeys.length;
+assert.deepStrictEqual(
+    [
+        segmentedLessonSheetSummary.totalValues[high3Offset + 2],
+        segmentedLessonSheetSummary.totalValues[high3Offset + 3],
+        segmentedLessonSheetSummary.totalValues[high3Offset + 4]
+    ],
+    ['0.5', '1', '0.5'],
+    'lesson-sheet summary should split unequal student durations across active class sizes'
+);
+
+lessonSheetApp.formatDuration = (hours, minutes) => `${hours}h${minutes ? `${minutes}min` : ''}`;
+const expandedStudentRows = lessonSheetApp.getLessonSheetExpandedRows([{
+    dateKey: '2026-07-01',
+    subject: 'Physics',
+    time: '08:00-10:00',
+    typeLabel: '1v3',
+    durationMinutes: 120,
+    actualDuration: '2h',
+    studentDetails: [
+        { name: 'A', status: 'present', actualMinutes: 120 },
+        { name: 'B', status: 'present', actualMinutes: 90 },
+        { name: 'C', status: 'absent', actualMinutes: 120 }
+    ]
+}]);
+assert.deepStrictEqual(
+    expandedStudentRows.map(row => [row.actualDuration, row.isUnderTwoHours]),
+    [['2h', false], ['1h30min', true], ['0h', true]],
+    'lesson-sheet detail rows should use each student actual duration and flag rows below two hours'
+);
+
 const perCourseCompletionApp = makeApp();
 Object.setPrototypeOf(perCourseCompletionApp, TimetableApp.prototype);
 perCourseCompletionApp.settings = { segmentedScheduling: false };

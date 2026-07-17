@@ -335,7 +335,11 @@ TimetableApp.prototype.updateBasicSettingsUI = function() {
     }
     const range = document.getElementById('pageZoomRange');
     const output = document.getElementById('pageZoomValue');
-    if (range) range.value = String(this.settings.pageZoom || 100);
+    if (range) {
+        range.value = String(this.settings.pageZoom || 100);
+        const progress = ((Number(range.value) - Number(range.min)) / (Number(range.max) - Number(range.min))) * 100;
+        range.style.setProperty('--zoom-range-progress', `${progress}%`);
+    }
     if (output) output.textContent = `${this.settings.pageZoom || 100}%`;
     const select = document.getElementById('teacherSubjectSelect');
     if (select) {
@@ -582,6 +586,8 @@ TimetableApp.prototype.applyStageQuickSettings = function() {
     if (window.ScheduleErpService.completeStudentsForEndedStages(this)) this.saveData();
     this.renderStageSettings();
     this.renderSubjects();
+    this.closeSettingsModal();
+    window.showAppToast?.('设置完成');
 }
 
 TimetableApp.prototype.getStageMonthRangesFromInputs = function() {
@@ -722,8 +728,10 @@ TimetableApp.prototype.saveStageSettings = function() {
     if (window.ScheduleErpService.completeStudentsForEndedStages(this)) this.saveData();
     this.renderStageSettings();
     this.renderSubjects();
-    message.textContent = '阶段设置已保存。';
-    message.className = 'stage-settings-message success';
+    message.textContent = '';
+    message.className = 'stage-settings-message';
+    this.closeSettingsModal();
+    window.showAppToast?.('保存成功');
 }
 
 TimetableApp.prototype.applySettings = function() {

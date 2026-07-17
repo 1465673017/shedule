@@ -321,6 +321,8 @@ TimetableApp.prototype.applyQuickSettings = function() {
         this.renderPeriods();
         this.saveData();
         this.applySettings();
+        this.closeSettingsModal();
+        window.showAppToast?.('设置完成');
     }
 
 TimetableApp.prototype.formatTime = function(minutes) {
@@ -334,6 +336,7 @@ TimetableApp.prototype.saveTimeManagement = function() {
         this.saveData();
         this.applySettings();
         this.closeSettingsModal();
+        window.showAppToast?.('保存成功');
     }
 
 TimetableApp.prototype.saveSettings = function(e) {

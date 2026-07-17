@@ -486,7 +486,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
                     if (!isClicking1v1 && hasSelected1v1Current) {
 
-                        alert('Cannot add other students to a 1v1 course');
+                        alert('1v1学生只能单独上课，无法添加其他学生');
 
                         return;
 

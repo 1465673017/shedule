@@ -47,7 +47,7 @@
     function shiftCoursesToStageStarts(app, courses) {
         const datedCourses = courses.map(course => ({ course, date: localDate(course.courseDate) }));
         const invalid = datedCourses.find(item => !item.date);
-        if (invalid) throw new Error(`课程 ${invalid.course.courseName || invalid.course.id || ''} 缺少有效 courseDate`);
+        if (invalid) throw new Error(`课程 ${invalid.course.courseName || invalid.course.id || ''} 缺少有效的课程日期`);
         const groups = new Map();
         datedCourses.forEach(item => {
             const occurrence = stageOccurrenceForDate(app, item.date);
@@ -161,7 +161,7 @@
         const invalidIndex = originalDates.findIndex(date => !date);
         if (invalidIndex >= 0) {
             const course = courses[invalidIndex];
-            throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效 courseDate`);
+            throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效的课程日期`);
         }
         const importItems = options.fromCurrentStage
             ? shiftCoursesToStageStarts(app, courses)
@@ -253,7 +253,7 @@
         let studentCount = 0;
         let skippedCourseCount = 0;
         importItems.forEach(({ course, date }) => {
-            if (!date) throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效 courseDate`);
+            if (!date) throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效的课程日期`);
             const day = date.getDay() || 7;
             const cellKey = app.buildCellKey(day, periodIndex(app, course));
             const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
@@ -343,7 +343,7 @@
             input.setSelectionRange(input.value.length, input.value.length);
             if (message) message.textContent = '已粘贴剪贴板内容';
         } catch (error) {
-            if (message) message.textContent = `粘贴失败：${error.message}`;
+            if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
         }
     };
     TimetableApp.prototype.submitCourseDataImport = async function (event) {
@@ -370,6 +370,10 @@
             });
             const skippedText = result.skippedCourseCount > 0 ? `，跳过 ${result.skippedCourseCount} 节已占用课程` : '';
             message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生${skippedText}`;
-        } catch (error) { message.textContent = `导入失败：${error.message}`; }
+        } catch (error) {
+            const detail = String(error && error.message ? error.message : '');
+            const chineseDetail = /[\u3400-\u9fff]/.test(detail) ? detail : '数据格式不正确或内容无法读取，请检查后重试。';
+            message.textContent = `导入失败：${chineseDetail}`;
+        }
     };
 })();

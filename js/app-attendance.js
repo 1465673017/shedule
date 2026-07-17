@@ -130,6 +130,11 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
             ? erpActualMin
             : scheduledMinutes;
         const students = this._attModalStudents || [];
+        const studentDurations = students.map(student => {
+            const saved = window.ScheduleErpService.getStudentActualMinutes(this, key, student.id, this._attModalDateKey);
+            return Math.min(240, saved !== undefined ? saved : currentMin);
+        });
+        const masterMinutes = studentDurations.length ? Math.max(...studentDurations) : Math.min(240, currentMin);
 
         const editor = document.createElement('div');
         editor.className = 'duration-editor-dropdown';
@@ -138,9 +143,11 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
         editor.innerHTML = `
             <div class="duration-editor-header">设置学生实际上课时长</div>
             <div class="duration-editor-body student-duration-editor-body">
-                ${students.map(student => {
-                    const saved = window.ScheduleErpService.getStudentActualMinutes(this, key, student.id, this._attModalDateKey);
-                    const minutes = Math.min(240, saved !== undefined ? saved : currentMin);
+                ${students.length ? `<div class="student-duration-master-row">
+                    <input type="range" class="duration-range student-duration-master-range" min="0" max="240" step="5" value="${masterMinutes}" oninput="app.syncAllStudentActualDurations('${key}', this.value)">
+                </div>` : ''}
+                ${students.map((student, index) => {
+                    const minutes = studentDurations[index];
                     return `<div class="student-duration-row">
                         <span class="student-duration-name">${student.name}</span>
                         <input type="range" class="duration-range student-duration-range" data-student-id="${student.id}" min="0" max="240" step="5" value="${minutes}" oninput="app.syncStudentActualDuration('${key}', '${student.id}', this.value)">
@@ -158,6 +165,15 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
                 this.syncStudentActualDuration(key, range.dataset.studentId, range.value);
             }, { passive: false });
         });
+        const masterRange = editor.querySelector('.student-duration-master-range');
+        if (masterRange) {
+            masterRange.addEventListener('wheel', (wheelEvent) => {
+                wheelEvent.preventDefault();
+                const direction = wheelEvent.deltaY > 0 ? -1 : 1;
+                masterRange.value = String(Math.max(0, Math.min(240, Number(masterRange.value) + direction * 5)));
+                this.syncAllStudentActualDurations(key, masterRange.value);
+            }, { passive: false });
+        }
 
         this._durationEditorKey = key;
 
@@ -216,6 +232,18 @@ TimetableApp.prototype.syncStudentActualDuration = function(key, studentId, valu
         this.renderAttendanceStudentList(this._attModalStudents || [], key);
         this.renderAttendanceRecords(this._attModalStudents || [], key);
         return true;
+    }
+
+TimetableApp.prototype.syncAllStudentActualDurations = function(key, value) {
+        const minutes = Math.max(0, Math.min(240, Number(value) || 0));
+        const ranges = Array.from(document.querySelectorAll('.student-duration-range'));
+        ranges.forEach(range => {
+            range.value = String(minutes);
+            const studentValue = document.getElementById(`studentDurationVal-${range.dataset.studentId}`);
+            if (studentValue) studentValue.textContent = this.formatDuration(Math.floor(minutes / 60), minutes % 60);
+        });
+        if (!ranges.length) return false;
+        return this.syncStudentActualDuration(key, ranges[0].dataset.studentId, minutes);
     }
 
 TimetableApp.prototype.getStudentActualDurationDisplay = function(key, studentId) {
