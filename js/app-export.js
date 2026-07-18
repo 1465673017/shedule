@@ -146,15 +146,19 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
         const date = new Date(current);
         const lessons = this.collectLessonsForDate(date) || [];
         lessons.forEach(lesson => {
+            const importInstance = this.erpData && Array.isArray(this.erpData.courseInstances)
+                ? this.erpData.courseInstances.find(instance => instance.id === lesson.courseInstanceId)
+                : null;
+            if (importInstance && importInstance.importGroupId && importInstance.importPartIndex > 0) return;
             const dateKey = lesson.dates && lesson.dates[0] ? lesson.dates[0] : this.formatLocalDate(date);
             const studentNames = (lesson.students || [])
                 .map(student => student && student.name)
                 .filter(Boolean)
                 .join('、');
             const actualMinutes = this.getLessonActualMinutesForStats(lesson);
-            const durationMinutes = actualMinutes !== undefined
-                ? actualMinutes
-                : this.getLessonDurationMinutesForStats(lesson);
+            const durationMinutes = importInstance && importInstance.importPartCount > 1
+                ? importInstance.importTotalMinutes
+                : (actualMinutes !== undefined ? actualMinutes : this.getLessonDurationMinutesForStats(lesson));
             const durationDisplay = this.formatDuration(
                 Math.floor(durationMinutes / 60),
                 durationMinutes % 60
@@ -163,7 +167,9 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                 const status = student && student.status ? student.status : null;
                 const studentMinutes = status === 'leave' || status === 'absent'
                     ? 0
-                    : Math.max(0, Number(student && student.actualMinutes !== undefined
+                    : Math.max(0, Number(importInstance && importInstance.importPartCount > 1
+                        ? durationMinutes
+                        : student && student.actualMinutes !== undefined
                         ? student.actualMinutes
                         : durationMinutes) || 0);
                 return {
@@ -191,7 +197,9 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                 subject: lesson.subject || '',
                 periodLabel: this.getLessonPeriodLabel(lesson.period),
                 periodIndex: this.getPeriodNumber(lesson.period),
-                time: lesson.time || '',
+                time: importInstance && importInstance.importSourceTime
+                    ? importInstance.importSourceTime
+                    : (lesson.time || ''),
                 students: studentNames,
                 studentGrades,
                 studentDetails,
@@ -744,8 +752,15 @@ TimetableApp.prototype.saveAsImage = function () {
         };
         const sourceWrapper = document.querySelector('.timetable-wrapper');
         const sourceTable = document.getElementById('timetable');
+        const longestStudentNameLength = (this.students || []).reduce((maxLength, student) => {
+            return Math.max(maxLength, Array.from(String(student && student.name || '').trim()).length);
+        }, 0);
+        const exportStudentPillWidth = Math.max(62, longestStudentNameLength * 12 + 24);
+        const exportDayColumnWidth = Math.max(132, exportStudentPillWidth * 2 + 36);
+        const exportCourseRowHeight = 108;
         const exportWidth = Math.max(
             metrics.containerMinWidth,
+            140 + (Number(metrics.visibleDayCount) || 7) * exportDayColumnWidth + 60,
             sourceWrapper ? Math.ceil(sourceWrapper.scrollWidth) : 0,
             sourceTable ? Math.ceil(sourceTable.scrollWidth + 48) : 0
         );
@@ -771,6 +786,14 @@ TimetableApp.prototype.saveAsImage = function () {
         }
 
         const tableClone = originalTable.cloneNode(true);
+        tableClone.style.setProperty('height', 'auto', 'important');
+        tableClone.style.setProperty('min-height', '0', 'important');
+        tableClone.style.setProperty('max-height', 'none', 'important');
+        tableClone.style.setProperty('padding', '0', 'important');
+        tableClone.style.setProperty('margin', '0', 'important');
+        tableClone.style.setProperty('overflow', 'visible', 'important');
+        tableClone.style.setProperty('display', 'block', 'important');
+        tableClone.style.setProperty('box-shadow', 'none', 'important');
 
         tableClone.querySelectorAll('.section-controls').forEach(control => control.remove());
         tableClone.querySelectorAll('.date-navigator').forEach(navigator => navigator.remove());
@@ -783,6 +806,9 @@ TimetableApp.prototype.saveAsImage = function () {
             clonedWrapper.style.overflow = 'visible';
             clonedWrapper.style.width = '100%';
             clonedWrapper.style.minWidth = '0';
+            clonedWrapper.style.height = 'auto';
+            clonedWrapper.style.minHeight = '0';
+            clonedWrapper.style.maxHeight = 'none';
         }
 
         const titleDiv = document.createElement('div');
@@ -801,8 +827,9 @@ TimetableApp.prototype.saveAsImage = function () {
                 border-collapse: collapse;
                 width: 100%;
                 min-width: ${metrics.tableMinWidth}px;
-                table-layout: fixed;
+                table-layout: auto;
                 border: 2px solid #333;
+                border-right: 2px solid #333;
                 font-size: 14px;
             `;
 
@@ -814,8 +841,9 @@ TimetableApp.prototype.saveAsImage = function () {
                     padding: 12px 8px;
                     text-align: center;
                     vertical-align: middle;
-                    min-width: 80px;
+                    min-width: ${isPeriodHeader ? '100px' : `${exportDayColumnWidth}px`};
                     min-height: 60px;
+                    box-sizing: border-box;
                     font-family: "Microsoft YaHei", Arial, sans-serif;
                     font-size: 14px;
                     ${isHeader ? `background-color: ${isPeriodHeader ? '#ffffff' : '#f8f9fa'}; font-weight: bold;` : ''}
@@ -851,11 +879,57 @@ TimetableApp.prototype.saveAsImage = function () {
             text.style.setProperty('display', 'block', 'important');
             text.style.setProperty('width', 'auto', 'important');
             text.style.setProperty('flex', '1 1 auto', 'important');
-            text.style.setProperty('min-width', '0', 'important');
+            text.style.setProperty('min-width', 'max-content', 'important');
             text.style.setProperty('max-width', 'none', 'important');
-            text.style.setProperty('overflow', 'hidden', 'important');
-            text.style.setProperty('text-overflow', 'ellipsis', 'important');
-            text.style.setProperty('white-space', 'nowrap', 'important');
+            text.style.setProperty('overflow', 'visible', 'important');
+            text.style.setProperty('text-overflow', 'clip', 'important');
+            text.style.setProperty('white-space', 'normal', 'important');
+            text.style.setProperty('word-break', 'keep-all', 'important');
+        });
+
+        table.querySelectorAll('.student-card-light').forEach(card => {
+            card.style.setProperty('flex', `0 0 ${exportStudentPillWidth}px`, 'important');
+            card.style.setProperty('width', `${exportStudentPillWidth}px`, 'important');
+            card.style.setProperty('min-width', `${exportStudentPillWidth}px`, 'important');
+            card.style.setProperty('max-width', `${exportStudentPillWidth}px`, 'important');
+            card.style.setProperty('height', 'auto', 'important');
+            card.style.setProperty('overflow', 'visible', 'important');
+        });
+
+        table.querySelectorAll('.cell-content').forEach(content => {
+            content.style.setProperty('display', 'flex', 'important');
+            content.style.setProperty('flex-wrap', 'wrap', 'important');
+            content.style.setProperty('align-content', 'flex-start', 'important');
+            content.style.setProperty('gap', '6px', 'important');
+            content.style.setProperty('max-height', 'none', 'important');
+            content.style.setProperty('overflow', 'visible', 'important');
+        });
+
+        table.querySelectorAll('.student-name').forEach(name => {
+            name.style.setProperty('width', '100%', 'important');
+            name.style.setProperty('min-width', '0', 'important');
+            name.style.setProperty('overflow', 'visible', 'important');
+            name.style.setProperty('text-overflow', 'clip', 'important');
+            name.style.setProperty('white-space', 'nowrap', 'important');
+            name.style.setProperty('word-break', 'normal', 'important');
+            name.style.setProperty('line-height', '1.25', 'important');
+        });
+
+        table.querySelectorAll('.delete-cell-btn-light').forEach(button => button.remove());
+
+        table.querySelectorAll('.cell-content').forEach(content => {
+            Array.from(content.querySelectorAll('.student-card-light')).forEach((card, index) => {
+                if (index >= 4) card.remove();
+            });
+        });
+
+        table.querySelectorAll('.cell').forEach(cell => {
+            cell.style.setProperty('height', `${exportCourseRowHeight}px`, 'important');
+            cell.style.setProperty('min-height', `${exportCourseRowHeight}px`, 'important');
+            const row = cell.closest('tr');
+            if (row) {
+                row.style.setProperty('height', `${exportCourseRowHeight}px`, 'important');
+            }
         });
 
         table.querySelectorAll('.subject-grade-tag').forEach(tag => {
@@ -886,6 +960,11 @@ TimetableApp.prototype.saveAsImage = function () {
 
         document.body.appendChild(cleanContainer);
 
+        // 折叠表格的最右边框可能有半个像素落在 scrollWidth 之外，
+        // 为截图画布保留额外右侧空间，避免导出时被裁掉。
+        const captureWidth = Math.ceil(cleanContainer.scrollWidth) + 32;
+        const captureHeight = Math.ceil(cleanContainer.scrollHeight);
+
         if (typeof html2canvas === 'undefined') {
             alert('图片导出组件未加载，请检查网络连接后刷新页面重试');
             document.body.removeChild(cleanContainer);
@@ -897,9 +976,10 @@ TimetableApp.prototype.saveAsImage = function () {
             scale: 2,
             useCORS: true,
             allowTaint: true,
-            width: exportWidth,
-            height: cleanContainer.scrollHeight,
-            windowWidth: exportWidth,
+            width: captureWidth,
+            height: captureHeight,
+            windowWidth: captureWidth,
+            windowHeight: captureHeight,
             onclone: clonedDocument => {
                 // 图片导出使用独立的浅色打印模板。只修改 html2canvas 的克隆文档，
                 // 避免暗色主题中的 color-mix() 被 html2canvas 1.4.1 解析并导致导出失败。
@@ -991,6 +1071,12 @@ TimetableApp.prototype.exportToWord = async function () {
             for (let day = 1; day <= dayCount; day++) {
                 const key = this.buildCellKey(day, index);
                 const version = this.getCellVersion(key, weekStartStr);
+                const courseInstance = version && this.erpData && Array.isArray(this.erpData.courseInstances)
+                    ? this.erpData.courseInstances.find(instance => instance.id === version.courseInstanceId)
+                    : null;
+                if (courseInstance && courseInstance.importGroupId && courseInstance.importPartIndex > 0) {
+                    continue;
+                }
                 let subjectId = version ? version.subject : null;
                 const studentIds = version ? (version.student || []) : [];
                 const students = studentIds
@@ -1015,7 +1101,6 @@ TimetableApp.prototype.exportToWord = async function () {
                             <div class="cell-lines">
                                 <div class="subject">课程名：${subject.name}</div>
                                 ${studentLines}
-                                ${subject.teacher ? `<div class="teacher">教师：${subject.teacher}</div>` : ''}
                             </div>
                         </td>`;
                     } else {
@@ -1151,6 +1236,12 @@ TimetableApp.prototype.exportToExcel = async function () {
             for (let day = 1; day <= dayCount; day++) {
                 const key = this.buildCellKey(day, index);
                 const version = this.getCellVersion(key, weekStartStr);
+                const courseInstance = version && this.erpData && Array.isArray(this.erpData.courseInstances)
+                    ? this.erpData.courseInstances.find(instance => instance.id === version.courseInstanceId)
+                    : null;
+                if (courseInstance && courseInstance.importGroupId && courseInstance.importPartIndex > 0) {
+                    continue;
+                }
                 let subjectId = version ? version.subject : null;
                 const studentIds = version ? (version.student || []) : [];
                 const students = studentIds
@@ -1171,12 +1262,15 @@ TimetableApp.prototype.exportToExcel = async function () {
                         const studentLines = studentChunks.map((line, idx) =>
                             `<div class="student-line">${idx === 0 ? `学生：${line}` : line}</div>`
                         ).join('');
-                        excelContent += `<td><div class="cell-lines">`;
+                        const rowSpan = courseInstance && courseInstance.importPartCount > 1
+                            ? ` rowspan="${courseInstance.importPartCount}"`
+                            : '';
+                        excelContent += `<td${rowSpan}><div class="cell-lines">`;
                         excelContent += `<div class="subject">课程名：${subject.name}</div>`;
-                        excelContent += studentLines;
-                        if (subject.teacher) {
-                            excelContent += `<div class="teacher">教师：${subject.teacher}</div>`;
+                        if (courseInstance && courseInstance.importSourceTime) {
+                            excelContent += `<div class="teacher">时间：${courseInstance.importSourceTime}</div>`;
                         }
+                        excelContent += studentLines;
                         excelContent += `</div></td>`;
                     } else {
                         excelContent += '<td></td>';

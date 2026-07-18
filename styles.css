@@ -4003,13 +4003,19 @@ html.electron-app.macos .electron-window-controls {
 }
 
 .electron-window-controls {
-    position: absolute;
+    display: none;
+}
+
+html.electron-app .electron-window-controls {
+    position: fixed;
+    z-index: 900;
     top: 0;
     right: 0;
     height: var(--electron-toolbar-height);
     display: flex;
     align-items: stretch;
     -webkit-app-region: no-drag;
+    pointer-events: auto;
 }
 
 .electron-window-controls button {
@@ -4023,6 +4029,9 @@ html.electron-app.macos .electron-window-controls {
     color: transparent;
     font-size: 0;
     cursor: default;
+    -webkit-app-region: no-drag !important;
+    pointer-events: auto !important;
+    user-select: none;
     transition: background-color .14s ease, color .14s ease;
 }
 

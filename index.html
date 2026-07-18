@@ -24,15 +24,15 @@
                 <span>课表工作台 · 内测版</span>
             </div>
         </div>
-        <div class="electron-window-controls" aria-label="窗口控制">
+    </header>
+    <div class="electron-window-controls" aria-label="窗口控制">
             <button type="button" aria-label="最小化" title="最小化"
                 onclick="window.electronAPI.windowControl('minimize')">&#8722;</button>
             <button type="button" aria-label="最大化或还原" title="最大化或还原"
                 onclick="window.electronAPI.windowControl('maximize')">&#9633;</button>
             <button type="button" class="electron-window-close" aria-label="关闭" title="关闭"
                 onclick="window.electronAPI.windowControl('close')">&#215;</button>
-        </div>
-    </header>
+    </div>
     <div id="appMessageModal" class="modal app-message-modal" role="dialog" aria-modal="true"
         aria-labelledby="appMessageTitle">
         <div class="app-message-dialog">
@@ -60,7 +60,7 @@
                     <button id="resetBtn" class="btn secondary">重置课表</button>
                     <button id="tutorialBtn" class="btn tertiary">快速开始</button>
                     <button id="settingsBtn" class="btn tertiary">基础设置</button>
-                    <button id="importCourseDataBtn" class="btn tertiary">导入课程数据</button>
+                    <button id="importStudentsBtn" class="btn tertiary">批量导入学生</button>
                 </div>
                 <div class="subject-pool">
                     <div class="pool-tabs">
@@ -70,7 +70,6 @@
                     <div class="add-buttons">
                         <button id="addSubjectBtn" class="btn primary btn-sm">添加科目</button>
                         <button id="addStudentBtn" class="btn primary btn-sm">添加学生</button>
-                        <button id="importStudentsBtn" class="btn primary btn-sm" style="display: none;">批量导入</button>
                     </div>
                     <div id="studentFilterButtons" class="student-filter-buttons">
                         <button class="filter-btn" data-filter="all">全部</button>
@@ -707,7 +706,7 @@
             <div class="modal-header">
                 <div class="modal-title-block">
                     <h3>批量导入学生</h3>
-                    <p class="modal-subtitle">选择统一年级，并用顿号分隔多个学生姓名</p>
+                    <p class="modal-subtitle">年级用 1–12 表示一年级至高三；不写年级时默认为一年级</p>
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭"
                     onclick="app.closeStudentBatchModal()">×</button>
@@ -715,50 +714,16 @@
             <form id="studentBatchForm">
                 <div class="modal-body">
                     <div class="modal-section form-group">
-                        <label for="studentBatchGrade">统一年级</label>
-                        <select id="studentBatchGrade" required></select>
+                        <textarea id="studentBatchNames" required rows="10"
+                            placeholder="例如：1张三、李四、王五1（均为一年级）；1张三、2李四、3王五（分别为一、二、三年级）；张三、李四（默认一年级）"></textarea>
                     </div>
-                    <div class="modal-section form-group">
-                        <label for="studentBatchNames">学生姓名</label>
-                        <textarea id="studentBatchNames" required placeholder="请输入学生姓名，使用“、”分隔，例如：张三、李四、王五"></textarea>
-                    </div>
+                    <div id="studentBatchImportMessage" class="modal-subtitle"></div>
                 </div>
                 <div class="form-actions">
-                    <button type="button" id="cancelStudentBatchBtn" class="btn secondary">取消</button>
-                    <button type="submit" class="btn primary">导入</button>
+                    <button type="button" id="clearStudentBatchBtn" class="btn secondary">清除</button>
+                    <button type="button" class="btn secondary" onclick="app.pasteStudentBatchText()">粘贴</button>
+                    <button type="submit" class="btn primary">识别并导入</button>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="courseDataImportModal" class="modal">
-        <div class="modal-content standard-form-modal">
-            <div class="modal-header">
-                <div class="modal-title-block">
-                    <h3>批量导入课程数据</h3>
-                    <p class="modal-subtitle">支持完整接口响应、按教师 ID 分组的数据、课程数组或单条课程 JSON</p>
-                </div>
-                <button type="button" class="modal-close" aria-label="关闭"
-                    onclick="app.closeCourseDataImportModal()">×</button>
-            </div>
-            <form id="courseDataImportForm">
-                <div class="modal-body">
-                    <div class="modal-section form-group">
-                        <div class="course-import-label-row">
-                            <label for="courseDataImportText">课程 JSON</label>
-                            <button type="button" id="courseImportStageStartToggle"
-                                class="btn secondary course-import-stage-start" aria-pressed="false"
-                                onclick="app.toggleCourseImportStageStart()">阶段导入</button>
-                        </div>
-                        <textarea id="courseDataImportText" required rows="14"
-                            placeholder="可直接粘贴完整接口返回 JSON，系统会递归识别其中的全部课程"></textarea>
-                    </div>
-                    <div id="courseDataImportMessage" class="modal-subtitle"></div>
-                </div>
-                <div class="form-actions"><button type="button" class="btn secondary"
-                        onclick="app.clearCourseDataImportText()">清空</button><button type="button" class="btn secondary"
-                        onclick="app.pasteCourseDataImportText()">粘贴</button><button type="submit"
-                        class="btn primary">识别并导入</button></div>
             </form>
         </div>
     </div>

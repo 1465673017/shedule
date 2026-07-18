@@ -257,20 +257,13 @@ TimetableApp.prototype.saveStudent = function (e) {
 
 TimetableApp.prototype.openStudentBatchModal = function () {
     const modal = document.getElementById('studentBatchModal');
-    const gradeSelect = document.getElementById('studentBatchGrade');
     const namesInput = document.getElementById('studentBatchNames');
-    if (!modal || !gradeSelect || !namesInput) return;
-
-    gradeSelect.innerHTML = '';
-    this.grades.forEach((grade, index) => {
-        const option = document.createElement('option');
-        option.value = grade.id;
-        option.textContent = grade.name;
-        option.selected = index === 0;
-        gradeSelect.appendChild(option);
-    });
+    if (!modal || !namesInput) return;
 
     namesInput.value = '';
+    const message = document.getElementById('studentBatchImportMessage');
+    if (message) message.textContent = '';
+    this._courseImportFromCurrentStage = false;
     modal.style.display = 'block';
     namesInput.focus();
 }
@@ -282,21 +275,92 @@ TimetableApp.prototype.closeStudentBatchModal = function () {
     }
 }
 
-TimetableApp.prototype.saveStudentBatch = function (e) {
+TimetableApp.prototype.clearStudentBatchInput = function () {
+    const input = document.getElementById('studentBatchNames');
+    const message = document.getElementById('studentBatchImportMessage');
+    if (input) input.value = '';
+    if (message) message.textContent = '';
+    this._courseImportFromCurrentStage = false;
+}
+
+TimetableApp.prototype.isStudentBatchJson = function () {
+    const input = document.getElementById('studentBatchNames');
+    const rawText = input ? input.value.trim() : '';
+    const normalized = window.CourseDataImportService
+        && typeof window.CourseDataImportService.normalizeMarkedInput === 'function'
+        ? window.CourseDataImportService.normalizeMarkedInput(rawText)
+        : { text: rawText };
+    const text = normalized.text;
+    if (normalized.hasStageMarker) return true;
+    if (!text) return false;
+    try {
+        const value = JSON.parse(text);
+        return value !== null && typeof value === 'object';
+    } catch (_) {
+        return false;
+    }
+}
+
+TimetableApp.prototype.parseStudentBatchEntries = function (text) {
+    let source = String(text || '').trim();
+    let groupGradeNumber = null;
+    // 前后编号是“整组年级”语法，只在确实包含多个姓名时启用。
+    // 否则像 1000001 这样的纯数字姓名会被误删末尾的 1。
+    const hasMultipleNames = /[、,，\n]/.test(source);
+    const groupMatch = hasMultipleNames ? source.match(/^(1[0-2]|[1-9])([\s\S]*?)\1$/) : null;
+    if (groupMatch) {
+        groupGradeNumber = Number(groupMatch[1]);
+        source = groupMatch[2].trim();
+    }
+
+    return source.split(/[、,，\n]+/).map(item => item.trim()).filter(Boolean).map(item => {
+        let name = item;
+        let gradeNumber = groupGradeNumber;
+        if (!gradeNumber) {
+            // 10–12 只在后面紧跟非数字姓名时按两位年级识别；数字姓名
+            // 如 1000001 应识别为“一年级 + 000001”。
+            const prefix = item.match(/^(1[0-2])\s*(\D.*)$/)
+                || item.match(/^([1-9])\s*(.+)$/);
+            const suffix = item.match(/^(.*\D)\s*(1[0-2])$/)
+                || item.match(/^(.+?)\s*([1-9])$/);
+            if (prefix) {
+                gradeNumber = Number(prefix[1]);
+                name = prefix[2].trim();
+            } else if (suffix) {
+                gradeNumber = Number(suffix[2]);
+                name = suffix[1].trim();
+            }
+        }
+        return { name, gradeNumber: gradeNumber || 1 };
+    }).filter(entry => entry.name);
+}
+
+TimetableApp.prototype.getBatchGradeByNumber = function (gradeNumber) {
+    return this.grades.find(grade => grade.id === `g${gradeNumber}`)
+        || this.grades[gradeNumber - 1]
+        || null;
+}
+
+TimetableApp.prototype.saveStudentBatch = async function (e) {
     e.preventDefault();
 
-    const gradeSelect = document.getElementById('studentBatchGrade');
     const namesInput = document.getElementById('studentBatchNames');
-    if (!gradeSelect || !namesInput) return;
+    if (!namesInput) return;
 
-    const gradeInfo = this.grades.find(g => g.id === gradeSelect.value);
-    const names = namesInput.value
-        .split('、')
-        .map(name => name.trim())
-        .filter(Boolean);
+    if (this.isStudentBatchJson()) {
+        await this.importCourseDataText(namesInput.value, document.getElementById('studentBatchImportMessage'));
+        return;
+    }
 
-    if (!gradeInfo || names.length === 0) {
-        alert('请选择年级，并使用“、”输入至少一个学生姓名。');
+    const entries = this.parseStudentBatchEntries(namesInput.value);
+    if (entries.length === 0) {
+        alert('请输入至少一个学生姓名（可用顿号、逗号或换行分隔）。');
+        return;
+    }
+
+    const invalidEntry = entries.find(entry => !this.getBatchGradeByNumber(entry.gradeNumber));
+    if (invalidEntry) {
+        alert(`未找到编号 ${invalidEntry.gradeNumber} 对应的年级，请先检查基础设置中的年级。`);
         return;
     }
 
@@ -304,7 +368,9 @@ TimetableApp.prototype.saveStudentBatch = function (e) {
         this.students.map(student => `${(student.name || '').trim()}__${student.grade || ''}`)
     );
 
-    names.forEach((name, index) => {
+    entries.forEach((entry, index) => {
+        const gradeInfo = this.getBatchGradeByNumber(entry.gradeNumber);
+        const name = entry.name;
         const studentKey = `${name}__${gradeInfo.name}`;
         if (existingKeys.has(studentKey)) return;
 
@@ -366,7 +432,10 @@ TimetableApp.prototype.renderSubjects = function () {
     if (this.currentPool === 'student' && this.currentStudentFilter !== 'all') {
         items = items.filter(student => {
             if (this.currentStudentFilter === 'ongoing') {
-                return !student.isAudition && !student.completed;
+                return !student.isAudition
+                    && !student.completed
+                    && typeof this.isStudentOngoing === 'function'
+                    && this.isStudentOngoing(student.id);
             } else if (this.currentStudentFilter === 'completed') {
                 return !!student.completed && !student.isAudition;
             } else if (this.currentStudentFilter === 'audition') {

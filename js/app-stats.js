@@ -1335,6 +1335,36 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
     var totalNonAudition = totalPresent - totalAudition;
     var totalLeave = data.leaveData.reduce(function (a, b) { return a + b; }, 0);
     var totalAbsent = data.absentData.reduce(function (a, b) { return a + b; }, 0);
+    var stackedTotalLabelPlugin = {
+        id: 'studentStackedTotalLabels',
+        afterDatasetsDraw: function (chart) {
+            if (!totalStudents || data.labels.length > 42) return;
+            var drawCtx = chart.ctx;
+            drawCtx.save();
+            drawCtx.fillStyle = isDark ? '#e2e8f0' : '#344054';
+            drawCtx.font = '700 10px sans-serif';
+            drawCtx.textAlign = 'center';
+            drawCtx.textBaseline = 'bottom';
+
+            data.labels.forEach(function (_label, dataIndex) {
+                var visibleTotal = 0;
+                var topY = Infinity;
+                var centerX = null;
+                chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                    if (!chart.isDatasetVisible(datasetIndex)) return;
+                    visibleTotal += Number(dataset.data[dataIndex] || 0);
+                    var bar = chart.getDatasetMeta(datasetIndex).data[dataIndex];
+                    if (bar) {
+                        centerX = bar.x;
+                        topY = Math.min(topY, bar.y);
+                    }
+                });
+                if (centerX === null || !isFinite(topY) || visibleTotal <= 0) return;
+                drawCtx.fillText(String(visibleTotal), centerX, Math.max(12, topY - 6));
+            });
+            drawCtx.restore();
+        }
+    };
 
     var chart = new Chart(ctx, {
         type: 'bar',
@@ -1428,6 +1458,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                 y: {
                     stacked: true,
                     beginAtZero: true,
+                    grace: '12%',
                     grid: { color: gridColor },
                     ticks: {
                         color: textColor,
@@ -1436,7 +1467,8 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     }
                 }
             }
-        }
+        },
+        plugins: [stackedTotalLabelPlugin]
     });
 
     this.setChartLegendNote('');
@@ -1762,7 +1794,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
                 unitData.forEach(function (value, index) {
                     var bar = meta.data[index];
                     if (!bar || value <= 0) return;
-                    drawCtx.fillText(Number(value).toFixed(1), bar.x, Math.max(chart.chartArea.top + 11, bar.y - 5));
+                    drawCtx.fillText(Number(value).toFixed(1), bar.x, Math.max(12, bar.y - 6));
                 });
                 drawCtx.restore();
             }
@@ -1874,7 +1906,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
                     }
                 });
                 if (centerX === null || !isFinite(topY) || visibleTotal <= 0) return;
-                drawCtx.fillText(visibleTotal.toFixed(1), centerX, Math.max(chart.chartArea.top + 11, topY - 5));
+                drawCtx.fillText(visibleTotal.toFixed(1), centerX, Math.max(12, topY - 6));
             });
             drawCtx.restore();
         }

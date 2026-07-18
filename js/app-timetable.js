@@ -751,13 +751,6 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                         subjectName.appendChild(gradeTag);
                     }
                     
-                    if (subject.teacher) {
-                        const teacherName = document.createElement('div');
-                        teacherName.className = 'teacher-name-light';
-                        teacherName.textContent = subject.teacher;
-                        subjectBg.appendChild(teacherName);
-                    }
-                    
                     subjectBg.appendChild(subjectName);
                     cell.appendChild(subjectBg);
                 }

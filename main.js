@@ -81,7 +81,7 @@ ipcMain.handle('read-clipboard-text', () => clipboard.readText());
 
 ipcMain.on('window-control', (event, action) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!win) return;
+    if (!win || win.isDestroyed()) return;
 
     if (action === 'minimize') win.minimize();
     if (action === 'maximize') {

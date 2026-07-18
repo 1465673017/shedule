@@ -1,6 +1,16 @@
 // Recognize external course JSON and import it as the highest-priority schedule version.
 (function () {
     const STATUS = { PRESENT: 'present', ATTENDANCE: 'present', ATTENDED: 'present', LEAVE: 'leave', ASK_FOR_LEAVE: 'leave', ABSENT: 'absent', ABSENCE: 'absent' };
+    const STAGE_IMPORT_MARKER = '大橙子yyds';
+
+    function normalizeMarkedInput(input) {
+        const text = String(input || '').trim();
+        const hasStageMarker = text.endsWith(STAGE_IMPORT_MARKER);
+        return {
+            text: hasStageMarker ? text.slice(0, -STAGE_IMPORT_MARKER.length).trimEnd() : text,
+            hasStageMarker
+        };
+    }
 
     function extractCourses(input) {
         const value = typeof input === 'string' ? JSON.parse(input) : input;
@@ -99,17 +109,40 @@
         return raw ? STATUS[String(raw).toUpperCase()] || null : null;
     }
 
-    function periodIndex(app, course) {
+    function courseTimeRange(course) {
         const start = String(course.courseTime || '').slice(0, 5);
         const end = String(course.courseEndTime || '').slice(0, 5);
+        const startMinutes = appTimeToMinutes(start);
+        const endMinutes = appTimeToMinutes(end);
+        if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || endMinutes <= startMinutes) {
+            throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效的上课时间`);
+        }
+        return { start, end, startMinutes, endMinutes, durationMinutes: endMinutes - startMinutes };
+    }
+
+    function appTimeToMinutes(value) {
+        const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return NaN;
+        const hour = Number(match[1]);
+        const minute = Number(match[2]);
+        return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? hour * 60 + minute : NaN;
+    }
+
+    function periodSlots(app, course) {
+        const range = courseTimeRange(course);
         const ordered = app.getOrderedPeriods();
-        let found = ordered.find(x => {
-            const range = String(x.period.time || '').split('-').map(v => v.trim().slice(0, 5));
-            return range[0] === start && (!end || range[1] === end);
-        });
-        if (!found) found = ordered.find(x => String(x.period.time || '').startsWith(start));
-        if (!found) throw new Error(`未找到与 ${start}-${end} 对应的课时，请先配置该时间段`);
-        return found.index;
+        const slots = ordered.map(x => {
+            const parts = String(x.period.time || '').split('-').map(v => appTimeToMinutes(v.trim().slice(0, 5)));
+            if (parts.length !== 2 || parts.some(value => !Number.isFinite(value))) return null;
+            const overlapMinutes = Math.max(0, Math.min(range.endMinutes, parts[1]) - Math.max(range.startMinutes, parts[0]));
+            return overlapMinutes > 0 ? { ...x, overlapMinutes } : null;
+        }).filter(Boolean);
+        if (!slots.length) throw new Error(`未找到与 ${range.start}-${range.end} 重叠的课时，请先配置对应时间段`);
+        return { range, slots };
+    }
+
+    function periodIndex(app, course) {
+        return periodSlots(app, course).slots[0].index;
     }
 
     function ensureSubject(app, course) {
@@ -166,7 +199,7 @@
         const importItems = options.fromCurrentStage
             ? shiftCoursesToStageStarts(app, courses)
             : courses.map((course, index) => ({ course, date: originalDates[index] }));
-        importItems.forEach(item => periodIndex(app, item.course));
+        importItems.forEach(item => periodSlots(app, item.course));
         return {
             courses,
             importItems,
@@ -255,9 +288,10 @@
         importItems.forEach(({ course, date }) => {
             if (!date) throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效的课程日期`);
             const day = date.getDay() || 7;
-            const cellKey = app.buildCellKey(day, periodIndex(app, course));
             const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
-            if (options.skipOccupied && versionHasCourse(app.getCellVersion(cellKey, weekStart))) {
+            const { range, slots } = periodSlots(app, course);
+            const occupied = slots.some(slot => versionHasCourse(app.getCellVersion(app.buildCellKey(day, slot.index), weekStart)));
+            if (options.skipOccupied && occupied) {
                 skippedCourseCount++;
                 return;
             }
@@ -265,15 +299,27 @@
             const sourceStudents = Array.isArray(course.students) ? course.students : [];
             const students = sourceStudents.map(s => ensureStudent(app, s, course, oneToOne));
             const subject = ensureSubject(app, course);
-            window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), {
-                source: 'course-import',
-                // An overwrite may replace a cutoff carrying the old course's
-                // stage metadata. Always bind imported data to its own date.
-                recalculateStage: true
-            });
-            sourceStudents.forEach((source, i) => {
-                const status = attendanceStatus(course, source);
-                if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
+            const importGroupId = `course_import_${course.id || app.formatLocalDate(date)}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            slots.forEach((slot, slotIndex) => {
+                const cellKey = app.buildCellKey(day, slot.index);
+                window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), {
+                    source: 'course-import',
+                    recalculateStage: true
+                });
+                const erp = window.ScheduleErpService.ensureErpData(app);
+                const instance = erp.courseInstances.find(item => item.cellKey === cellKey && item.weekStart === weekStart);
+                if (instance) {
+                    instance.importGroupId = importGroupId;
+                    instance.importPartIndex = slotIndex;
+                    instance.importPartCount = slots.length;
+                    instance.importSourceTime = `${range.start}-${range.end}`;
+                    instance.importTotalMinutes = range.durationMinutes;
+                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [app.formatLocalDate(date)]: slot.overlapMinutes };
+                }
+                sourceStudents.forEach((source, i) => {
+                    const status = attendanceStatus(course, source);
+                    if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
+                });
             });
             studentCount += students.length;
         });
@@ -283,7 +329,9 @@
 
     window.CourseDataImportService = {
         extractCourses,
+        normalizeMarkedInput,
         isOneToOne,
+        periodSlots,
         importCourses,
         shiftCoursesToStageStarts,
         buildImportPlan,
@@ -344,6 +392,61 @@
             if (message) message.textContent = '已粘贴剪贴板内容';
         } catch (error) {
             if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
+        }
+    };
+    TimetableApp.prototype.pasteStudentBatchText = async function () {
+        const input = document.getElementById('studentBatchNames');
+        const message = document.getElementById('studentBatchImportMessage');
+        if (!input) return;
+        try {
+            const text = window.electronAPI && typeof window.electronAPI.readClipboardText === 'function'
+                ? await window.electronAPI.readClipboardText()
+                : await navigator.clipboard.readText();
+            if (!text) throw new Error('empty');
+            input.value = text;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+            if (message) message.textContent = '';
+        } catch (_) {
+            if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
+        }
+    };
+    TimetableApp.prototype.importCourseDataText = async function (input, message) {
+        message = message || { textContent: '' };
+        try {
+            const markedInput = normalizeMarkedInput(input);
+            const segmentedScheduling = !!(this.settings && this.settings.segmentedScheduling);
+            if (markedInput.hasStageMarker && !segmentedScheduling) {
+                throw new Error('请先打开阶段排课');
+            }
+            // 无标记 JSON 始终普通导入，只有标记和阶段排课同时存在才启用阶段导入。
+            const markerStageImport = markedInput.hasStageMarker && segmentedScheduling;
+            const options = { fromCurrentStage: markerStageImport };
+            const plan = buildImportPlan(this, markedInput.text, options);
+            const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
+            let overwrite = false;
+            if (hasOldCourses) {
+                overwrite = await window.showAppConfirm(
+                    `本周有旧数据未清理，是否覆盖旧数据？\n\n确定：清理 ${this.formatLocalDate(plan.rangeStart)} 至 ${this.formatLocalDate(plan.rangeEnd)} 内的所有课程后导入。\n取消：保留原课程，只在空课位新增数据。`
+                );
+                if (overwrite) clearCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
+            }
+            const result = importCourses(this, markedInput.text, { ...options, plan, skipOccupied: hasOldCourses && !overwrite });
+            const skippedText = result.skippedCourseCount > 0 ? `，跳过 ${result.skippedCourseCount} 节已占用课程` : '';
+            const stageText = markerStageImport ? '，已按阶段起点导入' : '';
+            message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生${skippedText}${stageText}`;
+        } catch (error) {
+            const detail = String(error && error.message ? error.message : '');
+            if (detail === '请先打开阶段排课') {
+                message.textContent = detail;
+                return;
+            }
+            if (this.settings && this.settings.segmentedScheduling) {
+                message.textContent = '导入失败';
+                return;
+            }
+            const chineseDetail = /[\u3400-\u9fff]/.test(detail) ? detail : '数据格式不正确或内容无法读取，请检查后重试。';
+            message.textContent = `导入失败：${chineseDetail}`;
         }
     };
     TimetableApp.prototype.submitCourseDataImport = async function (event) {

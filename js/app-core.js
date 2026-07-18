@@ -159,10 +159,10 @@ class TimetableApp {
         bind('addCourseBtn', 'click', () => this.openManualCourseModal());
         bind('subjectForm', 'submit', (e) => this.saveSubject(e));
         bind('studentBatchForm', 'submit', (e) => this.saveStudentBatch(e));
+        bind('importStudentsBtn', 'click', () => this.openStudentBatchModal());
         bind('cancelBtn', 'click', () => this.closeSubjectModal());
-        bind('cancelStudentBatchBtn', 'click', () => this.closeStudentBatchModal());
+        bind('clearStudentBatchBtn', 'click', () => this.clearStudentBatchInput());
         bind('deleteSubjectBtn', 'click', () => this.deleteSubject());
-        this.ensureStudentBatchImportButton();
         
         // 添加课程弹窗相关
         bind('addLessonForm', 'submit', (e) => this.saveLessonToCell(e));
@@ -197,8 +197,6 @@ class TimetableApp {
         bind('resetBtn', 'click', () => this.openResetModal());
         bind('exportBtn', 'click', () => this.openExportModal());
         bind('settingsBtn', 'click', () => this.openSettingsModal());
-        bind('importCourseDataBtn', 'click', () => this.openCourseDataImportModal());
-        bind('courseDataImportForm', 'submit', (e) => this.submitCourseDataImport(e));
         window.addEventListener('resize', () => this.syncTimetableLayout());
         
         // 设置弹窗相关
@@ -325,7 +323,6 @@ class TimetableApp {
             gradeModal: () => this.closeGradeModal(),
             quickStartModal: () => this.closeQuickStartModal(),
             studentBatchModal: () => this.closeStudentBatchModal(),
-            courseDataImportModal: () => this.closeCourseDataImportModal(),
             resetModal: () => this.closeResetModal(),
             exportModal: () => this.closeExportModal()
         };
@@ -545,6 +542,14 @@ class TimetableApp {
         }
         if (options.weekRange) {
             this.updateWeekRange();
+        }
+        const statsModal = document.getElementById('statsModal');
+        if (statsModal && statsModal.style.display === 'block' && typeof this.onStatsDateChange === 'function') {
+            this.onStatsDateChange();
+        }
+        const textStatsModal = document.getElementById('textStatsModal');
+        if (textStatsModal && textStatsModal.style.display === 'block' && typeof this.renderTextStatsModal === 'function') {
+            this.renderTextStatsModal();
         }
     }
 
@@ -1431,11 +1436,6 @@ class TimetableApp {
         if (addButtons) {
             addButtons.style.display = 'flex';
         }
-        this.ensureStudentBatchImportButton();
-        const importStudentsBtn = document.getElementById('importStudentsBtn');
-        if (importStudentsBtn) {
-            importStudentsBtn.style.display = tab === 'student' ? 'inline-flex' : 'none';
-        }
 
         // 切换到学生池时显示筛选按钮，其他池隐藏
         const filterButtons = document.querySelector('.student-filter-buttons');
@@ -1444,17 +1444,6 @@ class TimetableApp {
         }
 
         this.renderSubjects();
-    }
-
-    ensureStudentBatchImportButton() {
-        const addButtons = document.querySelector('.add-buttons');
-        const btn = document.getElementById('importStudentsBtn');
-        if (!addButtons || !btn) return;
-        if (btn.dataset.bound === 'true') return;
-
-        btn.style.display = this.currentPool === 'student' ? 'inline-flex' : 'none';
-        btn.addEventListener('click', () => this.openStudentBatchModal());
-        btn.dataset.bound = 'true';
     }
 
     filterStudents(filter) {
