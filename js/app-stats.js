@@ -390,7 +390,67 @@ TimetableApp.prototype.renderTextStatsModal = function () {
     });
 }
 
+TimetableApp.prototype.invalidateStatsCache = function () {
+    this._statsDataRevision = (this._statsDataRevision || 0) + 1;
+    this._statsDailyLessonCache = new Map();
+    this._statsDailySalaryCache = new Map();
+    this._statsAggregateCache = new Map();
+    this._statsChartSeriesCache = new Map();
+    this._statsLookupIndex = null;
+    this._linkedChartSeriesData = null;
+};
+
+TimetableApp.prototype.getStatsDateCacheKey = function (date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+TimetableApp.prototype.getStatsLookupIndex = function () {
+    var revision = this._statsDataRevision || 0;
+    if (this._statsLookupIndex && this._statsLookupIndex.revision === revision) return this._statsLookupIndex;
+    var students = new Map();
+    (this.students || []).forEach(function (student) { students.set(String(student.id), student); });
+    var courseInstances = new Map();
+    var attendanceByInstance = new Map();
+    var attendanceByCell = new Map();
+    var erp = this.erpData || {};
+    (erp.courseInstances || []).forEach(function (instance) { courseInstances.set(String(instance.id), instance); });
+    (erp.attendanceRecords || []).forEach(function (record) {
+        var prefix = String(record.studentId) + '|';
+        var suffix = '|' + String(record.dateKey || '');
+        if (record.courseInstanceId !== undefined && record.courseInstanceId !== null) {
+            attendanceByInstance.set(prefix + String(record.courseInstanceId) + suffix, record.status);
+        }
+        if (record.cellKey) attendanceByCell.set(prefix + String(record.cellKey) + suffix, record.status);
+    });
+    this._statsLookupIndex = {
+        revision: revision,
+        students: students,
+        courseInstances: courseInstances,
+        attendanceByInstance: attendanceByInstance,
+        attendanceByCell: attendanceByCell
+    };
+    return this._statsLookupIndex;
+};
+
 TimetableApp.prototype.collectLessonsForDate = function (date) {
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+    const cacheKey = this.getStatsDateCacheKey(normalizedDate);
+    if (!this._statsDailyLessonCache) this._statsDailyLessonCache = new Map();
+    const now = new Date();
+    const isToday = cacheKey === this.getStatsDateCacheKey(now);
+    const minuteStamp = isToday
+        ? `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`
+        : 'stable';
+    const cached = this._statsDailyLessonCache.get(cacheKey);
+    if (cached && cached.revision === (this._statsDataRevision || 0) && cached.minuteStamp === minuteStamp) {
+        return cached.lessons;
+    }
+
+    date = normalizedDate;
     const dayIndex = date.getDay();
     const dayNum = dayIndex === 0 ? 7 : dayIndex;
     const formatLocalDate = d => {
@@ -419,6 +479,11 @@ TimetableApp.prototype.collectLessonsForDate = function (date) {
         }
     });
 
+    this._statsDailyLessonCache.set(cacheKey, {
+        revision: this._statsDataRevision || 0,
+        minuteStamp: minuteStamp,
+        lessons: lessons
+    });
     return lessons;
 }
 
@@ -434,13 +499,14 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
     // 课程已结束（过去的日期），即使没有考勤记录也纳入统计
     // 没有记录的学生默认视为"出勤"
 
+    const lookup = this.getStatsLookupIndex();
     const subject = cellData.subject ? this.subjects.find(s => s.id == cellData.subject) : null;
     const periodInfo = this.getPeriod(period);
 
     let studentCount = 0, leaveCount = 0, absentCount = 0;
     let presentNonAuditionCount = 0, auditionStudentCount = 0;
     const students = studentIds.map(id => {
-        const student = this.students.find(s => s.id === id);
+        const student = lookup.students.get(String(id));
         if (!student) return null;
         const status = this.getAttendanceStatusForStats(
             { key, courseInstanceId: cellData.courseInstanceId },
@@ -465,9 +531,7 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
         if (!student.completed) return false;
         return !student.manualCompletionDate || student.manualCompletionDate <= dateKey;
     }).length;
-    const courseInstance = this.erpData && Array.isArray(this.erpData.courseInstances)
-        ? this.erpData.courseInstances.find(instance => instance.id === cellData.courseInstanceId)
-        : null;
+    const courseInstance = lookup.courseInstances.get(String(cellData.courseInstanceId)) || null;
     const scheduledMinutes = periodInfo && periodInfo.time
         ? Math.max(0, this.timeToMinutes(periodInfo.time.split('-')[1]) - this.timeToMinutes(periodInfo.time.split('-')[0]))
         : 0;
@@ -505,7 +569,7 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
 
 TimetableApp.prototype.getLessonActualMinutesForStats = function (lesson) {
     if (this.erpData && Array.isArray(this.erpData.courseInstances)) {
-        const instance = this.erpData.courseInstances.find(ci => ci.id === lesson.courseInstanceId);
+        const instance = this.getStatsLookupIndex().courseInstances.get(String(lesson.courseInstanceId));
         if (instance && instance.actualMinutesByDate) {
             const dates = lesson.dates || [];
             for (const dateKey of dates) {
@@ -594,12 +658,15 @@ TimetableApp.prototype.getLessonTypeKeyForStats = function (lesson) {
 TimetableApp.prototype.getAttendanceStatusForStats = function (lesson, studentId, dateKey) {
     if (this.erpData && Array.isArray(this.erpData.attendanceRecords)) {
         const dates = dateKey ? [dateKey] : (lesson.dates || []);
-        const record = this.erpData.attendanceRecords.find(item =>
-            item.studentId === String(studentId) &&
-            (item.courseInstanceId === lesson.courseInstanceId || item.cellKey === lesson.key) &&
-            (dates.length === 0 || dates.includes(item.dateKey))
-        );
-        if (record) return record.status;
+        const lookup = this.getStatsLookupIndex();
+        for (const day of dates) {
+            const prefix = String(studentId) + '|';
+            const suffix = '|' + String(day || '');
+            const byInstance = lookup.attendanceByInstance.get(prefix + String(lesson.courseInstanceId) + suffix);
+            if (byInstance) return byInstance;
+            const byCell = lookup.attendanceByCell.get(prefix + String(lesson.key) + suffix);
+            if (byCell) return byCell;
+        }
     }
     return null;
 }
@@ -611,6 +678,17 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
     current.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setHours(0, 0, 0, 0);
+    if (!this._statsAggregateCache) this._statsAggregateCache = new Map();
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const includesToday = current <= today && end >= today;
+    const liveStamp = includesToday ? `${now.getHours()}:${now.getMinutes()}` : 'stable';
+    const aggregateCacheKey = `${this.getStatsDateCacheKey(current)}|${this.getStatsDateCacheKey(end)}|${liveStamp}`;
+    const cachedAggregate = this._statsAggregateCache.get(aggregateCacheKey);
+    if (cachedAggregate && cachedAggregate.revision === (this._statsDataRevision || 0)) {
+        return cachedAggregate.lessons;
+    }
 
     const formatLocalDate = d => {
         const y = d.getFullYear();
@@ -673,7 +751,12 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
         current.setDate(current.getDate() + 1);
     }
 
-    return Object.values(aggregated);
+    const result = Object.values(aggregated);
+    this._statsAggregateCache.set(aggregateCacheKey, {
+        revision: this._statsDataRevision || 0,
+        lessons: result
+    });
+    return result;
 }
 
 TimetableApp.prototype.showDayStats = function (date) {
@@ -1190,6 +1273,16 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
     var groupOrder = [];
     var self = this;
     var weekMode = this._statsWeekMode || 'monthWeeks';
+    if (!this._statsChartSeriesCache) this._statsChartSeriesCache = new Map();
+    var chartNow = new Date();
+    var chartTodayKey = formatLocalDate(chartNow);
+    var chartStartKey = formatLocalDate(startDate);
+    var chartEndKey = formatLocalDate(endDate);
+    var containsToday = chartStartKey <= chartTodayKey && chartEndKey >= chartTodayKey;
+    var chartLiveStamp = containsToday ? chartNow.getHours() + ':' + chartNow.getMinutes() : 'stable';
+    var chartCacheKey = [chartStartKey, chartEndKey, granularity, weekMode, this._durationUnitMode ? 'unit' : 'hours', chartLiveStamp].join('|');
+    var cachedSeries = this._statsChartSeriesCache.get(chartCacheKey);
+    if (cachedSeries && cachedSeries.revision === (this._statsDataRevision || 0)) return cachedSeries.data;
 
     var current = new Date(startDate);
     current.setHours(0, 0, 0, 0);
@@ -1304,7 +1397,7 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         });
     });
 
-    return {
+    var result = {
         labels: labels,
         presentData: presentData,
         presentNonAuditionData: presentNonAuditionData,
@@ -1320,6 +1413,11 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         granularity: granularity,
         rangeDayCount: dayCount
     };
+    this._statsChartSeriesCache.set(chartCacheKey, {
+        revision: this._statsDataRevision || 0,
+        data: result
+    });
+    return result;
 };
 
 // Final override: keep the percentage-enhanced duration pie chart as the last definition.
@@ -2668,8 +2766,19 @@ TimetableApp.prototype.calculateSalaryChartSeries = function (data, onlyIndex) {
                 activeMonth = monthKey;
                 monthWeightedHours = 0;
             }
-            var dayLessons = self.aggregateLessons(cursor, cursor);
-            var dayStats = self.calculateSalaryStats(dayLessons);
+            var dayKey = formatDate(cursor);
+            if (!self._statsDailySalaryCache) self._statsDailySalaryCache = new Map();
+            var cachedDayStats = self._statsDailySalaryCache.get(dayKey);
+            var dayStats;
+            if (cachedDayStats && cachedDayStats.revision === (self._statsDataRevision || 0)) {
+                dayStats = cachedDayStats.stats;
+            } else {
+                // Salary factors are stored on aggregated lessons as typeStats.
+                // The one-day aggregation itself is cached, so this preserves
+                // the fast path without dropping the class-type contributions.
+                dayStats = self.calculateSalaryStats(self.aggregateLessons(cursor, cursor));
+                self._statsDailySalaryCache.set(dayKey, { revision: self._statsDataRevision || 0, stats: dayStats });
+            }
             var weightedBefore = monthWeightedHours;
             var payBefore = payForHours(monthWeightedHours);
             monthWeightedHours += dayStats.weightedHours;
@@ -3806,10 +3915,16 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
     var ctx = canvas.getContext('2d');
     var self = this;
     var handleChartHover = function (index) {
-        if (self._activeChartSliceIndex === index) return;
-        self._activeChartSliceIndex = index;
-        self.updateStatsCardsForChartSlice(seriesData, index);
-        self.renderLinkedCharts(cat, seriesData, index, { updateLine: false });
+        self._pendingChartSliceIndex = index;
+        if (self._chartHoverFrame) return;
+        self._chartHoverFrame = requestAnimationFrame(function () {
+            self._chartHoverFrame = null;
+            var nextIndex = self._pendingChartSliceIndex;
+            if (self._activeChartSliceIndex === nextIndex) return;
+            self._activeChartSliceIndex = nextIndex;
+            self.updateStatsCardsForChartSlice(seriesData, nextIndex);
+            self.renderLinkedCharts(cat, seriesData, nextIndex, { updateLine: false });
+        });
     };
     this._chartLineHoverHandler = handleChartHover;
     canvas.onmouseleave = function () {

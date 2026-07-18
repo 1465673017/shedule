@@ -488,6 +488,7 @@ class TimetableApp {
     }
 
     saveData() {
+        if (typeof this.invalidateStatsCache === 'function') this.invalidateStatsCache();
         const data = {
             subjects: this.subjects,
             students: this.students,
