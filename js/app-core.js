@@ -527,7 +527,9 @@ class TimetableApp {
         this.migrateLegacyScheduleKeys();
 
         window.ScheduleErpService.ensureErpData(this);
+        const removedSubjectOnlyCourses = window.ScheduleErpService.removeSubjectOnlyCourses(this);
         window.ScheduleErpService.buildTimetableProjection(this);
+        if (removedSubjectOnlyCourses) this.saveData();
     }
     syncRealtime(options = {}) {
         window.ScheduleErpService.ensureErpData(this);

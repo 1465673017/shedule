@@ -497,6 +497,30 @@
         );
     }
 
+    function removeSubjectOnlyCourses(app) {
+        const erp = ensureErpData(app);
+        const validStudentIds = new Set((app.students || []).map(student => String(student.id)));
+        const removedIds = new Set();
+
+        erp.courseInstances.forEach(instance => {
+            if (!instance || instance.isDeleted || !instance.subjectId) return;
+            const relationIds = erp.studentCourseRelations
+                .filter(relation => relation.courseInstanceId === instance.id)
+                .map(relation => String(relation.studentId));
+            const studentIds = relationIds.length ? relationIds : normalizeIds(instance.studentIds);
+            if (!studentIds.some(studentId => validStudentIds.has(studentId))) {
+                removedIds.add(instance.id);
+            }
+        });
+
+        if (removedIds.size === 0) return false;
+        removeInstanceGraph(app, removedIds);
+        erp.attendanceRecords = erp.attendanceRecords.filter(record =>
+            !record.courseInstanceId || !removedIds.has(record.courseInstanceId)
+        );
+        return true;
+    }
+
     function clearEmptyRecurringStops(app, cellKey, fromWeekStart, mode = 'until-next-course') {
         if (!cellKey || !fromWeekStart) return;
         const erp = ensureErpData(app);
@@ -806,6 +830,7 @@
         ensureErpData,
         buildTimetableProjection,
         pruneOrphanedErpData,
+        removeSubjectOnlyCourses,
         completeStudentsForEndedStages,
         isStageFinalOccurrence,
         isStudentStageAutoCompleted,
@@ -835,7 +860,9 @@
             const erp = ensureErpData(app);
             const normalizedStudents = normalizeIds(studentIds);
             const normalizedSubjectId = normalizeSubjectId(app, subjectId, normalizedStudents);
-            const hasContent = normalizedSubjectId !== null || normalizedStudents.length > 0;
+            const subjectOnly = normalizedSubjectId !== null && normalizedStudents.length === 0;
+            const hasContent = normalizedStudents.length > 0;
+            if (subjectOnly) options = { ...options, cutoff: true };
             const existing = erp.courseInstances.find(instance =>
                 instance.cellKey === key && instance.weekStart === weekStartStr
             );
