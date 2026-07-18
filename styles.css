@@ -3926,6 +3926,81 @@ body.mint-theme-active .app-message-actions {
     }
 }
 
+/* Keep Chinese student names crisp in the lesson picker. Small 10px text and
+   eight narrow columns were noticeably blurred in Windows/Electron. */
+body.reference-main-ui .lesson-editor-modal .student-picker {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    gap: 10px 12px !important;
+}
+
+body.reference-main-ui .lesson-editor-modal .student-chip,
+body.reference-main-ui .lesson-editor-modal .student-chip:hover {
+    min-height: 58px;
+    padding: 7px 8px;
+    gap: 4px;
+    transform: none;
+}
+
+body.reference-main-ui .lesson-editor-modal .student-chip .sc-name {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    line-height: 20px !important;
+    letter-spacing: 0;
+}
+
+body.reference-main-ui .lesson-editor-modal .student-chip .sc-grade {
+    width: auto !important;
+    min-height: 0;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #f1f3f6;
+    color: #657287;
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 16px !important;
+    letter-spacing: 0;
+    -webkit-font-smoothing: auto;
+    text-rendering: auto;
+}
+
+body.reference-main-ui .lesson-editor-modal .student-chip.selected .sc-grade {
+    background: #f1f3f6;
+    color: #6b7788;
+}
+
+body.reference-main-ui.dark-theme-active #addLessonModal .student-chip .sc-grade,
+body.reference-main-ui.dark-theme-active #addLessonModal .student-picker .student-chip.selected .sc-grade {
+    background: #273449;
+    color: #aebacd !important;
+}
+
+body.mint-theme-active.reference-main-ui #addLessonModal .student-chip .sc-grade,
+body.mint-theme-active.reference-main-ui #addLessonModal .student-picker .student-chip.selected .sc-grade {
+    border: 1px solid rgba(var(--primary-rgb), .14);
+    background: #e5f0e9;
+    color: var(--primary-pressed) !important;
+}
+
+@media (max-height: 760px) {
+    body.reference-main-ui .lesson-editor-modal .student-picker {
+        grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    }
+
+    body.reference-main-ui .lesson-editor-modal .student-chip {
+        height: auto;
+        min-height: 52px;
+    }
+
+    body.reference-main-ui .lesson-editor-modal .student-chip .sc-name {
+        font-size: 14px !important;
+    }
+
+    body.reference-main-ui .lesson-editor-modal .student-chip .sc-grade {
+        font-size: 12px !important;
+    }
+}
+
 /* Electron-only workspace toolbar and stable timetable density. */
 :root {
     --electron-toolbar-height: 64px;
@@ -10028,11 +10103,8 @@ body.reference-main-ui .lesson-editor-modal .student-chip.selected {
 body.reference-main-ui .lesson-editor-modal .student-chip .sc-name {
     color: #172235;
     font-size: 17px;
-    font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
     font-weight: 600;
     line-height: 1.35;
-    -webkit-font-smoothing: auto;
-    text-rendering: optimizeLegibility;
 }
 
 body.reference-main-ui .lesson-editor-modal .subject-chip .sc-name,
