@@ -203,6 +203,8 @@ TimetableApp.prototype.selectStatsCalendarDate = function (dateValue) {
     }
 
     this.setStatsDateRange(this._pendingStatsStartDate, picked);
+    this._statsDate = new Date(picked);
+    this._statsDate.setHours(0, 0, 0, 0);
     this.closeStatsDatePicker();
     this.onStatsDateChange();
 }
@@ -1328,6 +1330,16 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
     var textColor = isDark ? '#c3c2b7' : '#52514e';
     var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
     var self = this;
+    var backgroundRgb = isDark ? [26, 26, 25] : [252, 252, 251];
+    var colorWithOpaqueTint = function (hex, strength) {
+        var value = String(hex || '').replace('#', '');
+        if (value.length !== 6) return hex;
+        var colorRgb = [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)];
+        var mixed = colorRgb.map(function (channel, index) {
+            return Math.round(backgroundRgb[index] + (channel - backgroundRgb[index]) * strength);
+        });
+        return 'rgb(' + mixed.join(',') + ')';
+    };
 
     var totalStudents = data.totalStudentsData.reduce(function (a, b) { return a + b; }, 0);
     var totalPresent = data.presentData.reduce(function (a, b) { return a + b; }, 0);
@@ -1335,6 +1347,50 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
     var totalNonAudition = totalPresent - totalAudition;
     var totalLeave = data.leaveData.reduce(function (a, b) { return a + b; }, 0);
     var totalAbsent = data.absentData.reduce(function (a, b) { return a + b; }, 0);
+    var studentStackedGradientPlugin = {
+        id: 'studentStackedGradients',
+        beforeDatasetsDraw: function (chart) {
+            data.labels.forEach(function (_label, dataIndex) {
+                var segments = [];
+                chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                    if (!dataset.legendColor || !chart.isDatasetVisible(datasetIndex) || Number(dataset.data[dataIndex]) <= 0) return;
+                    var bar = chart.getDatasetMeta(datasetIndex).data[dataIndex];
+                    if (!bar || !Number.isFinite(bar.y) || !Number.isFinite(bar.base)) return;
+                    segments.push({ dataset: dataset, bar: bar });
+                });
+                if (!segments.length) return;
+
+                var columnTop = Math.min.apply(null, segments.map(function (segment) { return Math.min(segment.bar.y, segment.bar.base); }));
+                var columnBottom = Math.max.apply(null, segments.map(function (segment) { return Math.max(segment.bar.y, segment.bar.base); }));
+                var columnHeight = Math.max(1, columnBottom - columnTop);
+                var gradient = chart.ctx.createLinearGradient(0, columnBottom, 0, columnTop);
+                segments.forEach(function (segment, segmentIndex) {
+                    var segmentBottom = Math.max(segment.bar.y, segment.bar.base);
+                    var segmentTop = Math.min(segment.bar.y, segment.bar.base);
+                    var bottomStop = Math.max(0, Math.min(1, (columnBottom - segmentBottom) / columnHeight));
+                    var topStop = Math.max(0, Math.min(1, (columnBottom - segmentTop) / columnHeight));
+                    var middleStop = bottomStop + (topStop - bottomStop) * .45;
+                    var previousColor = segmentIndex > 0 ? segments[segmentIndex - 1].dataset.legendColor : segment.dataset.legendColor;
+                    gradient.addColorStop(bottomStop, colorWithOpaqueTint(previousColor, .18 + bottomStop * .82));
+                    gradient.addColorStop(middleStop, colorWithOpaqueTint(segment.dataset.legendColor, .18 + middleStop * .82));
+                    gradient.addColorStop(topStop, colorWithOpaqueTint(segment.dataset.legendColor, .18 + topStop * .82));
+                    segment.bar.options = Object.assign({}, segment.bar.options, {
+                        backgroundColor: 'rgba(0,0,0,0)', borderWidth: 0, borderRadius: 0, $shared: false
+                    });
+                });
+
+                var referenceBar = segments[0].bar;
+                var left = referenceBar.x - referenceBar.width / 2;
+                chart.ctx.save();
+                chart.ctx.beginPath();
+                if (typeof chart.ctx.roundRect === 'function') chart.ctx.roundRect(left, columnTop, referenceBar.width, columnHeight, [4, 4, 0, 0]);
+                else chart.ctx.rect(left, columnTop, referenceBar.width, columnHeight);
+                chart.ctx.fillStyle = gradient;
+                chart.ctx.fill();
+                chart.ctx.restore();
+            });
+        }
+    };
     var stackedTotalLabelPlugin = {
         id: 'studentStackedTotalLabels',
         afterDatasetsDraw: function (chart) {
@@ -1377,8 +1433,9 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     data: data.presentNonAuditionData,
                     backgroundColor: '#0ca30c',
                     borderColor: '#0ca30c',
+                    legendColor: '#0ca30c',
                     borderWidth: 0,
-                    borderRadius: 4,
+                    borderRadius: 0,
                     borderSkipped: false,
                     yAxisID: 'y',
                     order: 2
@@ -1389,8 +1446,9 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     data: data.auditionData,
                     backgroundColor: '#2a78d6',
                     borderColor: '#2a78d6',
+                    legendColor: '#2a78d6',
                     borderWidth: 0,
-                    borderRadius: 4,
+                    borderRadius: 0,
                     borderSkipped: false,
                     yAxisID: 'y',
                     order: 2
@@ -1401,8 +1459,9 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     data: data.leaveData,
                     backgroundColor: '#fab219',
                     borderColor: '#fab219',
+                    legendColor: '#fab219',
                     borderWidth: 0,
-                    borderRadius: 4,
+                    borderRadius: 0,
                     borderSkipped: false,
                     yAxisID: 'y',
                     order: 2
@@ -1413,8 +1472,9 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                     data: data.absentData,
                     backgroundColor: '#d03b3b',
                     borderColor: '#d03b3b',
+                    legendColor: '#d03b3b',
                     borderWidth: 0,
-                    borderRadius: 4,
+                    borderRadius: 0,
                     borderSkipped: false,
                     yAxisID: 'y',
                     order: 2
@@ -1468,7 +1528,7 @@ TimetableApp.prototype.renderStudentBarChart = function (ctx, data, onBarHover) 
                 }
             }
         },
-        plugins: [stackedTotalLabelPlugin]
+        plugins: [studentStackedGradientPlugin, stackedTotalLabelPlugin]
     });
 
     this.setChartLegendNote('');
@@ -1754,12 +1814,24 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
         var hasUnitData = unitData.some(function (value) { return value > 0; });
         var themeStyles = getComputedStyle(document.body);
         var primaryRgb = themeStyles.getPropertyValue('--primary-rgb').trim() || '22, 119, 255';
+        var unitPanel = ctx.canvas && ctx.canvas.closest ? ctx.canvas.closest('.chart-panel') : null;
+        var unitPanelBackground = unitPanel ? getComputedStyle(unitPanel).backgroundColor : '';
+        var unitBackgroundMatch = String(unitPanelBackground).match(/rgba?\((\d+)[, ]+\s*(\d+)[, ]+\s*(\d+)/);
+        var unitBackgroundRgb = unitBackgroundMatch
+            ? [Number(unitBackgroundMatch[1]), Number(unitBackgroundMatch[2]), Number(unitBackgroundMatch[3])]
+            : (isDark ? [26, 26, 25] : [255, 255, 255]);
+        var unitPrimaryParts = primaryRgb.split(',').map(function (value) { return Number(value.trim()) || 0; });
+        var unitOpaqueTint = function (strength) {
+            return 'rgb(' + unitPrimaryParts.map(function (channel, index) {
+                return Math.round(unitBackgroundRgb[index] + (channel - unitBackgroundRgb[index]) * strength);
+            }).join(',') + ')';
+        };
         var unitBarGradient = function (context) {
             var chart = context.chart;
             var value = Number(context.raw);
             var yScale = chart.scales && chart.scales.y;
             if (!chart.chartArea || !yScale || !Number.isFinite(value) || value <= 0) {
-                return 'rgba(' + primaryRgb + ', .16)';
+                return unitOpaqueTint(.18);
             }
 
             // Each bar owns a full-height gradient: light at its base and the
@@ -1769,11 +1841,12 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
             var top = Math.min(valueY, baseY);
             var bottom = Math.max(valueY, baseY);
             if (!Number.isFinite(top) || !Number.isFinite(bottom) || top === bottom) {
-                return 'rgba(' + primaryRgb + ', .16)';
+                return unitOpaqueTint(.18);
             }
             var gradient = chart.ctx.createLinearGradient(0, bottom, 0, top);
-            gradient.addColorStop(0, 'rgba(' + primaryRgb + ', .22)');
-            gradient.addColorStop(1, 'rgb(' + primaryRgb + ')');
+            gradient.addColorStop(0, unitOpaqueTint(.18));
+            gradient.addColorStop(.45, unitOpaqueTint(.55));
+            gradient.addColorStop(1, unitOpaqueTint(1));
             return gradient;
         };
         var formatPd = function (value) {
@@ -1845,6 +1918,21 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
     var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
     var catColors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
     var typeLabels = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var panelElement = ctx.canvas && ctx.canvas.closest ? ctx.canvas.closest('.chart-panel') : null;
+    var panelBackground = panelElement ? getComputedStyle(panelElement).backgroundColor : '';
+    var backgroundMatch = String(panelBackground).match(/rgba?\((\d+)[, ]+\s*(\d+)[, ]+\s*(\d+)/);
+    var backgroundRgb = backgroundMatch
+        ? [Number(backgroundMatch[1]), Number(backgroundMatch[2]), Number(backgroundMatch[3])]
+        : (isDark ? [26, 26, 25] : [255, 255, 255]);
+    var colorWithOpaqueTint = function (hex, strength) {
+        var value = String(hex || '').replace('#', '');
+        if (value.length !== 6) return hex;
+        var colorRgb = [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)];
+        var mixed = colorRgb.map(function (channel, index) {
+            return Math.round(backgroundRgb[index] + (channel - backgroundRgb[index]) * strength);
+        });
+        return 'rgb(' + mixed.join(',') + ')';
+    };
 
     // Build datasets for each type that has data
     var datasets = [];
@@ -1856,15 +1944,20 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
         var typeTotal = typeData.reduce(function (a, b) { return a + b; }, 0);
         if (typeTotal > 0) {
             hasData = true;
+            var currentColor = catColors[i];
+            var previousColor = datasets.length > 0 ? datasets[datasets.length - 1].legendColor : currentColor;
             datasets.push({
                 label: type,
                 type: 'bar',
                 data: typeData,
-                backgroundColor: catColors[i],
-                borderColor: catColors[i],
+                backgroundColor: currentColor,
+                borderColor: currentColor,
+                legendColor: currentColor,
+                gradientBottomColor: previousColor,
                 borderWidth: 0,
-                borderRadius: 4,
+                borderRadius: 0,
                 borderSkipped: false,
+                inflateAmount: 0,
                 order: 2
             });
         }
@@ -1878,6 +1971,60 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
             borderWidth: 0
         }];
     }
+
+    var stackedGradientPlugin = {
+        id: 'durationStackedGradients',
+        beforeDatasetsDraw: function (chart) {
+            data.labels.forEach(function (_label, dataIndex) {
+                var segments = [];
+                chart.data.datasets.forEach(function (dataset, datasetIndex) {
+                    if (!dataset.legendColor || !chart.isDatasetVisible(datasetIndex) || Number(dataset.data[dataIndex]) <= 0) return;
+                    var bar = chart.getDatasetMeta(datasetIndex).data[dataIndex];
+                    if (!bar || !Number.isFinite(bar.y) || !Number.isFinite(bar.base)) return;
+                    segments.push({ dataset: dataset, bar: bar });
+                });
+                if (!segments.length) return;
+
+                var columnTop = Math.min.apply(null, segments.map(function (segment) { return Math.min(segment.bar.y, segment.bar.base); }));
+                var columnBottom = Math.max.apply(null, segments.map(function (segment) { return Math.max(segment.bar.y, segment.bar.base); }));
+                var columnHeight = Math.max(1, columnBottom - columnTop);
+                var gradient = chart.ctx.createLinearGradient(0, columnBottom, 0, columnTop);
+                segments.forEach(function (segment, segmentIndex) {
+                    var segmentBottom = Math.max(segment.bar.y, segment.bar.base);
+                    var segmentTop = Math.min(segment.bar.y, segment.bar.base);
+                    var bottomStop = Math.max(0, Math.min(1, (columnBottom - segmentBottom) / columnHeight));
+                    var topStop = Math.max(0, Math.min(1, (columnBottom - segmentTop) / columnHeight));
+                    var middleStop = bottomStop + (topStop - bottomStop) * .45;
+                    var bottomStrength = .18 + bottomStop * .82;
+                    var middleStrength = .18 + middleStop * .82;
+                    var topStrength = .18 + topStop * .82;
+                    var previousColor = segmentIndex > 0 ? segments[segmentIndex - 1].dataset.legendColor : segment.dataset.legendColor;
+                    gradient.addColorStop(bottomStop, colorWithOpaqueTint(previousColor, bottomStrength));
+                    gradient.addColorStop(middleStop, colorWithOpaqueTint(segment.dataset.legendColor, middleStrength));
+                    gradient.addColorStop(topStop, colorWithOpaqueTint(segment.dataset.legendColor, topStrength));
+                    segment.bar.options = Object.assign({}, segment.bar.options, {
+                        backgroundColor: 'rgba(0,0,0,0)',
+                        borderWidth: 0,
+                        borderRadius: 0,
+                        $shared: false
+                    });
+                });
+
+                var referenceBar = segments[0].bar;
+                var left = referenceBar.x - referenceBar.width / 2;
+                chart.ctx.save();
+                chart.ctx.beginPath();
+                if (typeof chart.ctx.roundRect === 'function') {
+                    chart.ctx.roundRect(left, columnTop, referenceBar.width, columnHeight, [4, 4, 0, 0]);
+                } else {
+                    chart.ctx.rect(left, columnTop, referenceBar.width, columnHeight);
+                }
+                chart.ctx.fillStyle = gradient;
+                chart.ctx.fill();
+                chart.ctx.restore();
+            });
+        }
+    };
 
     var totalHours = data.totalMinutesData.reduce(function (a, b) { return a + b; }, 0);
     var totalHoursDisplay = (totalHours / 60).toFixed(2);
@@ -1962,7 +2109,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
                 }
             }
         },
-        plugins: [stackedTotalLabelPlugin]
+        plugins: [stackedGradientPlugin, stackedTotalLabelPlugin]
     });
 
     var titleLegend = document.getElementById('barChartTitleLegend');
@@ -1973,7 +2120,7 @@ TimetableApp.prototype.renderDurationBarChart = function (ctx, data, onBarHover)
             var button = document.createElement('button');
             button.type = 'button';
             button.className = 'chart-title-legend-item';
-            button.innerHTML = '<i style="background:' + dataset.backgroundColor + '"></i><span>' + dataset.label + '</span>';
+            button.innerHTML = '<i style="background:' + (dataset.legendColor || dataset.backgroundColor) + '"></i><span>' + dataset.label + '</span>';
             button.onclick = function () {
                 var visible = chart.isDatasetVisible(datasetIndex);
                 chart.setDatasetVisibility(datasetIndex, !visible);
@@ -2162,7 +2309,10 @@ TimetableApp.prototype.openStatsModal = function (date, showCharts) {
         return;
     }
 
-    this._statsDate = date || new Date();
+    // Statistics own their date anchor. The timetable's viewed week must not
+    // change day/week/month/year summary cards.
+    this._statsDate = new Date();
+    this._statsDate.setHours(0, 0, 0, 0);
     this._statsShowCharts = true;
     this._currentChartCategory = 'duration';
     this._durationUnitMode = false;
@@ -2299,6 +2449,290 @@ TimetableApp.prototype.getNaturalWeekStatsRange = function (startDate, endDate) 
     };
 };
 
+TimetableApp.prototype.getSalarySettings = function () {
+    var defaults = { basePay: 3800, starLevel: 0, basicHours: 8 };
+    try {
+        var saved = JSON.parse(localStorage.getItem('timetableSalarySettings') || '{}');
+        return {
+            basePay: Number.isFinite(Number(saved.basePay)) ? Math.max(0, Number(saved.basePay)) : defaults.basePay,
+            starLevel: Number.isFinite(Number(saved.starLevel)) ? Math.max(0, Math.min(5, Math.round(Number(saved.starLevel)))) : defaults.starLevel,
+            basicHours: 8
+        };
+    } catch (error) {
+        return defaults;
+    }
+};
+
+TimetableApp.prototype.getSalaryStarBonus = function (level) {
+    return [0, 5, 15, 20, 25, 40][Math.max(0, Math.min(5, Number(level) || 0))];
+};
+
+TimetableApp.prototype.openSalarySettings = function () {
+    var settings = this.getSalarySettings();
+    document.getElementById('salaryBasePay').value = settings.basePay;
+    document.getElementById('salaryStarLevel').value = settings.starLevel;
+    var updatePreview = function () {
+        var bonus = this.getSalaryStarBonus(document.getElementById('salaryStarLevel').value);
+        document.getElementById('salaryRatePreview').textContent = '当前阶梯课时费：' + [40, 50, 65, 75, 80].map(function (rate) { return rate + bonus; }).join(' / ') + ' 元/小时';
+    }.bind(this);
+    document.getElementById('salaryStarLevel').onchange = updatePreview;
+    updatePreview();
+    document.getElementById('salarySettingsModal').style.display = 'block';
+};
+
+TimetableApp.prototype.closeSalarySettings = function () {
+    document.getElementById('salarySettingsModal').style.display = 'none';
+};
+
+TimetableApp.prototype.openSalaryRuleModal = function () {
+    document.getElementById('salaryRuleModal').style.display = 'block';
+};
+
+TimetableApp.prototype.closeSalaryRuleModal = function () {
+    document.getElementById('salaryRuleModal').style.display = 'none';
+};
+
+TimetableApp.prototype.saveSalarySettings = function () {
+    var numberValue = function (id, fallback) {
+        var value = Number(document.getElementById(id).value);
+        return Number.isFinite(value) ? value : fallback;
+    };
+    var settings = {
+        basePay: Math.max(0, numberValue('salaryBasePay', 3800)),
+        starLevel: Math.max(0, Math.min(5, Math.round(numberValue('salaryStarLevel', 0))))
+    };
+    localStorage.setItem('timetableSalarySettings', JSON.stringify(settings));
+    this.closeSalarySettings();
+    if (this._statsBaseCardLessons) {
+        this.renderStatsCards(this._statsBaseCardLessons, { startDate: this._statsBaseCardStart, endDate: this._statsBaseCardEnd });
+    }
+    if (this._currentChartCategory === 'salary' && this._lastChartLessons && this._lastChartStart && this._lastChartEnd) {
+        this.renderCharts(this._lastChartLessons, this._lastChartStart, this._lastChartEnd);
+    }
+};
+
+TimetableApp.prototype.calculateSalaryStats = function (lessons) {
+    var settings = this.getSalarySettings();
+    var peopleFactors = { '1v1(0.8)': 0.8, '1v1': 1, '1v2': 1.2, '1v3': 1.8, '1v4': 1.9 };
+    var gradeFactor = function (grade) {
+        grade = String(grade || '');
+        if (grade.indexOf('高三') >= 0) return 1.5;
+        if (grade.indexOf('高二') >= 0) return 1.3;
+        if (grade.indexOf('高一') >= 0) return 1.2;
+        return 1;
+    };
+    var weightedHours = 0;
+    var typeWeightedHours = {};
+    lessons.forEach(function (lesson) {
+        var students = (lesson.students || []).filter(function (student) { return student && !student.isAudition; });
+        var lessonGradeFactor = students.reduce(function (highest, student) { return Math.max(highest, gradeFactor(student.grade)); }, 1);
+        Object.keys(lesson.typeStats || {}).forEach(function (type) {
+            var factor = peopleFactors[type];
+            if (factor === undefined) {
+                var count = Number(String(type).replace('1v', ''));
+                factor = count >= 4 ? 1.9 : (count === 3 ? 1.8 : (count === 2 ? 1.2 : 1));
+            }
+            var typeHours = (Number(lesson.typeStats[type]) || 0) / 60 * factor * lessonGradeFactor;
+            weightedHours += typeHours;
+            typeWeightedHours[type] = (typeWeightedHours[type] || 0) + typeHours;
+        });
+    });
+    var paidHours = Math.max(0, weightedHours - settings.basicHours);
+    var starBonus = this.getSalaryStarBonus(settings.starLevel);
+    var rates = [40, 50, 65, 75, 80].map(function (rate) { return rate + starBonus; });
+    var remaining = paidHours;
+    var coursePay = 0;
+    [40, 40, 40, 40, Infinity].forEach(function (size, index) {
+        if (remaining <= 0) return;
+        var hours = Math.min(remaining, size);
+        coursePay += hours * rates[index];
+        remaining -= hours;
+    });
+    var currentTierIndex = paidHours <= 40 ? 0 : (paidHours <= 80 ? 1 : (paidHours <= 120 ? 2 : (paidHours <= 160 ? 3 : 4)));
+    return {
+        settings: settings,
+        weightedHours: weightedHours,
+        typeWeightedHours: typeWeightedHours,
+        paidHours: paidHours,
+        coursePay: coursePay,
+        grossPay: settings.basePay + coursePay,
+        rates: rates,
+        currentRate: rates[currentTierIndex],
+        currentMonthWeightedHours: weightedHours,
+        currentMonthPaidHours: paidHours
+    };
+};
+
+TimetableApp.prototype.calculateSalaryStatsForRange = function (startDate, endDate) {
+    var settings = this.getSalarySettings();
+    var start = new Date(startDate);
+    var end = new Date(endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    var cursor = new Date(start);
+    var weightedHours = 0;
+    var paidHours = 0;
+    var coursePay = 0;
+    var currentRate = 40 + this.getSalaryStarBonus(settings.starLevel);
+    var currentMonthWeightedHours = 0;
+    var currentMonthPaidHours = 0;
+
+    while (cursor <= end) {
+        var segmentEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+        if (segmentEnd > end) segmentEnd = new Date(end);
+        var monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+        var beforeEnd = new Date(cursor);
+        beforeEnd.setDate(beforeEnd.getDate() - 1);
+        var beforeStats = beforeEnd >= monthStart
+            ? this.calculateSalaryStats(this.aggregateLessons(monthStart, beforeEnd))
+            : this.calculateSalaryStats([]);
+        var throughStats = this.calculateSalaryStats(this.aggregateLessons(monthStart, segmentEnd));
+        var segmentStats = this.calculateSalaryStats(this.aggregateLessons(cursor, segmentEnd));
+
+        weightedHours += segmentStats.weightedHours;
+        paidHours += Math.max(0, throughStats.paidHours - beforeStats.paidHours);
+        coursePay += Math.max(0, throughStats.coursePay - beforeStats.coursePay);
+        currentRate = throughStats.currentRate;
+        currentMonthWeightedHours = throughStats.weightedHours;
+        currentMonthPaidHours = throughStats.paidHours;
+        cursor = new Date(segmentEnd);
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    var starBonus = this.getSalaryStarBonus(settings.starLevel);
+    return {
+        settings: settings,
+        weightedHours: weightedHours,
+        paidHours: paidHours,
+        coursePay: coursePay,
+        grossPay: settings.basePay + coursePay,
+        rates: [40, 50, 65, 75, 80].map(function (rate) { return rate + starBonus; }),
+        currentRate: currentRate,
+        currentMonthWeightedHours: currentMonthWeightedHours,
+        currentMonthPaidHours: currentMonthPaidHours
+    };
+};
+
+TimetableApp.prototype.calculateSalaryChartSeries = function (data, onlyIndex) {
+    var self = this;
+    var typeOrder = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var indexes = onlyIndex === null || onlyIndex === undefined
+        ? data.labels.map(function (_label, index) { return index; })
+        : [onlyIndex];
+
+    var settings = this.getSalarySettings();
+    var settingsKey = JSON.stringify(settings);
+    var firstDate = data.groupStartDates.length ? new Date(data.groupStartDates[0]) : null;
+    var lastDate = data.groupEndDates.length ? new Date(data.groupEndDates[data.groupEndDates.length - 1]) : null;
+    var cacheStartDate = firstDate ? new Date(firstDate.getFullYear(), firstDate.getMonth(), 1) : null;
+    var rangeKey = cacheStartDate && lastDate ? cacheStartDate.toISOString().slice(0, 10) + '|' + lastDate.toISOString().slice(0, 10) : '';
+
+    if (!data._salaryDailyCache || data._salaryDailyCache.settingsKey !== settingsKey || data._salaryDailyCache.rangeKey !== rangeKey) {
+        var daily = {};
+        var starBonus = this.getSalaryStarBonus(settings.starLevel);
+        var rates = [40, 50, 65, 75, 80].map(function (rate) { return rate + starBonus; });
+        var payForHours = function (weightedHours) {
+            var remaining = Math.max(0, weightedHours - settings.basicHours);
+            var total = 0;
+            [40, 40, 40, 40, Infinity].forEach(function (size, tier) {
+                if (remaining <= 0) return;
+                var hours = Math.min(remaining, size);
+                total += hours * rates[tier];
+                remaining -= hours;
+            });
+            return total;
+        };
+        var tierPayForRange = function (startHours, endHours) {
+            var bounds = [0, settings.basicHours, settings.basicHours + 40, settings.basicHours + 80, settings.basicHours + 120, settings.basicHours + 160, Infinity];
+            var tierRates = [0].concat(rates);
+            return tierRates.map(function (rate, tier) {
+                var overlap = Math.max(0, Math.min(endHours, bounds[tier + 1]) - Math.max(startHours, bounds[tier]));
+                return overlap * rate;
+            });
+        };
+        var tierHoursForRange = function (startHours, endHours) {
+            var bounds = [0, settings.basicHours, settings.basicHours + 40, settings.basicHours + 80, settings.basicHours + 120, settings.basicHours + 160, Infinity];
+            return bounds.slice(0, 6).map(function (lower, tier) {
+                return Math.max(0, Math.min(endHours, bounds[tier + 1]) - Math.max(startHours, lower));
+            });
+        };
+        var formatDate = function (date) {
+            return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+        };
+        var cursor = cacheStartDate ? new Date(cacheStartDate) : null;
+        var activeMonth = '';
+        var monthWeightedHours = 0;
+        while (cursor && cursor <= lastDate) {
+            var monthKey = cursor.getFullYear() + '-' + cursor.getMonth();
+            if (monthKey !== activeMonth) {
+                activeMonth = monthKey;
+                monthWeightedHours = 0;
+            }
+            var dayLessons = self.aggregateLessons(cursor, cursor);
+            var dayStats = self.calculateSalaryStats(dayLessons);
+            var weightedBefore = monthWeightedHours;
+            var payBefore = payForHours(monthWeightedHours);
+            monthWeightedHours += dayStats.weightedHours;
+            var dayPay = Math.max(0, payForHours(monthWeightedHours) - payBefore);
+            var dayTierPay = tierPayForRange(weightedBefore, monthWeightedHours);
+            var dayTierHours = tierHoursForRange(weightedBefore, monthWeightedHours);
+            var contributionTotal = Object.keys(dayStats.typeWeightedHours).reduce(function (sum, type) {
+                return sum + dayStats.typeWeightedHours[type];
+            }, 0);
+            var dayTypePay = {};
+            typeOrder.forEach(function (type) {
+                dayTypePay[type] = contributionTotal > 0 ? dayPay * (dayStats.typeWeightedHours[type] || 0) / contributionTotal : 0;
+            });
+            daily[formatDate(cursor)] = { pay: dayPay, typePay: dayTypePay, tierPay: dayTierPay, tierHours: dayTierHours };
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        data._salaryDailyCache = { settingsKey: settingsKey, rangeKey: rangeKey, daily: daily };
+    }
+
+    var payData = [];
+    var typePayByGroup = [];
+    var tierPayByGroup = [];
+    var tierHoursByGroup = [];
+    var formatGroupDate = function (date) {
+        return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    };
+    indexes.forEach(function (index) {
+        var cursor = new Date(data.groupStartDates[index]);
+        var end = new Date(data.groupEndDates[index]);
+        var groupPay = 0;
+        var groupTypePay = {};
+        var groupTierPay = [0, 0, 0, 0, 0, 0];
+        var groupTierHours = [0, 0, 0, 0, 0, 0];
+        while (cursor <= end) {
+            var entry = data._salaryDailyCache.daily[formatGroupDate(cursor)];
+            if (entry) {
+                groupPay += entry.pay;
+                typeOrder.forEach(function (type) { groupTypePay[type] = (groupTypePay[type] || 0) + (entry.typePay[type] || 0); });
+                (entry.tierPay || []).forEach(function (value, tier) { groupTierPay[tier] += value || 0; });
+                (entry.tierHours || []).forEach(function (value, tier) { groupTierHours[tier] += value || 0; });
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        payData.push(groupPay);
+        typePayByGroup.push(groupTypePay);
+        tierPayByGroup.push(groupTierPay);
+        tierHoursByGroup.push(groupTierHours);
+    });
+
+    var typePay = {};
+    typePayByGroup.forEach(function (group) {
+        Object.keys(group).forEach(function (type) { typePay[type] = (typePay[type] || 0) + group[type]; });
+    });
+    return {
+        labels: indexes.map(function (index) { return data.labels[index]; }),
+        payData: payData,
+        tierPayByGroup: tierPayByGroup,
+        tierHoursByGroup: tierHoursByGroup,
+        typePayByGroup: typePayByGroup,
+        typePay: typePay
+    };
+};
+
 TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var config = typeof options === 'boolean' ? { showClassDays: options } : (options || {});
     var showClassDays = config.showClassDays !== false;
@@ -2313,6 +2747,47 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var validLessons = lessons.filter(function (lesson) {
         return (lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0)) > 0;
     });
+
+    if (!config.legacy && container.id === 'statsCards' && this._currentChartCategory === 'salary') {
+        var salary = config.startDate && config.endDate
+            ? this.calculateSalaryStatsForRange(config.startDate, config.endDate)
+            : this.calculateSalaryStats(validLessons);
+        var money = function (value) { return '¥' + Number(value || 0).toFixed(2); };
+        container.classList.remove('lesson-unit-summary-grid', 'student-summary-grid');
+        if (validLessons.length === 0) {
+            container.innerHTML = [
+                '<button type="button" class="stats-card stats-card-hours salary-rule-card" onclick="app.openSalaryRuleModal()"><div class="stats-card-copy"><div class="st-label">折算总课时</div><div class="st-num">-</div><div class="st-foot">点击查看计算规则</div></div></button>',
+                '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">本月阶梯进度</div><div class="st-num">-</div></div></div>',
+                '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">课时费</div><div class="st-num">-</div></div></div>',
+                '<button type="button" class="stats-card stats-card-average salary-settings-card" onclick="app.openSalarySettings()"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">-</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
+            ].join('');
+            this.animateStatsCards(container, true);
+            return { empty: true, totalHours: '0.00', lessonCount: 0 };
+        }
+        var paidProgress = salary.currentMonthPaidHours || 0;
+        var basicRemaining = Math.max(0, salary.settings.basicHours - (salary.currentMonthWeightedHours || 0));
+        var progressValue;
+        var progressFoot;
+        if (basicRemaining > 0) {
+            progressValue = basicRemaining.toFixed(2) + 'h';
+            progressFoot = '基本课时剩余';
+        } else if (paidProgress <= 160) {
+            var nextThreshold = paidProgress <= 40 ? 40 : (paidProgress <= 80 ? 80 : (paidProgress <= 120 ? 120 : 160));
+            progressValue = paidProgress.toFixed(2) + ' / ' + nextThreshold + 'h';
+            progressFoot = '距下一档还差 ' + Math.max(0, nextThreshold - paidProgress).toFixed(2) + 'h';
+        } else {
+            progressValue = paidProgress.toFixed(2) + 'h';
+            progressFoot = '已进入最高档';
+        }
+        container.innerHTML = [
+            '<button type="button" class="stats-card stats-card-hours salary-rule-card" onclick="app.openSalaryRuleModal()"><div class="stats-card-copy"><div class="st-label">折算总课时</div><div class="st-num">' + salary.weightedHours.toFixed(2) + 'h</div><div class="st-foot">按年级与班型系数折算 · 点击查看规则</div></div></button>',
+            '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">本月阶梯进度</div><div class="st-num">' + progressValue + '</div><div class="st-foot">' + progressFoot + '</div></div></div>',
+            '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">课时费</div><div class="st-num">' + money(salary.coursePay) + '</div><div class="st-foot">当前阶段：' + salary.currentRate + '元/小时 · ' + salary.settings.starLevel + '星</div></div></div>',
+            '<button type="button" class="stats-card stats-card-average salary-settings-card" onclick="app.openSalarySettings()"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">' + money(salary.grossPay) + '</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
+        ].join('');
+        this.animateStatsCards(container, validLessons.length === 0);
+        return { empty: validLessons.length === 0, totalHours: salary.weightedHours.toFixed(2), lessonCount: validLessons.length };
+    }
 
     if (!config.legacy && container.id === 'statsCards' && this._durationUnitMode) {
         var totalUnitMinutes = validLessons.reduce(function (sum, lesson) {
@@ -2371,7 +2846,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
             : [
                 '<div class="stats-card stats-card-hours"><div class="stats-card-copy"><div class="st-label">总课时（小时）</div><div class="st-num">-</div></div></div>',
                 '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">总课程（节）</div><div class="st-num">-</div></div></div>',
-                '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">参与人数（人次）</div><div class="st-num">-</div></div></div>',
+                '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">实际／计划课时完成率</div><div class="st-num">-</div></div></div>',
                 '<div class="stats-card stats-card-average"><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">-</div></div></div>'
             ].join('');
         this.animateStatsCards(container, true);
@@ -2392,6 +2867,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var totalPresentNonAudition = 0;
     var totalScheduledStudents = 0;
     var totalMinutes = 0;
+    var totalPlannedMinutes = 0;
     var totalAuditionCount = 0;
     var totalMissingStudents = 0;
     var totalCompletedStudents = 0;
@@ -2410,6 +2886,17 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         totalScheduledStudents += totalCount;
         totalMissingStudents += (lesson.leaveCount || 0) + (lesson.absentCount || 0);
         totalCompletedStudents += lesson.completedStudentCount || 0;
+
+        var hasNonAuditionStudent = (lesson.students || []).some(function (student) {
+            return student && !student.isAudition;
+        });
+        if (hasNonAuditionStudent && lesson.time) {
+            var plannedParts = lesson.time.split('-');
+            if (plannedParts.length === 2) {
+                totalPlannedMinutes += Math.max(0, this.timeToMinutes(plannedParts[1]) - this.timeToMinutes(plannedParts[0]))
+                    * (lesson.lessonCount || 1);
+            }
+        }
 
         if (lesson.typeStats && Object.keys(lesson.typeStats).length > 0) {
             Object.keys(lesson.typeStats).forEach(function (type) {
@@ -2433,6 +2920,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     }, this);
 
     var totalHours = (totalMinutes / 60).toFixed(2);
+    var completionRate = totalPlannedMinutes > 0 ? totalMinutes / totalPlannedMinutes * 100 : 0;
     var classDays = allDates.size;
     var topTypeEntry = Object.keys(typeStats).map(function (type) {
         return { type: type, minutes: typeStats[type] };
@@ -2558,7 +3046,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         };
     }
 
-    var previousMetrics = { hours: 0, lessons: 0, people: 0, average: 0 };
+    var previousMetrics = { hours: 0, lessons: 0, plannedMinutes: 0, completion: 0, average: 0 };
     var hasComparisonRange = !!(config.startDate && config.endDate);
     var comparisonLabel = '较上1周期';
     if (hasComparisonRange) {
@@ -2592,7 +3080,16 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
             var scheduled = (lesson.studentCount || 0) + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
             if (scheduled <= 0) return;
             previousMetrics.lessons += 1;
-            previousMetrics.people += scheduled;
+            var hasPreviousNonAuditionStudent = (lesson.students || []).some(function (student) {
+                return student && !student.isAudition;
+            });
+            if (hasPreviousNonAuditionStudent && lesson.time) {
+                var previousPlannedParts = lesson.time.split('-');
+                if (previousPlannedParts.length === 2) {
+                    previousMetrics.plannedMinutes += Math.max(0, self.timeToMinutes(previousPlannedParts[1]) - self.timeToMinutes(previousPlannedParts[0]))
+                        * (lesson.lessonCount || 1);
+                }
+            }
             if (lesson.typeStats && Object.keys(lesson.typeStats).length) {
                 Object.keys(lesson.typeStats).forEach(function (type) {
                     previousMetrics.hours += (lesson.typeStats[type] || 0) / 60;
@@ -2602,6 +3099,9 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
             }
             (lesson.dates || []).forEach(function (dateKey) { previousDates.add(dateKey); });
         });
+        previousMetrics.completion = previousMetrics.plannedMinutes > 0
+            ? previousMetrics.hours * 60 / previousMetrics.plannedMinutes * 100
+            : 0;
         previousMetrics.average = previousDates.size ? previousMetrics.hours / previousDates.size : 0;
     }
 
@@ -2617,7 +3117,7 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     var cards = [];
     cards.push('<div class="stats-card stats-card-hours"><div class="stats-card-icon">◷</div><div class="stats-card-copy"><div class="st-label">总课时（小时）</div><div class="st-num">' + (totalMinutes > 0 ? totalHours : '0.00') + '</div><div class="st-foot">' + comparisonHtml(totalMinutes / 60, previousMetrics.hours) + '</div></div></div>');
     cards.push('<div class="stats-card stats-card-lessons"><div class="stats-card-icon">✓</div><div class="stats-card-copy"><div class="st-label">总课程（节）</div><div class="st-num">' + validLessons.length + '</div><div class="st-foot">' + comparisonHtml(validLessons.length, previousMetrics.lessons) + '</div></div></div>');
-    cards.push('<div class="stats-card stats-card-people"><div class="stats-card-icon">♟</div><div class="stats-card-copy"><div class="st-label">参与人数（人次）</div><div class="st-num">' + totalScheduledStudents + '</div><div class="st-foot">' + comparisonHtml(totalScheduledStudents, previousMetrics.people) + '</div></div></div>');
+    cards.push('<div class="stats-card stats-card-people"><div class="stats-card-icon">◴</div><div class="stats-card-copy"><div class="st-label">实际／计划课时完成率</div><div class="st-num">' + completionRate.toFixed(1) + '%</div><div class="st-foot">' + comparisonHtml(completionRate, previousMetrics.completion) + '</div></div></div>');
     var dailyAverageHours = classDays > 0 ? (totalMinutes / 60 / classDays).toFixed(2) : '0.00';
     cards.push('<div class="stats-card stats-card-average"><div class="stats-card-icon">▥</div><div class="stats-card-copy"><div class="st-label">日平均时长（小时/天）</div><div class="st-num">' + dailyAverageHours + '</div><div class="st-foot">' + comparisonHtml(Number(dailyAverageHours), previousMetrics.average) + '</div></div></div>');
     container.innerHTML = cards.join('');
@@ -2648,7 +3148,7 @@ TimetableApp.prototype.renderDayStats = function () {
     this.updateStatsHeader('日统计', this.getStatsViewSubtitle('日统计', startDate, endDate));
     this._chartGranularity = 'day';
     var lessons = this.aggregateLessons(startDate, endDate);
-    var cardDate = new Date(this._statsDate || this.currentDate || startDate);
+    var cardDate = new Date(this._statsDate || startDate);
     cardDate.setHours(0, 0, 0, 0);
     var cardLessons = this.aggregateLessons(cardDate, cardDate);
     var summary = this.renderStatsCards(cardLessons, { startDate: cardDate, endDate: cardDate });
@@ -2678,7 +3178,7 @@ TimetableApp.prototype.renderWeekStats = function () {
     this.updateStatsHeader('周统计', this.getStatsViewSubtitle('周统计', startDate, endDate));
     this._chartGranularity = 'week';
     var lessons = this.aggregateLessons(statsRange.start, statsRange.end);
-    var cardAnchor = new Date(this._statsDate || this.currentDate || startDate);
+    var cardAnchor = new Date(this._statsDate || startDate);
     var cardWeek = this.getWeekRange(cardAnchor);
     var cardLessons = this.aggregateLessons(cardWeek.start, cardWeek.end);
     var summary = this.renderStatsCards(cardLessons, { startDate: cardWeek.start, endDate: cardWeek.end });
@@ -2705,7 +3205,7 @@ TimetableApp.prototype.renderMonthStats = function () {
     this.updateStatsHeader('月统计', this.getStatsViewSubtitle('月统计', startDate, endDate));
     this._chartGranularity = 'month';
     var lessons = this.aggregateLessons(startDate, endDate);
-    var cardAnchor = new Date(this._statsDate || this.currentDate || startDate);
+    var cardAnchor = new Date(this._statsDate || startDate);
     var cardMonthStart = new Date(cardAnchor.getFullYear(), cardAnchor.getMonth(), 1);
     var cardMonthEnd = new Date(cardAnchor.getFullYear(), cardAnchor.getMonth() + 1, 0);
     var cardLessons = this.aggregateLessons(cardMonthStart, cardMonthEnd);
@@ -2733,7 +3233,7 @@ TimetableApp.prototype.renderYearStats = function () {
     this.updateStatsHeader('年统计', '当前查看年统计，主图突出全年结构变化，附图补充趋势和占比。');
     this._chartGranularity = 'year';
     var lessons = this.aggregateLessons(startDate, endDate);
-    var cardAnchor = new Date(this._statsDate || this.currentDate || startDate);
+    var cardAnchor = new Date(this._statsDate || startDate);
     var cardYearStart = new Date(cardAnchor.getFullYear(), 0, 1);
     var cardYearEnd = new Date(cardAnchor.getFullYear(), 11, 31);
     var cardLessons = this.aggregateLessons(cardYearStart, cardYearEnd);
@@ -2759,7 +3259,17 @@ TimetableApp.prototype.setChartPanelText = function (titleId, subtitleId, title,
 TimetableApp.prototype.getChartPanelCopy = function (category, granularity, focusLabel) {
     var prefix = focusLabel || '当前范围';
     var granularityLabel = this.getStatsGranularityLabel(granularity);
-    if (category === 'duration') {
+    if (category === 'duration' || category === 'salary') {
+        if (category === 'salary') {
+            return {
+                barTitle: '课时费来源总览',
+                barSubtitle: granularityLabel + '查看不同班型对折算课时的贡献。',
+                lineTitle: focusLabel ? prefix + '折算课时变化' : '折算课时趋势',
+                lineSubtitle: '课时费按照折算课时、星级和阶梯课时费计算。',
+                pieTitle: focusLabel ? prefix + '班型贡献' : '课时费班型构成',
+                pieSubtitle: '查看各班型产生的课时构成。'
+            };
+        }
         return {
             barTitle: '课时结构总览',
             barSubtitle: granularityLabel + '对比不同班型贡献的课时结构。',
@@ -2856,8 +3366,15 @@ TimetableApp.prototype.renderLinkedCharts = function (category, data, index, opt
     var shouldUpdateLine = !!config.updateLine;
 
     var overallData = this.applyMainChartFilters(category, this.getChartSliceData(data, null));
-    var detailData = this.applyMainChartFilters(category, this.getChartSliceData(data, index));
-    var focusLabel = detailData.selectedLabel || null;
+    // By default the third row uses the exact active day/week/month/year. While
+    // hovering chart one or two, it temporarily follows that point's time slice.
+    var hasFocusedSlice = index !== null && index !== undefined;
+    var detailSeriesData = hasFocusedSlice ? data : (this._linkedChartSeriesData || data);
+    var detailData = this.applyMainChartFilters(
+        category,
+        this.getChartSliceData(detailSeriesData, hasFocusedSlice ? index : null)
+    );
+    var focusLabel = hasFocusedSlice ? detailData.selectedLabel || null : null;
     var piePanelCopy = this.getChartPanelCopy(category, data.granularity, focusLabel);
     this.setChartPanelText('pieChartTitle', 'pieChartSubtitle', piePanelCopy.pieTitle, piePanelCopy.pieSubtitle);
 
@@ -2872,7 +3389,14 @@ TimetableApp.prototype.renderLinkedCharts = function (category, data, index, opt
     if (pieLayout) pieLayout.classList.add('duration-breakdown-active');
     if ((shouldUpdateLine && !lineCanvas) || !pieCanvas) return;
 
-    if (category === 'student') {
+    if (category === 'salary') {
+        var salaryOverall = this.calculateSalaryChartSeries(data, null);
+        var salaryDetail = this.calculateSalaryChartSeries(detailSeriesData, hasFocusedSlice ? index : null);
+        if (shouldUpdateLine) {
+            this._chartInstances.line = this.renderSalaryTrendChart(lineCanvas.getContext('2d'), salaryOverall, 'line', this._chartLineHoverHandler);
+        }
+        this._chartInstances.pie = this.renderSalaryTypePieChart(pieCanvas.getContext('2d'), salaryDetail);
+    } else if (category === 'student') {
         if (shouldUpdateLine) {
             this._chartNoteTarget = 'lineChartLegendNote';
             this._chartInstances.line = this.renderStudentLineChart(
@@ -2897,9 +3421,336 @@ TimetableApp.prototype.renderLinkedCharts = function (category, data, index, opt
     }
     if (comparisonCanvas) {
         this._chartNoteTarget = 'comparisonChartLegendNote';
-        this._chartInstances.comparison = this.renderTypeComparisonChart(comparisonCanvas.getContext('2d'), detailData, category);
+        this._chartInstances.comparison = category === 'salary'
+            ? this.renderSalaryTypeComparisonChart(comparisonCanvas.getContext('2d'), salaryDetail)
+            : this.renderTypeComparisonChart(comparisonCanvas.getContext('2d'), detailData, category);
     }
     this._chartNoteTarget = null;
+};
+
+TimetableApp.prototype.renderSalaryTrendChart = function (ctx, salaryData, chartType, onHover) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var gridColor = isDark ? '#2c2c2a' : '#e1e0d9';
+    var themeStyles = getComputedStyle(document.body);
+    var primaryRgb = themeStyles.getPropertyValue('--primary-rgb').trim() || '22, 119, 255';
+    var primary = themeStyles.getPropertyValue('--primary-color').trim() || 'rgb(' + primaryRgb + ')';
+    var isLine = chartType === 'line';
+    var linePointSizes = this.getLinePointSizes(salaryData.labels.length);
+    var primaryParts = primaryRgb.split(',').map(function (value) { return Number(value.trim()) || 0; });
+    var chartBackground = isDark ? [26, 26, 25] : [252, 252, 251];
+    var primaryTint = function (strength) {
+        return 'rgb(' + primaryParts.map(function (channel, index) {
+            return Math.round(chartBackground[index] + (channel - chartBackground[index]) * strength);
+        }).join(',') + ')';
+    };
+    var tierColors = [isDark ? '#64748b' : '#cbd5e1', primaryTint(.28), primaryTint(.44), primaryTint(.6), primaryTint(.78), primaryTint(1)];
+    var salarySettings = this.getSalarySettings();
+    var salaryRates = [40, 50, 65, 75, 80].map(function (rate) {
+        return rate + this.getSalaryStarBonus(salarySettings.starLevel);
+    }, this);
+    var salaryBarGradient = function (context) {
+        var chart = context.chart;
+        var value = Number(context.raw);
+        var yScale = chart.scales && chart.scales.y;
+        if (!chart.chartArea || !yScale || !Number.isFinite(value) || value <= 0) {
+            return 'rgba(' + primaryRgb + ', .16)';
+        }
+        var valueY = yScale.getPixelForValue(value);
+        var baseY = yScale.getPixelForValue(0);
+        var top = Math.min(valueY, baseY);
+        var bottom = Math.max(valueY, baseY);
+        if (!Number.isFinite(top) || !Number.isFinite(bottom) || top === bottom) {
+            return 'rgba(' + primaryRgb + ', .16)';
+        }
+        var gradient = chart.ctx.createLinearGradient(0, bottom, 0, top);
+        gradient.addColorStop(0, 'rgba(' + primaryRgb + ', .22)');
+        gradient.addColorStop(1, 'rgb(' + primaryRgb + ')');
+        return gradient;
+    };
+    var salaryBarValuePlugin = {
+        id: 'salaryBarValueLabels',
+        afterDatasetsDraw: function (chart) {
+            if (isLine) return;
+            if (salaryData.labels.length > 31) return;
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+            var drawCtx = chart.ctx;
+            drawCtx.save();
+            drawCtx.fillStyle = isDark ? '#e2e8f0' : '#334155';
+            drawCtx.font = '700 10px sans-serif';
+            drawCtx.textAlign = 'center';
+            drawCtx.textBaseline = 'bottom';
+            meta.data.forEach(function (bar, index) {
+                var value = Number(salaryData.payData[index]) || 0;
+                if (value <= 0) return;
+                var label = value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+                drawCtx.fillText(label, bar.x, Math.max(chart.chartArea.top + 10, bar.y - 6));
+            });
+            drawCtx.restore();
+        }
+    };
+    var salaryTierGradientPlugin = {
+        id: 'salaryTierGradients',
+        beforeDatasetsDraw: function (chart) {
+            if (isLine) return;
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+            meta.data.forEach(function (bar, index) {
+                var value = Number(salaryData.payData[index]) || 0;
+                var tierHours = salaryData.tierHoursByGroup[index] || [];
+                var totalHours = tierHours.reduce(function (sum, hours) { return sum + (hours || 0); }, 0);
+                if (totalHours <= 0 || !bar || !Number.isFinite(bar.y) || !Number.isFinite(bar.base)) return;
+                var bottom = Math.max(bar.y, bar.base);
+                var top = value > 0
+                    ? Math.min(bar.y, bar.base)
+                    : bottom - Math.max(7, Math.min(18, totalHours / Math.max(1, salarySettings.basicHours) * 18));
+                var height = Math.max(1, bottom - top);
+                var gradient = chart.ctx.createLinearGradient(0, bottom, 0, top);
+                var position = 0;
+                var previousColor = null;
+                tierHours.forEach(function (hours, tier) {
+                    if (!hours) return;
+                    var start = position;
+                    var end = Math.min(1, position + hours / totalHours);
+                    var currentColor = tierColors[tier];
+                    gradient.addColorStop(start, previousColor || (tier === 0 ? currentColor : primaryTint([.12, .16, .24, .34, .46, .6][tier])));
+                    gradient.addColorStop(start + (end - start) * .45, currentColor);
+                    gradient.addColorStop(end, currentColor);
+                    previousColor = currentColor;
+                    position = end;
+                });
+                if (position < 1 && previousColor) gradient.addColorStop(1, previousColor);
+
+                var left = bar.x - bar.width / 2;
+                chart.ctx.save();
+                chart.ctx.beginPath();
+                if (typeof chart.ctx.roundRect === 'function') chart.ctx.roundRect(left, top, bar.width, height, [5, 5, 0, 0]);
+                else chart.ctx.rect(left, top, bar.width, height);
+                chart.ctx.fillStyle = gradient;
+                chart.ctx.fill();
+                chart.ctx.restore();
+                if (value <= 0) bar.y = top;
+                bar.options = Object.assign({}, bar.options, {
+                    backgroundColor: 'rgba(0,0,0,0)', borderWidth: 0, borderRadius: 0, $shared: false
+                });
+            });
+        }
+    };
+    var salaryChart = new Chart(ctx, {
+        type: chartType,
+        data: { labels: salaryData.labels, datasets: [{
+            label: '课时费', data: salaryData.payData,
+            backgroundColor: isLine ? 'transparent' : primary,
+            borderColor: primary, borderWidth: isLine ? 2 : 0,
+            borderRadius: isLine ? 0 : 5, tension: .3, fill: false,
+            pointRadius: isLine ? Math.min(linePointSizes.radius, 2) : 0,
+            pointHoverRadius: isLine ? linePointSizes.hoverRadius : 0,
+            pointBackgroundColor: primary
+        }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            onHover: function (_event, elements, chart) {
+                chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+                if (onHover) onHover(elements.length ? elements[0].index : null);
+            },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (item) {
+                var index = item.dataIndex;
+                var lines = ['课时费合计：¥' + item.parsed.y.toFixed(2)];
+                var tierHours = salaryData.tierHoursByGroup[index] || [];
+                var tierPay = salaryData.tierPayByGroup[index] || [];
+                if ((tierHours[0] || 0) > 0) {
+                    lines.push('基本课时：' + Number(tierHours[0]).toFixed(2) + 'h（不计费）');
+                }
+                salaryRates.forEach(function (rate, tierIndex) {
+                    var amount = Number(tierPay[tierIndex + 1]) || 0;
+                    if (amount > 0) lines.push(rate + '元档：¥' + amount.toFixed(2));
+                });
+                return lines;
+            } } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } },
+                y: { beginAtZero: true, grace: isLine ? 0 : '15%', grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, callback: function (value) { return '¥' + value; } } }
+            }
+        },
+        plugins: [salaryTierGradientPlugin, salaryBarValuePlugin]
+    });
+    if (!isLine) {
+        var legend = document.getElementById('barChartTitleLegend');
+        if (legend) {
+            var tierLabels = ['0–' + salarySettings.basicHours + 'h 基本课时（不计费）'].concat(salaryRates.map(function (rate) { return rate + '元/小时'; }));
+            legend.innerHTML = tierLabels.map(function (label, index) {
+                return '<span class="chart-title-legend-item"><i style="background:' + tierColors[index] + '"></i><span>' + label + '</span></span>';
+            }).join('');
+        }
+    }
+    return salaryChart;
+};
+
+TimetableApp.prototype.renderSalaryTypePieChart = function (ctx, salaryData) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var textColor = isDark ? '#c3c2b7' : '#52514e';
+    var centerTextColor = isDark ? '#f8fafc' : '#0f172a';
+    var order = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var colors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
+    var labels = order.filter(function (type) { return (salaryData.typePay[type] || 0) > 0; });
+    var values = labels.map(function (type) { return salaryData.typePay[type]; });
+    var hasData = values.length > 0;
+    if (!hasData) { labels = ['暂无数据']; values = [1]; colors = ['#e1e0d9']; }
+    var getVisibleTotal = function (chart) {
+        if (!hasData) return 0;
+        return values.reduce(function (sum, value, index) {
+            return chart.getDataVisibility(index) ? sum + value : sum;
+        }, 0);
+    };
+    var doughnutLabelPlugin = {
+        id: 'salaryTypePieLabelPlugin',
+        afterDatasetsDraw: function (chart) {
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data || !meta.data.length) return;
+            var drawCtx = chart.ctx;
+            var visibleTotal = getVisibleTotal(chart);
+            drawCtx.save();
+            if (hasData) {
+                var centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                var centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                drawCtx.textAlign = 'center';
+                drawCtx.textBaseline = 'middle';
+                drawCtx.fillStyle = textColor;
+                drawCtx.font = '600 11px sans-serif';
+                drawCtx.fillText('总课时费', centerX, centerY - 12);
+                drawCtx.fillStyle = centerTextColor;
+                drawCtx.font = '700 20px sans-serif';
+                drawCtx.fillText('¥' + visibleTotal.toFixed(2), centerX, centerY + 10);
+            }
+            meta.data.forEach(function (arc, index) {
+                if (!hasData || !chart.getDataVisibility(index)) return;
+                var pct = visibleTotal > 0 ? values[index] / visibleTotal * 100 : 0;
+                if (pct < 8) return;
+                var angle = (arc.startAngle + arc.endAngle) / 2;
+                var radius = arc.innerRadius + (arc.outerRadius - arc.innerRadius) * 0.58;
+                drawCtx.fillStyle = '#ffffff';
+                drawCtx.font = '700 12px sans-serif';
+                drawCtx.shadowColor = 'rgba(15, 23, 42, 0.24)';
+                drawCtx.shadowBlur = 6;
+                drawCtx.fillText(Math.round(pct) + '%', arc.x + Math.cos(angle) * radius, arc.y + Math.sin(angle) * radius);
+                drawCtx.shadowBlur = 0;
+            });
+            drawCtx.restore();
+        }
+    };
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{
+            data: values,
+            backgroundColor: labels.map(function (type) { return colors[order.indexOf(type)] || colors[0]; }),
+            borderColor: isDark ? '#1a1a19' : '#fcfcfb',
+            borderWidth: 2,
+            hoverBorderWidth: 2
+        }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '56%', plugins: {
+            legend: this.getChartLegendOptions(textColor, { display: false }),
+            tooltip: { callbacks: { label: function (item) {
+                if (!hasData) return '暂无数据';
+                var visibleTotal = getVisibleTotal(item.chart);
+                var pct = visibleTotal > 0 ? item.parsed / visibleTotal * 100 : 0;
+                return item.label + ': ¥' + item.parsed.toFixed(2) + ' (' + pct.toFixed(1) + '%)';
+            } } }
+        } },
+        plugins: [doughnutLabelPlugin]
+    });
+    var breakdown = document.getElementById('durationPieBreakdown');
+    var renderBreakdown = function () {
+        if (!breakdown) return;
+        var visibleTotal = getVisibleTotal(chart);
+        var rows = order.map(function (type, typeIndex) {
+            var value = salaryData.typePay[type] || 0;
+            var chartIndex = labels.indexOf(type);
+            var isVisible = chartIndex >= 0 && chart.getDataVisibility(chartIndex);
+            var percent = value > 0 && isVisible && visibleTotal > 0 ? (value / visibleTotal * 100).toFixed(1) + '%' : '-';
+            var stateClass = value <= 0 ? ' is-empty' : (isVisible ? '' : ' is-hidden');
+            return '<button type="button" class="duration-breakdown-row' + stateClass + '" data-index="' + chartIndex + '"' + (chartIndex < 0 ? ' disabled' : '') + '>' +
+                '<span class="duration-breakdown-type"><i style="background:' + colors[typeIndex] + '"></i>' + type + '</span>' +
+                '<strong>' + (value > 0 ? '¥' + value.toFixed(2) : '-') + '</strong><span>' + percent + '</span></button>';
+        }).join('');
+        breakdown.innerHTML = '<div class="duration-breakdown-head"><span>班型</span><span>课时费（元）</span><span>占比</span></div>' + rows;
+        breakdown.querySelectorAll('.duration-breakdown-row').forEach(function (row) {
+            row.onclick = function () {
+                var itemIndex = Number(row.dataset.index);
+                if (itemIndex < 0) return;
+                chart.toggleDataVisibility(itemIndex);
+                chart.update();
+                renderBreakdown();
+            };
+        });
+    };
+    renderBreakdown();
+    this.setChartLegendNote(hasData ? '' : '暂无课时费数据');
+    return chart;
+};
+
+TimetableApp.prototype.renderSalaryTypeComparisonChart = function (ctx, salaryData) {
+    var isDark = document.body.classList.contains('dark-theme-active');
+    var labels = ['1v1(0.8)', '1v1', '1v2', '1v3', '1v4'];
+    var colors = ['#1677ff', '#20b486', '#ff9418', '#7651c9', '#16b4c6'];
+    var values = labels.map(function (type) { return salaryData.typePay[type] || 0; });
+    var rankedTypes = labels.map(function (label, index) {
+        return { label: label, value: values[index], color: colors[index] };
+    }).sort(function (a, b) { return b.value - a.value; });
+    labels = rankedTypes.map(function (item) { return item.label; });
+    values = rankedTypes.map(function (item) { return item.value; });
+    colors = rankedTypes.map(function (item) { return item.color; });
+    var total = values.reduce(function (sum, value) { return sum + value; }, 0);
+    var hasData = total > 0;
+    var valueLabelPlugin = {
+        id: 'salaryComparisonValueLabels',
+        afterDatasetsDraw: function (chart) {
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+            var drawCtx = chart.ctx;
+            drawCtx.save();
+            drawCtx.fillStyle = isDark ? '#e2e8f0' : '#334155';
+            drawCtx.font = '700 11px sans-serif';
+            drawCtx.textAlign = 'left';
+            drawCtx.textBaseline = 'middle';
+            meta.data.forEach(function (bar, index) {
+                drawCtx.fillText('¥' + (values[index] || 0).toFixed(2), Math.min(bar.x + 8, chart.chartArea.right + 8), bar.y);
+            });
+            drawCtx.restore();
+        }
+    };
+    var title = document.getElementById('comparisonChartTitle');
+    if (title) title.textContent = '各班型课时费对比（元）';
+    var chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{
+            label: '课时费',
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 6,
+            borderSkipped: false,
+            barThickness: 13
+        }] },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { right: 70 } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: isDark ? 'rgba(148,163,184,.12)' : 'rgba(148,163,184,.16)' }, ticks: { color: isDark ? '#94a3b8' : '#64748b', callback: function (value) { return '¥' + value; } } },
+                y: { grid: { display: false }, ticks: { color: isDark ? '#e2e8f0' : '#334155', font: { weight: 600 } } }
+            },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (item) {
+                var value = Number(item.raw || 0);
+                var percent = total ? (value / total * 100).toFixed(1) : '0.0';
+                return '¥' + value.toFixed(2) + ' · ' + percent + '%';
+            } } } }
+        },
+        plugins: [valueLabelPlugin]
+    });
+    this.setChartLegendNote(hasData ? '' : '暂无课时费数据');
+    return chart;
 };
 
 TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
@@ -2926,13 +3777,16 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
 
     chartSection.style.display = '';
     var seriesData = this.collectChartSeriesData(startDate, endDate);
+    this._linkedChartSeriesData = (this._statsBaseCardStart && this._statsBaseCardEnd)
+        ? this.collectChartSeriesData(this._statsBaseCardStart, this._statsBaseCardEnd, this._chartGranularity)
+        : seriesData;
     var updated = document.getElementById('statsDataUpdated');
     if (updated) updated.textContent = '数据更新于 ' + new Date().toLocaleString('zh-CN', { hour12: false });
     var cat = this._currentChartCategory;
     var titleLegend = document.getElementById('barChartTitleLegend');
-    if (cat === 'student' && titleLegend) titleLegend.innerHTML = '';
+    if ((cat === 'student' || cat === 'salary') && titleLegend) titleLegend.innerHTML = '';
     var lineTitleLegend = document.getElementById('lineChartTitleLegend');
-    if (cat === 'student' && lineTitleLegend) lineTitleLegend.innerHTML = '';
+    if ((cat === 'student' || cat === 'salary') && lineTitleLegend) lineTitleLegend.innerHTML = '';
     var copy = this._durationUnitMode ? {
         barTitle: '总耗课',
         barSubtitle: '按' + this.getStatsGranularityLabel(seriesData.granularity) + '汇总，40分钟计为1Pd.。',
@@ -2967,7 +3821,9 @@ TimetableApp.prototype.renderCharts = function (lessons, startDate, endDate) {
 
     this._chartInstances = {};
     this._chartNoteTarget = 'barChartLegendNote';
-    if (cat === 'student') {
+    if (cat === 'salary') {
+        this._chartInstances.bar = this.renderSalaryTrendChart(ctx, this.calculateSalaryChartSeries(seriesData, null), 'bar', handleChartHover);
+    } else if (cat === 'student') {
         this._chartInstances.bar = this.renderStudentBarChart(ctx, seriesData, handleChartHover);
     } else {
         this._chartInstances.bar = this.renderDurationBarChart(ctx, seriesData, handleChartHover);

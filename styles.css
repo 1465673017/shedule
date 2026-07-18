@@ -3770,6 +3770,219 @@ body.mint-theme-active .app-message-actions {
 
 }
 
+.salary-settings-card {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.salary-rule-card {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.salary-rule-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 8px 20px rgba(var(--primary-rgb), .12);
+}
+
+.salary-settings-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 8px 20px rgba(var(--primary-rgb), .12);
+}
+
+.salary-settings-modal {
+    width: min(620px, 92vw);
+    padding: 0;
+    overflow: hidden;
+}
+
+.salary-settings-modal .modal-header,
+.salary-settings-modal .form-actions {
+    margin: 0;
+    padding: 20px 24px;
+}
+
+.salary-settings-modal .modal-header > div,
+.salary-rule-modal .modal-header > div,
+.salary-settings-modal .modal-header h3,
+.salary-rule-modal .modal-header h3,
+.salary-settings-modal .modal-subtitle,
+.salary-rule-modal .modal-subtitle {
+    text-align: left;
+}
+
+.salary-settings-body {
+    padding: 22px 24px;
+}
+
+.salary-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.salary-settings-grid input,
+.salary-settings-grid select {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+}
+
+.salary-rate-preview {
+    margin-top: 18px;
+    padding: 13px 15px;
+    border-radius: 10px;
+    background: var(--primary-bg);
+    color: var(--text-1);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.salary-rule-modal {
+    width: min(860px, 96vw);
+    max-width: 96vw;
+    padding: 0;
+    overflow: hidden;
+}
+
+.salary-rule-modal .modal-header,
+.salary-rule-modal .form-actions {
+    margin: 0;
+    padding: 20px 24px;
+}
+
+.salary-rule-content {
+    display: grid;
+    gap: 12px;
+    max-height: min(62vh, 560px);
+    padding: 20px 24px;
+    overflow-y: auto;
+}
+
+.salary-rule-content section {
+    padding: 13px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--light-color);
+}
+
+.salary-rule-content h4 {
+    margin: 0 0 6px;
+    color: var(--text-1);
+    font-size: 14px;
+}
+
+.salary-rule-content p {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.salary-rule-formula {
+    border-color: rgba(var(--primary-rgb), .22) !important;
+    background: var(--primary-bg) !important;
+    text-align: center;
+}
+
+.salary-rule-formula p {
+    color: var(--primary-color);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.salary-rule-table-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.salary-rule-table-grid section {
+    min-width: 0;
+}
+
+.salary-rule-content table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-2);
+    font-size: 12px;
+    text-align: center;
+}
+
+.salary-rule-content th,
+.salary-rule-content td {
+    padding: 7px 8px;
+    border: 1px solid var(--border-color);
+}
+
+.salary-rule-content th {
+    background: rgba(var(--primary-rgb), .07);
+    color: var(--text-1);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.salary-rule-content td:first-child {
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+.salary-rule-note {
+    margin-bottom: 10px !important;
+}
+
+.salary-rule-table-scroll {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.salary-star-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.salary-star-table th,
+.salary-star-table td {
+    padding: 7px 4px;
+    white-space: normal;
+}
+
+.salary-rule-example strong {
+    color: var(--primary-color);
+}
+
+@media (max-width: 640px) {
+    .salary-rule-table-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (orientation: landscape) {
+    .salary-rule-modal {
+        width: min(900px, 96vw);
+    }
+
+    .salary-rule-content {
+        max-height: calc(100vh - 150px);
+    }
+
+    .salary-star-table {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 640px) {
+    .salary-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
 .export-tabs {
     display: inline-flex;
     gap: 8px;

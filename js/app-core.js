@@ -300,6 +300,8 @@ class TimetableApp {
                 this.closeGradeModal();
                 this.closeStatsModal();
                 this.closeTextStatsModal();
+                this.closeSalarySettings();
+                this.closeSalaryRuleModal();
                 this.closeExportModal();
             }
         });
@@ -319,6 +321,8 @@ class TimetableApp {
             attendanceModal: () => this.closeAttendanceModal(),
             statsModal: () => this.closeStatsModal(),
             textStatsModal: () => this.closeTextStatsModal(),
+            salarySettingsModal: () => this.closeSalarySettings(),
+            salaryRuleModal: () => this.closeSalaryRuleModal(),
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
             quickStartModal: () => this.closeQuickStartModal(),

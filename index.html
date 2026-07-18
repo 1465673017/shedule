@@ -950,6 +950,8 @@
                         onclick="app.switchChartCategory('duration')">课时统计</button>
                     <button class="chart-category-tab" data-category="student"
                         onclick="app.switchChartCategory('student')">人数统计</button>
+                    <button class="chart-category-tab" data-category="salary"
+                        onclick="app.switchChartCategory('salary')">课时费统计</button>
                 </div>
             </div>
             <div id="statsContent">
@@ -1022,6 +1024,55 @@
                 </div>
                 <div class="stats-data-updated" id="statsDataUpdated">数据更新于 --</div>
             </div>
+        </div>
+    </div>
+
+    <div id="salarySettingsModal" class="modal">
+        <div class="modal-content salary-settings-modal">
+            <div class="modal-header">
+                <div>
+                    <h3>工资设置</h3>
+                    <p class="modal-subtitle">星级加成统一叠加到全部阶梯课时单价</p>
+                </div>
+                <button class="modal-close" type="button" onclick="app.closeSalarySettings()">&times;</button>
+            </div>
+            <div class="modal-body salary-settings-body">
+                <div class="salary-settings-grid">
+                    <div class="form-group"><label for="salaryBasePay">月底薪（元）</label><input id="salaryBasePay" type="number" min="0" step="0.01"></div>
+                    <div class="form-group"><label for="salaryStarLevel">教师星级</label><select id="salaryStarLevel"><option value="0">0星（+0元）</option><option value="1">1星（+5元）</option><option value="2">2星（+15元）</option><option value="3">3星（+20元）</option><option value="4">4星（+25元）</option><option value="5">5星（+40元）</option></select></div>
+                </div>
+                <div class="salary-rate-preview" id="salaryRatePreview"></div>
+            </div>
+            <div class="form-actions">
+                <button class="btn secondary" type="button" onclick="app.closeSalarySettings()">取消</button>
+                <button class="btn primary" type="button" onclick="app.saveSalarySettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="salaryRuleModal" class="modal">
+        <div class="modal-content salary-rule-modal">
+            <div class="modal-header">
+                <div>
+                    <h3>课时计算规则</h3>
+                    <p class="modal-subtitle">折算总课时用于计算工资课时和阶梯课时费</p>
+                </div>
+                <button class="modal-close" type="button" onclick="app.closeSalaryRuleModal()">&times;</button>
+            </div>
+            <div class="salary-rule-content">
+                <section class="salary-rule-formula"><h4>折算公式</h4><p>折算课时 = 实际上课时长 × 班型系数 × 年级系数</p></section>
+                <div class="salary-rule-table-grid">
+                    <section><h4>班型系数</h4><table><thead><tr><th>班型</th><th>系数</th></tr></thead><tbody><tr><td>1v1（0.8）</td><td>0.8</td></tr><tr><td>1v1</td><td>1.0</td></tr><tr><td>1v2</td><td>1.2</td></tr><tr><td>1v3</td><td>1.8</td></tr><tr><td>1v4</td><td>1.9</td></tr></tbody></table></section>
+                    <section><h4>年级系数</h4><table><thead><tr><th>年级</th><th>系数</th></tr></thead><tbody><tr><td>小学</td><td>1.0</td></tr><tr><td>初中</td><td>1.0</td></tr><tr><td>高一</td><td>1.2</td></tr><tr><td>高二</td><td>1.3</td></tr><tr><td>高三</td><td>1.5</td></tr></tbody></table></section>
+                </div>
+                <section><h4>星级加成与阶梯课时费</h4><p class="salary-rule-note">星级加成统一叠加到五档阶梯课时费，不改变折算课时。</p><div class="salary-rule-table-scroll"><table class="salary-star-table"><thead><tr><th>星级</th><th>统一加价</th><th>0–40h</th><th>41–80h</th><th>81–120h</th><th>121–160h</th><th>160h以上</th></tr></thead><tbody><tr><td>0星</td><td>+0</td><td>40</td><td>50</td><td>65</td><td>75</td><td>80</td></tr><tr><td>1星</td><td>+5</td><td>45</td><td>55</td><td>70</td><td>80</td><td>85</td></tr><tr><td>2星</td><td>+15</td><td>55</td><td>65</td><td>80</td><td>90</td><td>95</td></tr><tr><td>3星</td><td>+20</td><td>60</td><td>70</td><td>85</td><td>95</td><td>100</td></tr><tr><td>4星</td><td>+25</td><td>65</td><td>75</td><td>90</td><td>100</td><td>105</td></tr><tr><td>5星</td><td>+40</td><td>80</td><td>90</td><td>105</td><td>115</td><td>120</td></tr></tbody></table></div></section>
+                <div class="salary-rule-table-grid salary-rule-summary-grid">
+                    <section><h4>基本课时</h4><p>每月折算总课时先扣除固定的8小时基本课时；不足时工资课时为0。每月只扣一次。</p></section>
+                    <section><h4>分段累进</h4><p>每一档只计算落在该区间内的工资课时，不会把全部课时按最高档单价重新计算。</p></section>
+                </div>
+                <section class="salary-rule-example"><h4>计算示例</h4><p>高一1v2上课1小时：<strong>1 × 1.2 × 1.2 = 1.44</strong> 个折算课时。若教师为1星，该课时进入第一档时按45元/小时计算。</p></section>
+            </div>
+            <div class="form-actions"><button class="btn primary" type="button" onclick="app.closeSalaryRuleModal()">知道了</button></div>
         </div>
     </div>
 
