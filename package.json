@@ -12,7 +12,7 @@
     "test": "node tests/schedule-erp.test.js && node tests/time-settings.test.js && node tests/salary-stats.test.js && node tests/security-regressions.test.js && node --check main.js && node --check preload.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
     "test:electron": "node tests/electron-smoke.test.js",
     "build": "electron-builder --win portable --x64",
-    "build:mac": "electron-builder --mac --publish never",
+    "build:mac": "electron-builder --mac dmg zip --publish never && bash build/build-mac-portable.sh",
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
   "build": {
@@ -20,7 +20,6 @@
     "productName": "A大橙子课时统计",
     "artifactName": "A大橙子课时统计（正式版-${version}）.${ext}",
     "asar": true,
-    "electronDist": "node_modules/electron/dist",
     "directories": {
       "output": "dist"
     },
@@ -48,7 +47,7 @@
     },
     "mac": {
       "icon": "icon/orange.png",
-      "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}",
+      "artifactName": "A大橙子课时统计（绿色压缩包版-${version}）-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
@@ -61,9 +60,19 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

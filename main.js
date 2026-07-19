@@ -10,7 +10,16 @@ const appDataPath = app.getPath('appData');
 app.setName(APP_NAME);
 const formalUserDataPath = path.join(appDataPath, APP_NAME);
 const isolatedTestDataPath = process.env.KEBIAO_E2E_USER_DATA_DIR;
-app.setPath('userData', isolatedTestDataPath ? path.resolve(isolatedTestDataPath) : formalUserDataPath);
+const portableRoot = (() => {
+    if (process.env.KEBIAO_PORTABLE_DIR) return path.resolve(process.env.KEBIAO_PORTABLE_DIR);
+    if (!isMac || !app.isPackaged) return null;
+    const bundleParent = path.dirname(path.dirname(path.dirname(path.dirname(process.execPath))));
+    return fs.existsSync(path.join(bundleParent, '.kebiao-portable')) ? bundleParent : null;
+})();
+const portableUserDataPath = portableRoot ? path.join(portableRoot, 'data') : null;
+app.setPath('userData', isolatedTestDataPath
+    ? path.resolve(isolatedTestDataPath)
+    : (portableUserDataPath || formalUserDataPath));
 
 // A renderer crash on a small number of Windows graphics drivers used to look
 // like the application simply did not start. A crash-triggered relaunch adds
@@ -29,7 +38,7 @@ if (!gotSingleInstanceLock) {
 let staleUserDataPath = null;
 
 function migrateLegacyUserDataDirectory() {
-    if (isolatedTestDataPath) {
+    if (isolatedTestDataPath || portableUserDataPath) {
         return;
     }
     const legacyPath = path.join(appDataPath, LEGACY_APP_NAME);

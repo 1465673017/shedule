@@ -1,4 +1,4 @@
-name: Build macOS DMG
+name: Build macOS Packages
 
 on:
   push:
@@ -33,12 +33,26 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-electron-builder-
 
-    - name: Build macOS DMG
+    - name: Build macOS packages
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
       run: npm run build:mac
 
-    - name: Upload DMG artifact
+    - name: Upload macOS green ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-green-zip
+        path: dist/*绿色压缩包版*.zip
+        if-no-files-found: error
+
+    - name: Upload macOS portable ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-portable-zip
+        path: dist/*便携版*.zip
+        if-no-files-found: error
+
+    - name: Upload macOS DMG
       uses: actions/upload-artifact@v4
       with:
         name: macos-dmg
