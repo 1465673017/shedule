@@ -65,7 +65,11 @@ TimetableApp.prototype.addItemToCell = function(item, day, period) {
             }
         }
 
-        this.setCellVersion(key, weekStartStr, currentSubject, currentStudents);
+        if (item.type === 'student') {
+            window.ScheduleErpService.setSingleCellOccurrence(this, key, weekStartStr, currentSubject, currentStudents);
+        } else {
+            this.setCellVersion(key, weekStartStr, currentSubject, currentStudents);
+        }
 
         if (item.type === 'student') {
             this.ensureAuditionStudentsTemporary(key, [item.id]);
@@ -174,7 +178,9 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
         }
 
         const isEmpty = !newSubject && newStudents.length === 0;
-        if (isEmpty) {
+        if (type === 'student') {
+            window.ScheduleErpService.setSingleCellOccurrence(this, key, weekStartStr, newSubject, newStudents);
+        } else if (isEmpty) {
             window.ScheduleErpService.deleteSingleCellOccurrence(this, key, weekStartStr);
         } else {
             this.setCellVersion(key, weekStartStr, newSubject, newStudents, { cutoff: isEmpty });
@@ -185,7 +191,6 @@ TimetableApp.prototype.removeItemFromCell = function(cell, type = null, studentI
 
 TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
-        const nextWeekStr = this.formatLocalDate(this.getWeekRange(new Date(new Date(this.getWeekRange(this.currentDate).start).getTime() + 7 * 24 * 60 * 60 * 1000)).start);
         const sourceVersion = this.getCellVersion(sourceKey, weekStartStr);
         if (!sourceVersion || !sourceVersion.student || !sourceVersion.student.includes(studentId)) return;
 
@@ -225,35 +230,10 @@ TimetableApp.prototype.moveStudent = function(sourceKey, targetKey, studentId) {
             targetSubject = this.ensureUncategorizedSubject().id;
         }
 
-        const sourceNextVersion = this.getCellVersion(sourceKey, nextWeekStr);
-        const targetNextVersion = this.getCellVersion(targetKey, nextWeekStr);
-
         const sourceStudents = (sourceVersion.student || []).filter(id => id !== studentId);
 
-        this.setCellVersion(sourceKey, weekStartStr, sourceVersion.subject, sourceStudents);
-        this.setCellVersion(targetKey, weekStartStr, targetSubject, targetStudents);
-
-        const branchedSourceVersion = this.getCellVersion(sourceKey, weekStartStr);
-        const branchedTargetVersion = this.getCellVersion(targetKey, weekStartStr);
-        const sourceRestoreSubject = sourceNextVersion ? sourceNextVersion.subject : sourceVersion.subject;
-        const sourceRestoreStudents = sourceNextVersion ? (sourceNextVersion.student || []) : (sourceVersion.student || []);
-
-        if (sourceRestoreSubject || sourceRestoreStudents.length > 0) {
-            const sourceStateOrigin = sourceNextVersion || sourceVersion;
-            window.ScheduleErpService.restoreCellSnapshot(this, sourceKey, nextWeekStr, {
-                ...sourceStateOrigin,
-                subject: sourceRestoreSubject,
-                student: sourceRestoreStudents
-            });
-        } else {
-            this.setCellVersion(sourceKey, nextWeekStr, null, [], { cutoff: true });
-        }
-
-        if (targetNextVersion && (targetNextVersion.subject || (targetNextVersion.student || []).length > 0)) {
-            window.ScheduleErpService.restoreCellSnapshot(this, targetKey, nextWeekStr, targetNextVersion);
-        } else {
-            this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
-        }
+        window.ScheduleErpService.setSingleCellOccurrence(this, sourceKey, weekStartStr, sourceVersion.subject, sourceStudents);
+        window.ScheduleErpService.setSingleCellOccurrence(this, targetKey, weekStartStr, targetSubject, targetStudents);
 
         if (draggedStudent && draggedStudent.isAudition) {
             this.ensureAuditionStudentsTemporary(targetKey, [studentId]);

@@ -927,6 +927,38 @@
             buildTimetableProjection(app);
         },
 
+        setSingleCellOccurrence(app, key, weekStartStr, subjectId, studentIds) {
+            const currentVersion = this.getCellVersion(app, key, weekStartStr);
+            const nextWeekStart = addWeeks(weekStartStr, 1);
+            const nextVersion = this.getCellVersion(app, key, nextWeekStart);
+            const nextSnapshot = nextVersion ? {
+                ...nextVersion,
+                student: normalizeIds(nextVersion.student),
+                actualMinutesByDate: nextVersion.actualMinutesByDate
+                    ? { ...nextVersion.actualMinutesByDate }
+                    : undefined
+            } : null;
+            const normalizedStudents = normalizeIds(studentIds);
+
+            if (subjectId || normalizedStudents.length > 0) {
+                restoreCellSnapshot(app, key, weekStartStr, {
+                    ...(currentVersion || {}),
+                    subject: subjectId || null,
+                    student: normalizedStudents
+                });
+            } else {
+                this.setCellVersion(app, key, weekStartStr, null, [], { cutoff: true });
+            }
+
+            if (nextSnapshot && (nextSnapshot.subject || nextSnapshot.student.length > 0)) {
+                restoreCellSnapshot(app, key, nextWeekStart, nextSnapshot);
+            } else {
+                this.setCellVersion(app, key, nextWeekStart, null, [], { cutoff: true });
+            }
+
+            return this.getCellVersion(app, key, weekStartStr);
+        },
+
         deleteSingleCellOccurrence(app, key, weekStartStr) {
             const currentVersion = this.getCellVersion(app, key, weekStartStr);
             if (!currentVersion) return false;

@@ -62,6 +62,44 @@ function studentIds(version) {
     return version ? version.student.slice().sort() : [];
 }
 
+const singleStudentEditApp = makeApp();
+ScheduleErpService.setCellVersion(singleStudentEditApp, '2-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);
+ScheduleErpService.setSingleCellOccurrence(singleStudentEditApp, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleStudentEditApp, '2-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'removing a student should affect only the selected lesson'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleStudentEditApp, '2-afternoon-0', '2026-07-20')),
+    ['s1', 's2'],
+    'the original student roster should resume on the following recurring lesson'
+);
+ScheduleErpService.setSingleCellOccurrence(singleStudentEditApp, '2-afternoon-0', '2026-07-20', 'math', ['s1', 's2', 's3']);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleStudentEditApp, '2-afternoon-0', '2026-07-20')),
+    ['s1', 's2', 's3'],
+    'adding a student should affect only the selected lesson'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(singleStudentEditApp, '2-afternoon-0', '2026-07-27')),
+    ['s1', 's2'],
+    'a student added to one lesson must not enter later recurring lessons'
+);
+
+const isolatedStudentAddApp = makeApp();
+ScheduleErpService.setSingleCellOccurrence(isolatedStudentAddApp, '3-afternoon-0', '2026-07-13', 'math', ['s2']);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(isolatedStudentAddApp, '3-afternoon-0', '2026-07-13')),
+    ['s2'],
+    'adding a student to an empty cell should create the selected lesson'
+);
+assert.strictEqual(
+    ScheduleErpService.getCellVersion(isolatedStudentAddApp, '3-afternoon-0', '2026-07-20'),
+    null,
+    'an isolated student addition should not create a new weekly recurrence'
+);
+
 const segmentedApp = makeApp();
 segmentedApp.settings = {
     segmentedScheduling: true,

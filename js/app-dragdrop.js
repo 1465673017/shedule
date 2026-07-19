@@ -394,7 +394,13 @@ TimetableApp.prototype.setupDragAndDrop = function() {
 
                         const newStudents = sourceVersion.student.filter(id => id !== this.draggedItem.id);
 
-                        this.setCellVersion(sourceKey, weekStartStr, sourceVersion.subject, newStudents);
+                        window.ScheduleErpService.setSingleCellOccurrence(
+                            this,
+                            sourceKey,
+                            weekStartStr,
+                            sourceVersion.subject,
+                            newStudents
+                        );
 
                     }
 
