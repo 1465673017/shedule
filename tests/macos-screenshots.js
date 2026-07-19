@@ -3,13 +3,16 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-if (process.platform !== 'darwin') {
+if (process.platform !== 'darwin' && process.env.ALLOW_NON_MAC_SCREENSHOTS !== '1') {
     throw new Error('macOS 截图测试只能在 macOS 上运行。');
 }
 
 const rootDir = path.resolve(__dirname, '..');
 const outputDir = path.resolve(process.env.SCREENSHOT_DIR || path.join(rootDir, 'artifacts', 'macos-screenshots'));
-const themes = ['default', 'dark', 'mint'];
+const themes = (process.env.SCREENSHOT_THEMES || 'default,dark,mint')
+    .split(',')
+    .map(theme => theme.trim())
+    .filter(Boolean);
 const views = [
     { name: 'main', title: '主界面', action: 'main' },
     { name: 'subject-add', title: '添加科目', action: 'subject' },
