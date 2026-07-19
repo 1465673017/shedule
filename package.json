@@ -13,7 +13,7 @@
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
   "build": {
-    "appId": "com.example.kebiao",
+    "appId": "com.adachengzi.kebiao",
     "productName": "A大橙子课时统计",
     "artifactName": "A大橙子课时统计（正式版-${version}）.${ext}",
     "asar": true,
@@ -38,6 +38,11 @@
     "mac": {
       "icon": "icon/orange.png",
       "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
       "target": [
         {
           "target": "dmg",

@@ -10,6 +10,11 @@ const appDataPath = app.getPath('appData');
 app.setName(APP_NAME);
 
 function migrateLegacyUserDataDirectory() {
+    const isolatedTestDataPath = process.env.KEBIAO_E2E_USER_DATA_DIR;
+    if (isolatedTestDataPath) {
+        app.setPath('userData', path.resolve(isolatedTestDataPath));
+        return;
+    }
     const legacyPath = path.join(appDataPath, LEGACY_APP_NAME);
     const formalPath = path.join(appDataPath, APP_NAME);
     if (!fs.existsSync(legacyPath)) {

@@ -1,10 +1,14 @@
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { _electron: electron } = require('playwright');
 
 (async () => {
+    const testUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kebiao-electron-smoke-'));
     const launchEnv = { ...process.env };
     delete launchEnv.ELECTRON_RUN_AS_NODE;
+    launchEnv.KEBIAO_E2E_USER_DATA_DIR = testUserDataDir;
     const app = await electron.launch({ args: [path.join(__dirname, '..')], env: launchEnv });
     try {
         const page = await app.firstWindow();
@@ -24,6 +28,7 @@ const { _electron: electron } = require('playwright');
         console.log('Electron CSP smoke test passed');
     } finally {
         await app.close();
+        fs.rmSync(testUserDataDir, { recursive: true, force: true });
     }
 })().catch(error => {
     console.error(error);

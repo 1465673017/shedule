@@ -1608,7 +1608,7 @@ function bindStaticDeclarativeHandlers() {
 let app;
 document.addEventListener('DOMContentLoaded', () => {
     if (navigator.userAgent.includes('Electron')) document.documentElement.classList.add('electron-app');
-    if (navigator.platform.startsWith('Mac')) document.documentElement.classList.add('macos');
+    if (window.electronAPI && window.electronAPI.platform === 'darwin') document.documentElement.classList.add('macos');
     app = new TimetableApp();
     bindStaticDeclarativeHandlers();
 });

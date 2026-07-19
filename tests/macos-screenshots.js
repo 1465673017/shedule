@@ -1,6 +1,11 @@
 const { _electron: electron } = require('playwright');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+
+if (process.platform !== 'darwin') {
+    throw new Error('macOS 截图测试只能在 macOS 上运行。');
+}
 
 const rootDir = path.resolve(__dirname, '..');
 const outputDir = path.resolve(process.env.SCREENSHOT_DIR || path.join(rootDir, 'artifacts', 'macos-screenshots'));
@@ -117,10 +122,16 @@ async function prepareView(page, view) {
 }
 
 (async () => {
+    const testUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kebiao-macos-screenshots-'));
     fs.rmSync(outputDir, { recursive: true, force: true });
     fs.mkdirSync(outputDir, { recursive: true });
 
-    const appProcess = await electron.launch({ args: [rootDir] });
+    const launchEnv = {
+        ...process.env,
+        KEBIAO_E2E_USER_DATA_DIR: testUserDataDir
+    };
+    delete launchEnv.ELECTRON_RUN_AS_NODE;
+    const appProcess = await electron.launch({ args: [rootDir], env: launchEnv });
     const page = await appProcess.firstWindow();
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => typeof app !== 'undefined' && app && document.querySelector('.timetable'));
@@ -146,6 +157,7 @@ async function prepareView(page, view) {
         }
     } finally {
         await appProcess.close();
+        fs.rmSync(testUserDataDir, { recursive: true, force: true });
     }
 
     fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify({
