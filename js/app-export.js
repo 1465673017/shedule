@@ -1,6 +1,6 @@
-TimetableApp.prototype._saveFile = async function (data, encoding, defaultName, mimeType) {
+TimetableApp.prototype._saveFile = async function (data, encoding, defaultName, mimeType, fileExt) {
     if (window.electronAPI && typeof window.electronAPI.saveFile === 'function') {
-        return window.electronAPI.saveFile(data, encoding, defaultName, mimeType);
+        return window.electronAPI.saveFile(data, encoding, defaultName, mimeType, fileExt);
     }
 
     let blob;
@@ -25,6 +25,11 @@ TimetableApp.prototype._saveFile = async function (data, encoding, defaultName, 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
     return { canceled: false, filePath: defaultName || 'download' };
+}
+
+TimetableApp.prototype.sanitizeSpreadsheetText = function (value) {
+    const text = String(value ?? '');
+    return /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
 }
 
 TimetableApp.prototype.getLocalizedExportError = function (error, fileType = '文件') {
@@ -398,10 +403,11 @@ TimetableApp.prototype.exportLessonSheetToWord = async function () {
         }
 
         const title = `课时单-${range.startLabel}至${range.endLabel}`;
+        const safeTitle = this.escapeHtml(title);
         let wordContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <meta charset="utf-8">
-                <title>${title}</title>
+                <title>${safeTitle}</title>
                 <style>
                     @page { margin: 1.8cm; }
                     body { font-family: 'Microsoft YaHei', 'SimSun', Arial, sans-serif; margin: 18px; color: #333; }
@@ -421,7 +427,7 @@ TimetableApp.prototype.exportLessonSheetToWord = async function () {
                 </style>
             </head>
             <body>
-                <div class="main-title">${title}</div>
+                <div class="main-title">${safeTitle}</div>
                 <div class="sub-title">课时统计报表</div>
                 <table>
                     <colgroup>
@@ -456,17 +462,17 @@ TimetableApp.prototype.exportLessonSheetToWord = async function () {
 
         rows.forEach(row => {
             wordContent += `<tr>
-                    <td>${row.dateKey}</td>
-                    <td>${row.subject}</td>
-                    <td>${row.time}</td>
-                    <td class="left">${row.students || '-'}</td>
+                    <td>${this.escapeHtml(row.dateKey)}</td>
+                    <td>${this.escapeHtml(row.subject)}</td>
+                    <td>${this.escapeHtml(row.time)}</td>
+                    <td class="left">${this.escapeHtml(row.students || '-')}</td>
                     <td>${row.scheduledStudents}</td>
                     <td>${row.presentCount}</td>
                     <td>${row.leaveCount}</td>
                     <td>${row.absentCount}</td>
                     <td>${row.auditionCount}</td>
-                    <td>${row.typeLabel}</td>
-                    <td>${row.actualDuration}</td>
+                    <td>${this.escapeHtml(row.typeLabel)}</td>
+                    <td>${this.escapeHtml(row.actualDuration)}</td>
                 </tr>`;
         });
 
@@ -498,9 +504,9 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&apos;');
-        const makeCell = (value, styleId = 'Cell') => `<Cell ss:StyleID="${styleId}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+        const makeCell = (value, styleId = 'Cell') => `<Cell ss:StyleID="${styleId}"><Data ss:Type="String">${escapeXml(this.sanitizeSpreadsheetText(value))}</Data></Cell>`;
         const makeRow = (cells, cellStyles = []) => `<Row>${cells.map((value, index) => makeCell(value, cellStyles[index] || 'Cell')).join('')}</Row>`;
-        const makeMergedCell = (value, mergeAcross, styleId = 'Header') => `<Cell ss:StyleID="${styleId}" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+        const makeMergedCell = (value, mergeAcross, styleId = 'Header') => `<Cell ss:StyleID="${styleId}" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">${escapeXml(this.sanitizeSpreadsheetText(value))}</Data></Cell>`;
 
         const summaryHeaders = ['日期', '年级', '科目', '时间', '学生', '应到', '实到', '请假', '类型', '实际时长'];
         const detailHeaders = ['日期', '年级', '科目', '时间', '学生', '出勤状态', '类型', '实际时长'];
@@ -1014,12 +1020,13 @@ TimetableApp.prototype.exportToWord = async function () {
     try {
         const titleEl = document.getElementById('tableTitle') || document.getElementById('timetableTitle');
         const title = (titleEl && titleEl.value) || '课程表';
+        const safeTitle = this.escapeHtml(title);
 
         // 创建用于导出 Word 的 HTML 内容
         let wordContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
         <head>
             <meta charset="utf-8">
-            <title>${title}</title>
+            <title>${safeTitle}</title>
             <!--[if gte mso 9]>
             <xml>
                 <w:WordDocument>
@@ -1045,7 +1052,7 @@ TimetableApp.prototype.exportToWord = async function () {
             </style>
         </head>
         <body>
-            <div class="main-title">${title}</div>
+            <div class="main-title">${safeTitle}</div>
             <table>
                 <thead>
                     <tr>
@@ -1066,7 +1073,7 @@ TimetableApp.prototype.exportToWord = async function () {
 
         orderedPeriods.forEach(({ index, period, periodNum }) => {
             wordContent += `<tr>`;
-            wordContent += `<td class="period-header">第${periodNum}节${this.settings.showPeriodTime ? `<br><small>${period.time}</small>` : ''}</td>`;
+            wordContent += `<td class="period-header">第${periodNum}节${this.settings.showPeriodTime ? `<br><small>${this.escapeHtml(period.time)}</small>` : ''}</td>`;
 
             for (let day = 1; day <= dayCount; day++) {
                 const key = this.buildCellKey(day, index);
@@ -1089,7 +1096,7 @@ TimetableApp.prototype.exportToWord = async function () {
                 if (subjectId) {
                     const subject = this.subjects.find(s => s.id === subjectId);
                     if (subject) {
-                        const studentNames = students.map(student => student.name);
+                        const studentNames = students.map(student => this.escapeHtml(student.name));
                         const studentChunks = [];
                         for (let i = 0; i < studentNames.length; i += 2) {
                             studentChunks.push(studentNames.slice(i, i + 2).join('、'));
@@ -1099,7 +1106,7 @@ TimetableApp.prototype.exportToWord = async function () {
                         ).join('');
                         wordContent += `<td>
                             <div class="cell-lines">
-                                <div class="subject">课程名：${subject.name}</div>
+                                <div class="subject">课程名：${this.escapeHtml(subject.name)}</div>
                                 ${studentLines}
                             </div>
                         </td>`;
@@ -1128,12 +1135,13 @@ TimetableApp.prototype.exportToExcel = async function () {
     try {
         const titleEl = document.getElementById('tableTitle') || document.getElementById('timetableTitle');
         const title = (titleEl && titleEl.value) || '课程表';
+        const safeTitle = this.escapeHtml(this.sanitizeSpreadsheetText(title));
 
         // 创建兼容Excel的HTML格式
         let excelContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <meta charset="utf-8">
-                <title>${title}</title>
+                <title>${safeTitle}</title>
                 <style>
                     body { 
                         font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; 
@@ -1210,7 +1218,7 @@ TimetableApp.prototype.exportToExcel = async function () {
                 </style>
             </head>
             <body>
-                <div class="main-title">${title}</div>
+                <div class="main-title">${safeTitle}</div>
                 <table>
                     <thead>
                         <tr>
@@ -1231,7 +1239,7 @@ TimetableApp.prototype.exportToExcel = async function () {
 
         orderedPeriods.forEach(({ index, period, periodNum }) => {
             excelContent += '<tr>';
-            excelContent += `<td class="period-header">第${periodNum}节${this.settings.showPeriodTime ? `<br><span class="period-time">${period.time}</span>` : ''}</td>`;
+            excelContent += `<td class="period-header">第${periodNum}节${this.settings.showPeriodTime ? `<br><span class="period-time">${this.escapeHtml(this.sanitizeSpreadsheetText(period.time))}</span>` : ''}</td>`;
 
             for (let day = 1; day <= dayCount; day++) {
                 const key = this.buildCellKey(day, index);
@@ -1254,7 +1262,7 @@ TimetableApp.prototype.exportToExcel = async function () {
                 if (subjectId) {
                     const subject = this.subjects.find(s => s.id === subjectId);
                     if (subject) {
-                        const studentNames = students.map(student => student.name);
+                        const studentNames = students.map(student => this.escapeHtml(this.sanitizeSpreadsheetText(student.name)));
                         const studentChunks = [];
                         for (let i = 0; i < studentNames.length; i += 2) {
                             studentChunks.push(studentNames.slice(i, i + 2).join('、'));
@@ -1266,9 +1274,9 @@ TimetableApp.prototype.exportToExcel = async function () {
                             ? ` rowspan="${courseInstance.importPartCount}"`
                             : '';
                         excelContent += `<td${rowSpan}><div class="cell-lines">`;
-                        excelContent += `<div class="subject">课程名：${subject.name}</div>`;
+                        excelContent += `<div class="subject">课程名：${this.escapeHtml(this.sanitizeSpreadsheetText(subject.name))}</div>`;
                         if (courseInstance && courseInstance.importSourceTime) {
-                            excelContent += `<div class="teacher">时间：${courseInstance.importSourceTime}</div>`;
+                            excelContent += `<div class="teacher">时间：${this.escapeHtml(this.sanitizeSpreadsheetText(courseInstance.importSourceTime))}</div>`;
                         }
                         excelContent += studentLines;
                         excelContent += `</div></td>`;

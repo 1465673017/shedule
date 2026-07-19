@@ -485,7 +485,7 @@ TimetableApp.prototype.renderSubjects = function () {
 
         const extraInfo = this.currentPool === 'subject' ? item.teacher : item.grade;
         const extraClass = this.currentPool === 'subject' ? 'teacher-name' : 'grade-label';
-        const extraHtml = extraInfo ? `<div class="${extraClass}">${extraInfo}</div>` : '';
+        const extraHtml = extraInfo ? `<div class="${extraClass}">${this.escapeHtml(extraInfo)}</div>` : '';
         const oneV1Badge = (this.currentPool === 'student' && item.is1v1) ? '<span class="status-badge one-v1">1v1</span>' : '';
         const auditionBadge = (this.currentPool === 'student' && item.isAudition) ? '<span class="status-badge audition">试</span>' : '';
         const completedBadge = (this.currentPool === 'student' && item.completed) ? '<span class="status-badge completed">结</span>' : '';
@@ -501,7 +501,7 @@ TimetableApp.prototype.renderSubjects = function () {
                 </div>
                 ${assignedBadge}
                 <div class="subject-info">
-                    <div class="subject-name">${item.name}</div>
+                    <div class="subject-name">${this.escapeHtml(item.name)}</div>
                     ${extraHtml}
                 </div>
                 <div class="subject-actions">

@@ -1,6 +1,8 @@
 // app-core.js - Core class definition and data management
 // Auto-split from script.js
 
+const TIMETABLE_BACKUP_INTERVAL_MS = 10 * 60 * 1000;
+
 function createDefaultSubjects() {
     return [
         { id: '1', name: '语文', teacher: '', color: '#FFE4E1' },
@@ -497,20 +499,94 @@ class TimetableApp {
             erpData: this.erpData,
             quickSettingsState: this.quickSettingsState
         };
+        let serialized = '';
+        let backupWritten = false;
         try {
-            localStorage.setItem('timetableData', JSON.stringify(data));
+            serialized = JSON.stringify(data);
+            const previous = localStorage.getItem('timetableData');
+            const backupAt = Number(localStorage.getItem('timetableDataBackupAt')) || 0;
+            const shouldRefreshBackup = previous
+                && (!localStorage.getItem('timetableDataBackup') || Date.now() - backupAt >= TIMETABLE_BACKUP_INTERVAL_MS);
+            if (shouldRefreshBackup) {
+                try {
+                    // The primary snapshot was validated by loadData (or produced by
+                    // the last successful save), so copying it does not need another
+                    // expensive JSON.parse on the UI thread.
+                    localStorage.setItem('timetableDataBackup', previous);
+                    backupWritten = true;
+                    localStorage.setItem('timetableDataBackupAt', String(Date.now()));
+                } catch (_) {
+                    // A backup quota failure must not prevent the smaller primary
+                    // update from being attempted.
+                }
+            }
+            localStorage.setItem('timetableData', serialized);
+            return true;
         } catch (e) {
-            alert('保存失败：存储空间不足，请清理旧数据或导出备份。');
+            if (backupWritten) {
+                try {
+                    localStorage.removeItem('timetableDataBackup');
+                    localStorage.removeItem('timetableDataBackupAt');
+                    localStorage.setItem('timetableData', serialized);
+                    return true;
+                } catch (_) {
+                    // Continue to the visible failure below.
+                }
+            }
+            alert('保存失败：存储空间不足。本次修改已撤回并恢复到最后成功保存的状态，请先导出备份或清理旧数据。');
             console.error('保存数据失败:', e);
+            this.restoreRuntimeDataSnapshot(localStorage.getItem('timetableData'));
+            return false;
+        }
+    }
+
+    restoreRuntimeDataSnapshot(serialized) {
+        if (!serialized) return false;
+        try {
+            const parsed = JSON.parse(serialized);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
+            this.subjects = Array.isArray(parsed.subjects) && parsed.subjects.length ? parsed.subjects : createDefaultSubjects();
+            this.students = Array.isArray(parsed.students) ? parsed.students : [];
+            this.manualCourses = Array.isArray(parsed.manualCourses) ? parsed.manualCourses : [];
+            this.erpData = parsed.erpData || (window.createEmptyErpData ? window.createEmptyErpData() : null);
+            this.periods = this.normalizePeriods(parsed.periods || createDefaultPeriods());
+            this.quickSettingsState = parsed.quickSettingsState || createDefaultQuickSettings();
+            window.ScheduleErpService.ensureErpData(this);
+            window.ScheduleErpService.buildTimetableProjection(this);
+            if (typeof this.invalidateStatsCache === 'function') this.invalidateStatsCache();
+            return true;
+        } catch (error) {
+            console.error('恢复最后成功保存的数据失败:', error);
+            return false;
         }
     }
 
     loadData() {
-        const data = localStorage.getItem('timetableData');
+        const primaryData = localStorage.getItem('timetableData');
+        const backupData = localStorage.getItem('timetableDataBackup');
         let hasValidSubjects = false;
+        let parsed = null;
 
-        if (data) {
-            const parsed = JSON.parse(data);
+        if (primaryData) {
+            try {
+                parsed = JSON.parse(primaryData);
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = null;
+            } catch (error) {
+                console.error('主课表数据损坏，尝试恢复备份:', error);
+            }
+        }
+        if (!parsed && backupData) {
+            try {
+                parsed = JSON.parse(backupData);
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = null;
+                if (parsed) localStorage.setItem('timetableData', backupData);
+            } catch (error) {
+                console.error('课表备份数据也无法读取:', error);
+                parsed = null;
+            }
+        }
+
+        if (parsed) {
             this.students = Array.isArray(parsed.students) ? parsed.students : [];
             this.manualCourses = Array.isArray(parsed.manualCourses) ? parsed.manualCourses : [];
             this.erpData = parsed.erpData || null;
@@ -1070,6 +1146,8 @@ class TimetableApp {
         this._temporaryCourseSourceVersion = null;
 
         localStorage.removeItem('timetableData');
+        localStorage.removeItem('timetableDataBackup');
+        localStorage.removeItem('timetableDataBackupAt');
         localStorage.removeItem('timetableGrades');
         localStorage.removeItem('timetableSettings');
         localStorage.removeItem('timetableTitle');
@@ -1488,8 +1566,49 @@ class TimetableApp {
 
 }
 
+function bindStaticDeclarativeHandlers() {
+    const eventNames = ['click', 'input', 'change', 'submit', 'mousedown', 'keydown'];
+    const parseArgument = (token, element) => {
+        const value = token.trim();
+        if (value === 'this.value') return element.value;
+        if (value === 'this.checked') return element.checked;
+        if (/^-?\d+(?:\.\d+)?$/.test(value)) return Number(value);
+        const stringMatch = value.match(/^'([^']*)'$/);
+        if (stringMatch) return stringMatch[1];
+        throw new Error(`Unsupported declarative handler argument: ${value}`);
+    };
+    const invoke = (code, element, event) => {
+        if (code === 'if(event.target===this)app.closeQuickStartModal()') {
+            if (event.target === element) app.closeQuickStartModal();
+            return;
+        }
+        const windowMatch = code.match(/^window\.electronAPI\.windowControl\('([^']+)'\)$/);
+        if (windowMatch) {
+            window.electronAPI.windowControl(windowMatch[1]);
+            return;
+        }
+        const appMatch = code.match(/^app\.([a-zA-Z_$][\w$]*)\((.*)\)$/);
+        if (!appMatch || typeof app[appMatch[1]] !== 'function') throw new Error(`Unsupported declarative handler: ${code}`);
+        const rawArgs = appMatch[2].trim();
+        const args = rawArgs ? rawArgs.split(',').map(token => parseArgument(token, element)) : [];
+        app[appMatch[1]](...args);
+    };
+    const selector = eventNames.map(eventName => `[data-on${eventName}]`).join(',');
+    document.querySelectorAll(selector).forEach(element => {
+        eventNames.forEach(eventName => {
+            if (!element.hasAttribute(`data-on${eventName}`)) return;
+            const code = element.dataset[`on${eventName}`];
+            element.removeAttribute(`data-on${eventName}`);
+            element.addEventListener(eventName, event => invoke(code, element, event));
+        });
+    });
+}
+
 // Initialize app on DOMContentLoaded
 let app;
 document.addEventListener('DOMContentLoaded', () => {
+    if (navigator.userAgent.includes('Electron')) document.documentElement.classList.add('electron-app');
+    if (navigator.platform.startsWith('Mac')) document.documentElement.classList.add('macos');
     app = new TimetableApp();
+    bindStaticDeclarativeHandlers();
 });

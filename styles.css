@@ -9732,6 +9732,11 @@ body.reference-main-ui .sidebar-actions .btn:active {
     box-shadow: 0 2px 7px rgba(40, 74, 116, .12);
 }
 
+body.reference-main-ui .sidebar-actions .btn:focus,
+body.reference-main-ui .sidebar-actions .btn:focus-visible {
+    outline: none;
+}
+
 body.reference-main-ui .subject-pool {
     max-height: none;
     border-radius: 18px;

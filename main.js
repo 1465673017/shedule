@@ -1,9 +1,59 @@
-const { app, BrowserWindow, dialog, ipcMain, Menu, clipboard } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, clipboard, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const isMac = process.platform === 'darwin';
 const appIconPath = path.join(__dirname, 'icon', isMac ? 'orange.png' : 'orange.ico');
-app.setName('A大橙子课时统计（内测版）');
+const APP_NAME = 'A大橙子课时统计';
+const LEGACY_APP_NAME = 'A大橙子课时统计（内测版）';
+const appDataPath = app.getPath('appData');
+app.setName(APP_NAME);
+
+function migrateLegacyUserDataDirectory() {
+    const legacyPath = path.join(appDataPath, LEGACY_APP_NAME);
+    const formalPath = path.join(appDataPath, APP_NAME);
+    if (!fs.existsSync(legacyPath)) {
+        app.setPath('userData', formalPath);
+        return;
+    }
+
+    let displacedFormalPath = null;
+    try {
+        // A formal-version directory may have been created by an earlier empty
+        // launch. Move it aside first so the complete legacy Chromium profile
+        // (including Local Storage/LevelDB) can be renamed as one unit.
+        if (fs.existsSync(formalPath)) {
+            displacedFormalPath = `${formalPath}.migration-${Date.now()}`;
+            fs.renameSync(formalPath, displacedFormalPath);
+        }
+        fs.renameSync(legacyPath, formalPath);
+        app.setPath('userData', formalPath);
+        console.log(`已将内测版数据目录迁移为正式版：${formalPath}`);
+    } catch (error) {
+        console.error('内测版数据目录改名失败，继续使用原数据目录:', error);
+        if (!fs.existsSync(formalPath) && displacedFormalPath && fs.existsSync(displacedFormalPath)) {
+            try {
+                fs.renameSync(displacedFormalPath, formalPath);
+                displacedFormalPath = null;
+            } catch (restoreError) {
+                console.error('恢复正式版目录失败:', restoreError);
+            }
+        }
+        // Never start with an empty profile merely because migration failed.
+        app.setPath('userData', legacyPath);
+        return;
+    }
+
+    if (displacedFormalPath && fs.existsSync(displacedFormalPath)) {
+        try {
+            fs.rmSync(displacedFormalPath, { recursive: true, force: true });
+        } catch (cleanupError) {
+            console.warn('清理迁移前的空正式版目录失败，可稍后手动删除:', cleanupError);
+        }
+    }
+}
+
+migrateLegacyUserDataDirectory();
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {
@@ -14,23 +64,16 @@ function requireAppIcon() {
     if (fs.existsSync(appIconPath)) return true;
     const message = `缺少必需的应用图标：${appIconPath}\n请恢复 ${path.basename(appIconPath)} 后重新启动。`;
     console.error(message);
-    dialog.showErrorBox('无法启动A大橙子课时统计（内测版）', message);
+    dialog.showErrorBox('无法启动A大橙子课时统计', message);
     return false;
 }
 
 // Apply the branded icon to every window opened by a link, including links
 // opened from an existing external document window.
 app.on('web-contents-created', (_event, contents) => {
-    contents.setWindowOpenHandler(() => ({
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-            icon: appIconPath,
-            autoHideMenuBar: true
-        }
-    }));
-
-    contents.on('did-create-window', childWindow => {
-        if (!childWindow.isDestroyed()) childWindow.setIcon(appIconPath);
+    contents.setWindowOpenHandler(({ url }) => {
+        if (/^https:\/\//i.test(url)) shell.openExternal(url).catch(console.error);
+        return { action: 'deny' };
     });
 });
 
@@ -59,13 +102,27 @@ function createWindow() {
         }
     });
 
-    win.loadFile(path.join(__dirname, 'index.html'));
+    const appPageUrl = pathToFileURL(path.join(__dirname, 'index.html')).toString();
+    win.webContents.on('will-navigate', (event, targetUrl) => {
+        if (targetUrl !== appPageUrl) event.preventDefault();
+    });
+    win.loadURL(appPageUrl);
 }
 
 ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileExt }) => {
+    if (typeof data !== 'string') throw new TypeError('Invalid file data');
+    if (encoding !== 'base64' && encoding !== 'utf-8' && encoding !== 'utf8') throw new TypeError('Unsupported file encoding');
+    const normalizedExt = String(fileExt || path.extname(String(defaultName || '')).slice(1)).toLowerCase();
+    const allowedExtensions = new Set(['doc', 'xls', 'png', 'json', 'txt']);
+    if (!allowedExtensions.has(normalizedExt)) throw new TypeError('Unsupported file extension');
+    const estimatedBytes = encoding === 'base64' ? Math.ceil(data.length * 0.75) : Buffer.byteLength(data, 'utf8');
+    if (estimatedBytes > 50 * 1024 * 1024) throw new RangeError('File data exceeds the 50 MB limit');
+    const safeDefaultName = path.basename(String(defaultName || `课程表.${normalizedExt}`))
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+        .slice(0, 180);
     const result = await dialog.showSaveDialog({
-        defaultPath: defaultName || `课程表.${fileExt || 'txt'}`,
-        filters: fileExt ? [{ name: fileExt.toUpperCase(), extensions: [fileExt] }] : undefined
+        defaultPath: safeDefaultName,
+        filters: [{ name: normalizedExt.toUpperCase(), extensions: [normalizedExt] }]
     });
 
     if (result.canceled || !result.filePath) {

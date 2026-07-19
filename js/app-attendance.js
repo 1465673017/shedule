@@ -52,10 +52,10 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
             <div class="attendance-lesson-summary">
                 <div class="attendance-lesson-main">
                     <strong class="attendance-lesson-period">${dayName} ${periodLabel}</strong>
-                    <span class="attendance-lesson-subject">${subject ? subject.name : '无科目'}</span>
+                    <span class="attendance-lesson-subject">${this.escapeHtml(subject ? subject.name : '无科目')}</span>
                     <span class="attendance-lesson-time">${periodInfo ? periodInfo.time : ''}</span>
                 </div>
-                <div class="actual-duration-display" onclick="app.showDurationEditor(event, '${key}')" title="点击设置每个学生的实际上课时长">
+                <div class="actual-duration-display" title="点击设置每个学生的实际上课时长">
                     <span class="actual-duration-label">实上</span>
                     <span class="actual-duration-value">${actualDisplay}</span>
                     <span class="actual-duration-edit-icon" aria-hidden="true">
@@ -144,20 +144,25 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
             <div class="duration-editor-header">设置学生实际上课时长</div>
             <div class="duration-editor-body student-duration-editor-body">
                 ${students.length ? `<div class="student-duration-master-row">
-                    <input type="range" class="duration-range student-duration-master-range" min="0" max="240" step="5" value="${masterMinutes}" oninput="app.syncAllStudentActualDurations('${key}', this.value)">
+                    <input type="range" class="duration-range student-duration-master-range" min="0" max="240" step="5" value="${masterMinutes}">
                 </div>` : ''}
                 ${students.map((student, index) => {
                     const minutes = studentDurations[index];
                     return `<div class="student-duration-row">
-                        <span class="student-duration-name">${student.name}</span>
-                        <input type="range" class="duration-range student-duration-range" data-student-id="${student.id}" min="0" max="240" step="5" value="${minutes}" oninput="app.syncStudentActualDuration('${key}', '${student.id}', this.value)">
-                        <span class="duration-slider-val" id="studentDurationVal-${student.id}">${this.formatDuration(Math.floor(minutes / 60), minutes % 60)}</span>
+                        <span class="student-duration-name">${this.escapeHtml(student.name)}</span>
+                        <input type="range" class="duration-range student-duration-range" data-student-id="${this.escapeHtml(student.id)}" min="0" max="240" step="5" value="${minutes}">
+                        <span class="duration-slider-val" id="studentDurationVal-${this.escapeHtml(student.id)}">${this.formatDuration(Math.floor(minutes / 60), minutes % 60)}</span>
                     </div>`;
                 }).join('') || '<div class="text-muted">暂无学生</div>'}
             </div>
         `;
+        lessonInfo.querySelector('.actual-duration-display')?.addEventListener('click', event => this.showDurationEditor(event, key));
         displayEl.appendChild(editor);
+        editor.querySelector('.student-duration-master-range')?.addEventListener('input', event => {
+            this.syncAllStudentActualDurations(key, event.currentTarget.value);
+        });
         editor.querySelectorAll('.student-duration-range').forEach(range => {
+            range.addEventListener('input', () => this.syncStudentActualDuration(key, range.dataset.studentId, range.value));
             range.addEventListener('wheel', (wheelEvent) => {
                 wheelEvent.preventDefault();
                 const direction = wheelEvent.deltaY > 0 ? -1 : 1;
@@ -317,28 +322,34 @@ TimetableApp.prototype.renderAttendanceStudentList = function(students, key) {
             html += `
                 <div class="lps-item">
                     <div class="lps-identity">
-                        <span class="lps-name">${student.name}</span>
-                        <span class="lps-grade">${student.teacher || ''}</span>
+                        <span class="lps-name">${this.escapeHtml(student.name)}</span>
+                        <span class="lps-grade">${this.escapeHtml(student.teacher || '')}</span>
                     </div>
                     <div class="lps-leave">
                         <button class="recurrence-btn ${recType === 'recurring' ? 'active recurring' : ''} ${auditionDisabled} ${completedDisabled}"
-                                data-sid="${student.id}"
-                                onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'recurring', this)">循环</button>
+                                data-sid="${this.escapeHtml(student.id)}"
+                                data-recurrence="recurring">循环</button>
                         <button class="recurrence-btn ${recType === 'stopped' ? 'active stopped' : ''} ${auditionDisabled} ${completedDisabled}"
-                                data-sid="${student.id}"
-                                onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'stopped', this)">中止</button>
+                                data-sid="${this.escapeHtml(student.id)}"
+                                data-recurrence="stopped">中止</button>
                         <button class="recurrence-btn ${recType === 'temporary' ? 'active temporary' : ''} ${completedDisabled}"
-                                data-sid="${student.id}"
-                                onclick="app.setStudentRecurrenceUI('${key}', '${student.id}', 'temporary', this)">临时</button>
+                                data-sid="${this.escapeHtml(student.id)}"
+                                data-recurrence="temporary">临时</button>
                         <button class="recurrence-btn ${completionClass} ${auditionDisabled}" title="${completionTitle}"
-                                data-sid="${student.id}"
-                                onclick="app.toggleStudentCompleted('${student.id}', this)">结课</button>
+                                data-sid="${this.escapeHtml(student.id)}"
+                                data-action="complete">结课</button>
                     </div>
                 </div>
             `;
         });
 
         container.innerHTML = html;
+        container.querySelectorAll('.recurrence-btn[data-recurrence]').forEach(button => {
+            button.addEventListener('click', () => this.setStudentRecurrenceUI(key, button.dataset.sid, button.dataset.recurrence, button));
+        });
+        container.querySelectorAll('.recurrence-btn[data-action="complete"]').forEach(button => {
+            button.addEventListener('click', () => this.toggleStudentCompleted(button.dataset.sid, button));
+        });
     }
 
 TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
@@ -378,20 +389,20 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
             const status = att[student.id] || defaultStatus;
             html += `
                 <div class="att-row">
-                    <span style="font-size: 13px;">${student.name}<small class="student-actual-duration">实上 ${this.getStudentActualDurationDisplay(key, student.id)}</small></span>
+                    <span style="font-size: 13px;">${this.escapeHtml(student.name)}<small class="student-actual-duration">实上 ${this.escapeHtml(this.getStudentActualDurationDisplay(key, student.id))}</small></span>
                     <div class="att-status">
-                        <button class="att-btn ${status === 'present' ? 'present' : ''}"
-                                onclick="app.setAttendance('${key}', '${student.id}', 'present', this)">出勤</button>
-                        <button class="att-btn ${status === 'leave' ? 'leave' : ''}"
-                                onclick="app.setAttendance('${key}', '${student.id}', 'leave', this)">请假</button>
-                        <button class="att-btn ${status === 'absent' ? 'absent' : ''}"
-                                onclick="app.setAttendance('${key}', '${student.id}', 'absent', this)">缺勤</button>
+                        <button class="att-btn ${status === 'present' ? 'present' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="present">出勤</button>
+                        <button class="att-btn ${status === 'leave' ? 'leave' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="leave">请假</button>
+                        <button class="att-btn ${status === 'absent' ? 'absent' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="absent">缺勤</button>
                     </div>
                 </div>
             `;
         });
 
         container.innerHTML = html;
+        container.querySelectorAll('.att-btn[data-status]').forEach(button => {
+            button.addEventListener('click', () => this.setAttendance(key, button.dataset.studentId, button.dataset.status, button));
+        });
     }
 
 TimetableApp.prototype.setAttendance = function(key, studentId, status, btn) {

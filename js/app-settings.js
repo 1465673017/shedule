@@ -63,13 +63,15 @@ TimetableApp.prototype.renderGrades = function() {
             card.dataset.index = index;
             
             card.innerHTML = `
-                <div class="grade-color" style="background: ${grade.color};"></div>
-                <div class="grade-name">${grade.name}</div>
+                <div class="grade-color" style="background: ${this.escapeHtml(grade.color)};"></div>
+                <div class="grade-name">${this.escapeHtml(grade.name)}</div>
                 <div class="grade-actions">
-                    <button class="btn-icon edit-btn" title="编辑" onclick="app.editGrade('${grade.id}')"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
-                    <button class="btn-icon delete-btn" title="删除" onclick="app.deleteGrade('${grade.id}')"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+                    <button class="btn-icon edit-btn" title="编辑"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5C17.3284 2.67157 18.6716 2.67157 19.5 3.5L20.5 4.5C21.3284 5.32843 21.3284 6.67157 20.5 7.5L8 20H4V16L16.5 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+                    <button class="btn-icon delete-btn" title="删除"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11V17M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7L6 19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19L19 7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7V4H15V7" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
                 </div>
             `;
+            card.querySelector('.edit-btn').addEventListener('click', () => this.editGrade(grade.id));
+            card.querySelector('.delete-btn').addEventListener('click', () => this.deleteGrade(grade.id));
             
             gradesList.appendChild(card);
         });
@@ -423,6 +425,16 @@ TimetableApp.prototype.escapeHtml = function(value) {
         .replace(/'/g, '&#39;');
 }
 
+TimetableApp.prototype.escapeInlineJsString = function(value) {
+    return String(value ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+}
+
 TimetableApp.prototype.renderStageSettings = function() {
     if (this._activeSharedDateRangeScope && this._activeSharedDateRangeScope.startsWith('stage-')) {
         this.closeSharedDateRangePicker(this._activeSharedDateRangeScope);
@@ -456,15 +468,20 @@ TimetableApp.prototype.renderStageSettings = function() {
         <div class="form-group stage-month-field" data-stage-index="${index}">
             <label>${names[index] || `第${index + 1}`}段月份范围</label>
             <div class="stage-month-range-inputs">
-                <input type="number" id="stageStartMonth-${index}" aria-label="${names[index] || `第${index + 1}`}段起始月" class="setting-input" min="1" max="12" value="${range[0]}" oninput="app.updateStageQuickValidation()" onchange="app.recalculateStageRanges()">
+                <input type="number" id="stageStartMonth-${index}" aria-label="${names[index] || `第${index + 1}`}段起始月" class="setting-input" min="1" max="12" value="${range[0]}">
                 <span>至</span>
-                <input type="number" id="stageEndMonth-${index}" aria-label="${names[index] || `第${index + 1}`}段结束月" class="setting-input" min="1" max="120" value="${range[1]}" oninput="app.updateStageQuickValidation()" onchange="app.recalculateStageRanges()">
+                <input type="number" id="stageEndMonth-${index}" aria-label="${names[index] || `第${index + 1}`}段结束月" class="setting-input" min="1" max="120" value="${range[1]}">
                 <span>月</span>
             </div>
         </div>`).join('');
+    monthRanges.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('input', () => this.updateStageQuickValidation());
+        input.addEventListener('change', () => this.recalculateStageRanges());
+    });
     this.updateStageQuickValidation();
     list.innerHTML = '';
     this.settings.stages.forEach((stage, index) => {
+        if (!/^[a-zA-Z0-9_-]+$/.test(String(stage.id || ''))) stage.id = `stage_${Date.now()}_${index}`;
         const row = document.createElement('div');
         row.className = 'stage-setting-row';
         const names = ['第一', '第二', '第三', '第四', '第五', '第六', '第七', '第八', '第九', '第十', '第十一', '第十二'];
@@ -473,25 +490,33 @@ TimetableApp.prototype.renderStageSettings = function() {
         const start = this.parseDateInputValue(stage.startDate);
         const end = this.parseDateInputValue(stage.endDate);
         const rangeText = start && end ? this.formatSharedDateRangeLabel(start, end) : '请选择日期范围';
-        row.innerHTML = `<input type="text" class="setting-input stage-name-input" maxlength="20" aria-label="阶段名称" value="${this.escapeHtml(stage.name)}" oninput="app.updateStage('${stage.id}', 'name', this.value)">
+        row.innerHTML = `<input type="text" class="setting-input stage-name-input" maxlength="20" aria-label="阶段名称" value="${this.escapeHtml(stage.name)}">
             <div class="shared-date-range-picker stage-date-range" id="stageRange-${stage.id}">
-                <input type="hidden" id="stageStart-${stage.id}" value="${stage.startDate || ''}">
-                <input type="hidden" id="stageEnd-${stage.id}" value="${stage.endDate || ''}">
-                <button type="button" class="stats-date-range-picker" onclick="app.toggleStageDateRangePicker('${stage.id}', this)">
+                <input type="hidden" id="stageStart-${stage.id}" value="${this.escapeHtml(stage.startDate || '')}">
+                <input type="hidden" id="stageEnd-${stage.id}" value="${this.escapeHtml(stage.endDate || '')}">
+                <button type="button" class="stats-date-range-picker">
                     <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                    <span class="stats-date-range-value" id="stageRangeText-${stage.id}">${rangeText}</span>
+                    <span class="stats-date-range-value" id="stageRangeText-${stage.id}">${this.escapeHtml(rangeText)}</span>
                     <span class="stats-date-range-caret">&#9662;</span>
                 </button>
                 <div class="stats-date-popover stage-date-popover" id="stagePopover-${stage.id}" style="display:none;">
-                    <div class="stats-calendar-header"><button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('${scope}', -1)">&#8249;</button><div class="stats-calendar-title" id="stageCalendarTitle-${stage.id}"></div><button type="button" class="stats-calendar-nav" onclick="app.changeSharedCalendarMonth('${scope}', 1)">&#8250;</button></div>
+                    <div class="stats-calendar-header"><button type="button" class="stats-calendar-nav" data-month-delta="-1">&#8249;</button><div class="stats-calendar-title" id="stageCalendarTitle-${stage.id}"></div><button type="button" class="stats-calendar-nav" data-month-delta="1">&#8250;</button></div>
                     <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
                     <div class="stats-calendar-grid" id="stageCalendarGrid-${stage.id}"></div>
                 </div>
             </div>
             <div class="stage-order-actions">
-                <button type="button" class="stage-order-button" aria-label="上移${this.escapeHtml(stage.name)}" title="上移" ${index === 0 ? 'disabled' : ''} onclick="app.moveStage('${stage.id}', -1)">↑</button>
-                <button type="button" class="stage-order-button" aria-label="下移${this.escapeHtml(stage.name)}" title="下移" ${index === this.settings.stages.length - 1 ? 'disabled' : ''} onclick="app.moveStage('${stage.id}', 1)">↓</button>
+                <button type="button" class="stage-order-button" data-stage-delta="-1" aria-label="上移${this.escapeHtml(stage.name)}" title="上移" ${index === 0 ? 'disabled' : ''}>↑</button>
+                <button type="button" class="stage-order-button" data-stage-delta="1" aria-label="下移${this.escapeHtml(stage.name)}" title="下移" ${index === this.settings.stages.length - 1 ? 'disabled' : ''}>↓</button>
             </div>`;
+        row.querySelector('.stage-name-input').addEventListener('input', event => this.updateStage(stage.id, 'name', event.currentTarget.value));
+        row.querySelector('.stats-date-range-picker').addEventListener('click', event => this.toggleStageDateRangePicker(stage.id, event.currentTarget));
+        row.querySelectorAll('.stats-calendar-nav[data-month-delta]').forEach(button => {
+            button.addEventListener('click', () => this.changeSharedCalendarMonth(scope, Number(button.dataset.monthDelta)));
+        });
+        row.querySelectorAll('.stage-order-button[data-stage-delta]').forEach(button => {
+            button.addEventListener('click', () => this.moveStage(stage.id, Number(button.dataset.stageDelta)));
+        });
         list.appendChild(row);
     });
     if (addZone) {

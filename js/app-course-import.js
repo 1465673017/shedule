@@ -32,7 +32,8 @@
         const p = String(text || '').split('-').map(Number);
         if (p.length !== 3 || p.some(n => !Number.isFinite(n))) return null;
         const result = new Date(p[0], p[1] - 1, p[2]);
-        return Number.isNaN(result.getTime()) ? null : result;
+        if (Number.isNaN(result.getTime()) || result.getFullYear() !== p[0] || result.getMonth() !== p[1] - 1 || result.getDate() !== p[2]) return null;
+        return result;
     }
 
     function stageOccurrenceForDate(app, referenceDate) {
@@ -157,6 +158,8 @@
 
     function ensureStudent(app, source, course, oneToOne) {
         const externalId = String(source.id || '');
+        const externalIdHash = Array.from(externalId).reduce((hash, char) => ((hash * 31) + char.codePointAt(0)) >>> 0, 0).toString(36);
+        const safeExternalId = externalId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64) + '_' + externalIdHash;
         const grade = String(course.grade && course.grade.name || '').trim();
         const classType = oneToOne ? '1v1' : '1vN';
         const studentClassType = student => student.classType || (student.is1v1 ? '1v1' : '1vN');
@@ -173,7 +176,7 @@
         if (!student) {
             student = {
                 id: externalId
-                    ? `import_student_${externalId}_${classType}`
+                    ? `import_student_${safeExternalId}_${classType}`
                     : `import_student_${Date.now()}_${classType}_${Math.random().toString(36).slice(2, 7)}`,
                 name: source.name,
                 grade
@@ -277,6 +280,24 @@
             instance.updatedAt = new Date().toISOString();
         });
         window.ScheduleErpService.buildTimetableProjection(app);
+    }
+
+    function createImportSnapshot(app) {
+        return JSON.parse(JSON.stringify({
+            subjects: app.subjects || [],
+            students: app.students || [],
+            erpData: app.erpData || null
+        }));
+    }
+
+    function restoreImportSnapshot(app, snapshot) {
+        if (!snapshot) return;
+        app.subjects = snapshot.subjects;
+        app.students = snapshot.students;
+        app.erpData = snapshot.erpData;
+        window.ScheduleErpService.ensureErpData(app);
+        window.ScheduleErpService.buildTimetableProjection(app);
+        app.saveData();
     }
 
     function importCourses(app, input, options = {}) {
@@ -429,9 +450,16 @@
                 overwrite = await window.showAppConfirm(
                     `本周有旧数据未清理，是否覆盖旧数据？\n\n确定：清理 ${this.formatLocalDate(plan.rangeStart)} 至 ${this.formatLocalDate(plan.rangeEnd)} 内的所有课程后导入。\n取消：保留原课程，只在空课位新增数据。`
                 );
+                var importSnapshot = overwrite ? createImportSnapshot(this) : null;
                 if (overwrite) clearCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
             }
-            const result = importCourses(this, markedInput.text, { ...options, plan, skipOccupied: hasOldCourses && !overwrite });
+            let result;
+            try {
+                result = importCourses(this, markedInput.text, { ...options, plan, skipOccupied: hasOldCourses && !overwrite });
+            } catch (error) {
+                if (importSnapshot) restoreImportSnapshot(this, importSnapshot);
+                throw error;
+            }
             const skippedText = result.skippedCourseCount > 0 ? `，跳过 ${result.skippedCourseCount} 节已占用课程` : '';
             const stageText = markerStageImport ? '，已按阶段起点导入' : '';
             message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生${skippedText}${stageText}`;
@@ -464,13 +492,20 @@
                 overwrite = await window.showAppConfirm(
                     `本周有旧数据未清理，是否覆盖旧数据？\n\n确定：清理 ${this.formatLocalDate(plan.rangeStart)} 至 ${this.formatLocalDate(plan.rangeEnd)} 内的所有课程后导入。\n取消：保留原课程，只在空课位新增数据。`
                 );
+                var importSnapshot = overwrite ? createImportSnapshot(this) : null;
                 if (overwrite) clearCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
             }
-            const result = importCourses(this, input, {
-                ...options,
-                plan,
-                skipOccupied: hasOldCourses && !overwrite
-            });
+            let result;
+            try {
+                result = importCourses(this, input, {
+                    ...options,
+                    plan,
+                    skipOccupied: hasOldCourses && !overwrite
+                });
+            } catch (error) {
+                if (importSnapshot) restoreImportSnapshot(this, importSnapshot);
+                throw error;
+            }
             const skippedText = result.skippedCourseCount > 0 ? `，跳过 ${result.skippedCourseCount} 节已占用课程` : '';
             message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生${skippedText}`;
         } catch (error) {

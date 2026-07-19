@@ -4,14 +4,11 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>A大橙子课时统计（内测版）</title>
+    <title>A大橙子课时统计（正式版 1.2）</title>
     <link rel="icon" type="image/png" href="./icon/orange.png">
-    <script>
-        if (navigator.userAgent.includes('Electron')) document.documentElement.classList.add('electron-app');
-        if (navigator.platform.startsWith('Mac')) document.documentElement.classList.add('macos');
-    </script>
     <link rel="stylesheet" href="./styles.css">
 </head>
 
@@ -21,17 +18,17 @@
             <img src="./icon/orange.png" alt="" class="electron-app-logo">
             <div class="electron-app-brand-copy">
                 <strong>A大橙子课时统计</strong>
-                <span>课表工作台 · 内测版</span>
+                <span>课表工作台 · 正式版 1.2</span>
             </div>
         </div>
     </header>
     <div class="electron-window-controls" aria-label="窗口控制">
             <button type="button" aria-label="最小化" title="最小化"
-                onclick="window.electronAPI.windowControl('minimize')">&#8722;</button>
+                data-onclick="window.electronAPI.windowControl('minimize')">&#8722;</button>
             <button type="button" aria-label="最大化或还原" title="最大化或还原"
-                onclick="window.electronAPI.windowControl('maximize')">&#9633;</button>
+                data-onclick="window.electronAPI.windowControl('maximize')">&#9633;</button>
             <button type="button" class="electron-window-close" aria-label="关闭" title="关闭"
-                onclick="window.electronAPI.windowControl('close')">&#215;</button>
+                data-onclick="window.electronAPI.windowControl('close')">&#215;</button>
     </div>
     <div id="appMessageModal" class="modal app-message-modal" role="dialog" aria-modal="true"
         aria-labelledby="appMessageTitle">
@@ -40,7 +37,7 @@
                 <img src="./icon/orange.png" alt="" class="app-message-logo">
                 <div>
                     <h3 id="appMessageTitle">A大橙子课时统计</h3>
-                    <span>内测版</span>
+                    <span>正式版 1.2</span>
                 </div>
             </div>
             <div id="appMessageText" class="app-message-text"></div>
@@ -611,7 +608,7 @@
                     <h3 id="modalTitle">科目设置</h3>
                     <p id="entityModalSubtitle" class="modal-subtitle">设置科目名称、老师和显示颜色</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeSubjectModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeSubjectModal()">×</button>
             </div>
             <form id="subjectForm">
                 <div class="modal-body">
@@ -634,9 +631,9 @@
                             </div>
                             <div class="student-type-actions">
                                 <button type="button" id="oneV1Btn" class="one-v1-btn"
-                                    onclick="app.toggleOneV1()">1v1</button>
+                                    data-onclick="app.toggleOneV1()">1v1</button>
                                 <button type="button" id="auditionBtn" class="one-v1-btn"
-                                    onclick="app.toggleAudition()">试听</button>
+                                    data-onclick="app.toggleAudition()">试听</button>
                             </div>
                         </div>
                     </div>
@@ -709,7 +706,7 @@
                     <p class="modal-subtitle">年级用 1–12 表示一年级至高三；不写年级时默认为一年级</p>
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭"
-                    onclick="app.closeStudentBatchModal()">×</button>
+                    data-onclick="app.closeStudentBatchModal()">×</button>
             </div>
             <form id="studentBatchForm">
                 <div class="modal-body">
@@ -721,7 +718,7 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" id="clearStudentBatchBtn" class="btn secondary">清除</button>
-                    <button type="button" class="btn secondary" onclick="app.pasteStudentBatchText()">粘贴</button>
+                    <button type="button" class="btn secondary" data-onclick="app.pasteStudentBatchText()">粘贴</button>
                     <button type="submit" class="btn primary">识别并导入</button>
                 </div>
             </form>
@@ -736,7 +733,7 @@
                     <h3>修改课时</h3>
                     <p class="modal-subtitle">设置课时名称以及开始、结束时间</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTimeModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeTimeModal()">×</button>
             </div>
             <form id="timeForm">
                 <div class="modal-body">
@@ -843,7 +840,7 @@
                     <h3 id="addLessonTitle">添加课程</h3>
                     <p class="modal-subtitle">选择科目和参与本节课的学生</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeAddLessonModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeAddLessonModal()">×</button>
             </div>
             <form id="addLessonForm">
                 <div class="modal-body">
@@ -881,7 +878,7 @@
                     <p class="modal-subtitle">记录本节课的学生出勤情况</p>
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭"
-                    onclick="app.closeAttendanceModal()">×</button>
+                    data-onclick="app.closeAttendanceModal()">×</button>
             </div>
             <div id="attendanceContent" class="modal-body">
                 <div id="attendanceLessonInfo"
@@ -905,20 +902,20 @@
                     <h3 id="statsTitle">课时统计总览</h3>
                     <p class="stats-subtitle" id="statsSubtitle">用图表和摘要快速查看这个时间范围的课程表现。</p>
                 </div>
-                <button class="modal-close" onclick="app.closeStatsModal()">&times;</button>
+                <button class="modal-close" data-onclick="app.closeStatsModal()">&times;</button>
             </div>
             <div class="stats-tabs" id="statsTabs">
-                <button class="stats-tab active" data-tab="day" onclick="app.switchStatsTab('day')">日统计</button>
-                <button class="stats-tab stats-tab-week" data-tab="week" onclick="app.switchStatsTab('week')">周统计<span
+                <button class="stats-tab active" data-tab="day" data-onclick="app.switchStatsTab('day')">日统计</button>
+                <button class="stats-tab stats-tab-week" data-tab="week" data-onclick="app.switchStatsTab('week')">周统计<span
                         class="stats-week-mode-badge" id="statsWeekModeBadge" hidden>自</span></button>
-                <button class="stats-tab" data-tab="month" onclick="app.switchStatsTab('month')">月统计</button>
-                <button class="stats-tab" data-tab="year" onclick="app.switchStatsTab('year')">年统计</button>
+                <button class="stats-tab" data-tab="month" data-onclick="app.switchStatsTab('month')">月统计</button>
+                <button class="stats-tab" data-tab="year" data-onclick="app.switchStatsTab('year')">年统计</button>
             </div>
             <div class="stats-filter-row">
                 <div class="stats-custom-range" id="statsCustomRange">
                     <input type="hidden" id="statsStartDate">
                     <input type="hidden" id="statsEndDate">
-                    <button type="button" class="stats-date-range-picker" onclick="app.toggleStatsDatePicker()">
+                    <button type="button" class="stats-date-range-picker" data-onclick="app.toggleStatsDatePicker()">
                         <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                 <path
                                     d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
@@ -933,10 +930,10 @@
                     <div class="stats-date-popover" id="statsDatePopover" style="display:none;">
                         <div class="stats-calendar-header">
                             <button type="button" class="stats-calendar-nav"
-                                onclick="app.changeStatsCalendarMonth(-1)">&#8249;</button>
+                                data-onclick="app.changeStatsCalendarMonth(-1)">&#8249;</button>
                             <div class="stats-calendar-title" id="statsCalendarTitle"></div>
                             <button type="button" class="stats-calendar-nav"
-                                onclick="app.changeStatsCalendarMonth(1)">&#8250;</button>
+                                data-onclick="app.changeStatsCalendarMonth(1)">&#8250;</button>
                         </div>
                         <div class="stats-calendar-weekdays">
                             <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
@@ -947,11 +944,11 @@
                 <div class="chart-category-tabs">
                     <span class="chart-category-label">统计视图</span>
                     <button class="chart-category-tab active" data-category="duration"
-                        onclick="app.switchChartCategory('duration')">课时统计</button>
+                        data-onclick="app.switchChartCategory('duration')">课时统计</button>
                     <button class="chart-category-tab" data-category="student"
-                        onclick="app.switchChartCategory('student')">人数统计</button>
+                        data-onclick="app.switchChartCategory('student')">人数统计</button>
                     <button class="chart-category-tab" data-category="salary"
-                        onclick="app.switchChartCategory('salary')">课时费统计</button>
+                        data-onclick="app.switchChartCategory('salary')">课时费统计</button>
                 </div>
             </div>
             <div id="statsContent">
@@ -1011,7 +1008,7 @@
                 </div>
                 <div class="stats-detail-section" id="statsDetailSection">
                     <button type="button" class="stats-detail-toggle" id="statsDetailToggle"
-                        onclick="app.toggleStatsDetails()">
+                        data-onclick="app.toggleStatsDetails()">
                         <span class="stats-detail-toggle-copy">
                             <span class="stats-detail-toggle-title">课程明细</span>
                             <span class="stats-detail-toggle-subtitle" id="statsDetailSummary">展开查看详细记录</span>
@@ -1034,7 +1031,7 @@
                     <h3>工资设置</h3>
                     <p class="modal-subtitle">星级加成统一叠加到全部阶梯课时单价</p>
                 </div>
-                <button class="modal-close" type="button" onclick="app.closeSalarySettings()">&times;</button>
+                <button class="modal-close" type="button" data-onclick="app.closeSalarySettings()">&times;</button>
             </div>
             <div class="modal-body salary-settings-body">
                 <div class="salary-settings-grid">
@@ -1044,8 +1041,8 @@
                 <div class="salary-rate-preview" id="salaryRatePreview"></div>
             </div>
             <div class="form-actions">
-                <button class="btn secondary" type="button" onclick="app.closeSalarySettings()">取消</button>
-                <button class="btn primary" type="button" onclick="app.saveSalarySettings()">保存设置</button>
+                <button class="btn secondary" type="button" data-onclick="app.closeSalarySettings()">取消</button>
+                <button class="btn primary" type="button" data-onclick="app.saveSalarySettings()">保存设置</button>
             </div>
         </div>
     </div>
@@ -1057,7 +1054,7 @@
                     <h3>课时计算规则</h3>
                     <p class="modal-subtitle">折算总课时用于计算工资课时和阶梯课时费</p>
                 </div>
-                <button class="modal-close" type="button" onclick="app.closeSalaryRuleModal()">&times;</button>
+                <button class="modal-close" type="button" data-onclick="app.closeSalaryRuleModal()">&times;</button>
             </div>
             <div class="salary-rule-content">
                 <section class="salary-rule-formula"><h4>折算公式</h4><p>折算课时 = 实际上课时长 × 班型系数 × 年级系数</p></section>
@@ -1072,7 +1069,7 @@
                 </div>
                 <section class="salary-rule-example"><h4>计算示例</h4><p>高一1v2上课1小时：<strong>1 × 1.2 × 1.2 = 1.44</strong> 个折算课时。若教师为1星，该课时进入第一档时按45元/小时计算。</p></section>
             </div>
-            <div class="form-actions"><button class="btn primary" type="button" onclick="app.closeSalaryRuleModal()">知道了</button></div>
+            <div class="form-actions"><button class="btn primary" type="button" data-onclick="app.closeSalaryRuleModal()">知道了</button></div>
         </div>
     </div>
 
@@ -1087,27 +1084,27 @@
                     <div class="text-stats-range-row">
                         <div class="text-stats-navigator">
                             <button type="button" class="text-stats-nav-btn" id="textStatsPrevBtn" aria-label="上一项"
-                                title="上一项" onclick="app.changeTextStatsRange(-1)">
+                                title="上一项" data-onclick="app.changeTextStatsRange(-1)">
                                 <span class="text-stats-nav-icon" aria-hidden="true">‹</span>
                             </button>
                             <div class="text-stats-range-center">
                                 <input type="date" class="text-stats-date-input" id="textStatsDateInput"
-                                    aria-label="选择统计日期" onchange="app.setTextStatsDate(this.value)">
+                                    aria-label="选择统计日期" data-onchange="app.setTextStatsDate(this.value)">
                             </div>
                             <button type="button" class="text-stats-nav-btn" id="textStatsNextBtn" aria-label="下一项"
-                                title="下一项" onclick="app.changeTextStatsRange(1)">
+                                title="下一项" data-onclick="app.changeTextStatsRange(1)">
                                 <span class="text-stats-nav-icon" aria-hidden="true">›</span>
                             </button>
                         </div>
                     </div>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeTextStatsModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeTextStatsModal()">×</button>
             </div>
             <div class="stats-tabs" id="textStatsTabs">
-                <button class="stats-tab active" data-tab="day" onclick="app.switchTextStatsTab('day')">日统计</button>
-                <button class="stats-tab" data-tab="week" onclick="app.switchTextStatsTab('week')">周统计</button>
-                <button class="stats-tab" data-tab="month" onclick="app.switchTextStatsTab('month')">月统计</button>
-                <button class="stats-tab" data-tab="year" onclick="app.switchTextStatsTab('year')">年统计</button>
+                <button class="stats-tab active" data-tab="day" data-onclick="app.switchTextStatsTab('day')">日统计</button>
+                <button class="stats-tab" data-tab="week" data-onclick="app.switchTextStatsTab('week')">周统计</button>
+                <button class="stats-tab" data-tab="month" data-onclick="app.switchTextStatsTab('month')">月统计</button>
+                <button class="stats-tab" data-tab="year" data-onclick="app.switchTextStatsTab('year')">年统计</button>
             </div>
             <div class="text-stats-summary-panel">
                 <div class="text-stats-summary-head">
@@ -1134,7 +1131,7 @@
                     <h3>设置</h3>
                     <p class="modal-subtitle">管理主题、年级、阶段和每日课时时间</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeSettingsModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeSettingsModal()">×</button>
             </div>
             <div class="settings-content">
                 <div class="settings-tabs">
@@ -1152,7 +1149,7 @@
                                 <p class="setting-description">开启后，今天以前的排课和出勤数据将无法修改。</p>
                             </div>
                             <button type="button" id="historyProtectionToggle" class="toggle-switch"
-                                onclick="app.toggleHistoryProtection()">已关闭</button>
+                                data-onclick="app.toggleHistoryProtection()">已关闭</button>
                         </div>
                         <div class="basic-setting-row">
                             <div>
@@ -1160,7 +1157,7 @@
                                 <p class="setting-description">选择应用界面的整体配色。</p>
                             </div>
                             <select id="themeSelect" class="setting-input"
-                                onchange="app.applyPredefinedTheme(this.value)">
+                                data-onchange="app.applyPredefinedTheme(this.value)">
                                 <option value="default">默认主题</option>
                                 <option value="dark">暗色主题</option>
                                 <option value="mint">浅绿色主题</option>
@@ -1173,7 +1170,7 @@
                             </div>
                             <div class="zoom-setting-control">
                                 <input type="range" id="pageZoomRange" min="75" max="125" step="5" value="100"
-                                    oninput="app.setPageZoom(this.value)">
+                                    data-oninput="app.setPageZoom(this.value)">
                                 <output id="pageZoomValue" for="pageZoomRange">100%</output>
                             </div>
                         </div>
@@ -1183,7 +1180,7 @@
                                 <p class="setting-description">无学科背景的课程默认归入所选科目；不选择时归为未分类。</p>
                             </div>
                             <select id="teacherSubjectSelect" class="setting-input"
-                                onchange="app.setTeacherSubject(this.value)">
+                                data-onchange="app.setTeacherSubject(this.value)">
                                 <option value="">未选择（未分类）</option>
                             </select>
                         </div>
@@ -1267,10 +1264,10 @@
                     <div class="settings-section">
                         <div class="settings-header">
                             <h4>年级设置</h4>
-                            <button onclick="app.randomizeGradeColors()" class="btn secondary btn-sm">随机颜色</button>
+                            <button data-onclick="app.randomizeGradeColors()" class="btn secondary btn-sm">随机颜色</button>
                         </div>
                         <div id="gradesList" class="grades-list"></div>
-                        <div class="period-add-zone" onclick="app.addGrade()">
+                        <div class="period-add-zone" data-onclick="app.addGrade()">
                             <span>+ 添加年级</span>
                         </div>
                     </div>
@@ -1283,42 +1280,42 @@
                                 <h4>快速设置</h4>
                                 <button type="button" id="segmentedSchedulingToggle"
                                     class="toggle-switch stage-scheduling-toggle"
-                                    onclick="app.toggleSegmentedScheduling()">开启分段排课</button>
+                                    data-onclick="app.toggleSegmentedScheduling()">开启分段排课</button>
                             </div>
                             <div class="stage-quick-control-row">
                                 <div class="form-group">
                                     <label for="stageCountInput">全年分段数量</label>
                                     <input type="number" id="stageCountInput" value="4" min="1" max="12"
-                                        class="setting-input" onchange="app.setStageCount(this.value)">
+                                        class="setting-input" data-onchange="app.setStageCount(this.value)">
                                 </div>
                                 <div class="form-group">
                                     <label for="firstStageStartDate">第一阶段起始日期</label>
                                     <input type="date" id="firstStageStartDate" class="setting-input"
-                                        onchange="app.recalculateStageRanges()">
+                                        data-onchange="app.recalculateStageRanges()">
                                 </div>
                             </div>
                             <div id="stageMonthRanges" class="stage-month-ranges"></div>
                             <div id="stageQuickMessage" class="stage-quick-message" aria-live="polite"></div>
                             <button type="button" id="stageQuickApplyBtn" class="btn primary stage-quick-apply"
-                                onclick="app.applyStageQuickSettings()">应用快速设置</button>
+                                data-onclick="app.applyStageQuickSettings()">应用快速设置</button>
                         </div>
                         <button type="button" class="advanced-settings-toggle stage-advanced-toggle"
                             aria-expanded="false" aria-controls="stageAdvancedSettings"
-                            onclick="app.toggleStageAdvancedSettings()">
+                            data-onclick="app.toggleStageAdvancedSettings()">
                             <span>高级设置 <small>分时间段设置</small></span>
                             <span class="toggle-icon" aria-hidden="true"></span>
                         </button>
                         <div class="advanced-settings stage-advanced-settings" id="stageAdvancedSettings">
                             <div id="stagesList" class="stages-list"></div>
                             <button type="button" id="stageAddZone" class="period-add-zone stage-add-zone"
-                                onclick="app.addStage()">
+                                data-onclick="app.addStage()">
                                 <span>+ 添加阶段</span>
                             </button>
                         </div>
                         <div class="form-actions stage-settings-footer" id="stageAdvancedSaveActions"
                             style="display:none;">
                             <span id="stageSettingsMessage" class="stage-settings-message" aria-live="polite"></span>
-                            <button type="button" class="btn primary" onclick="app.saveStageSettings()">保存</button>
+                            <button type="button" class="btn primary" data-onclick="app.saveStageSettings()">保存</button>
                         </div>
                     </div>
                 </div>
@@ -1330,7 +1327,7 @@
                                 <div class="quick-settings-header">
                                     <h4>快速设置</h4>
                                     <button id="showPeriodTimeToggle" class="toggle-switch"
-                                        onclick="app.toggleShowPeriodTime()">
+                                        data-onclick="app.toggleShowPeriodTime()">
                                         显示课时时间
                                     </button>
                                 </div>
@@ -1373,12 +1370,12 @@
                                             class="setting-input">
                                     </div>
                                 </div>
-                                <button onclick="app.applyQuickSettings()" class="btn primary"
+                                <button data-onclick="app.applyQuickSettings()" class="btn primary"
                                     style="margin-top: 12px; width: 100%;">应用快速设置</button>
                             </div>
 
                             <button type="button" class="advanced-settings-toggle" aria-expanded="false"
-                                aria-controls="advancedSettings" onclick="app.toggleAdvancedSettings()">
+                                aria-controls="advancedSettings" data-onclick="app.toggleAdvancedSettings()">
                                 <span>高级设置 <small>自定义课时</small></span>
                                 <span class="toggle-icon" aria-hidden="true"></span>
                             </button>
@@ -1388,7 +1385,7 @@
                         </div>
                         <div class="form-actions time-settings-footer" id="timeAdvancedSaveActions"
                             style="display: none;">
-                            <button onclick="app.saveTimeManagement()" class="btn primary">保存</button>
+                            <button data-onclick="app.saveTimeManagement()" class="btn primary">保存</button>
                         </div>
                     </div>
                 </div>
@@ -1404,7 +1401,7 @@
                     <h3 id="gradeModalTitle">添加年级</h3>
                     <p class="modal-subtitle">设置年级名称和学生卡片的标识颜色</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeGradeModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeGradeModal()">×</button>
             </div>
             <form id="gradeForm">
                 <div class="modal-body">
@@ -1473,15 +1470,15 @@
                     <h3>重置选项</h3>
                     <p class="modal-subtitle">请选择需要清除的数据范围</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeResetModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeResetModal()">×</button>
             </div>
             <div style="margin-bottom: 16px; color: #666; font-size: 14px; line-height: 1.7;">
                 请选择要执行的重置范围。
             </div>
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button type="button" class="btn danger" onclick="app.resetTimetable()"
+                <button type="button" class="btn danger" data-onclick="app.resetTimetable()"
                     style="width: 100%;">全部重置</button>
-                <button type="button" class="btn secondary" onclick="app.resetScheduleOnly()"
+                <button type="button" class="btn secondary" data-onclick="app.resetScheduleOnly()"
                     style="width: 100%;">重置课表</button>
             </div>
             <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #eee;">
@@ -1491,7 +1488,7 @@
                         <input type="hidden" id="customResetStartDate">
                         <input type="hidden" id="customResetEndDate">
                         <button type="button" class="stats-date-range-picker"
-                            onclick="app.toggleSharedDateRangePicker('reset')">
+                            data-onclick="app.toggleSharedDateRangePicker('reset')">
                             <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                     <path
                                         d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
@@ -1506,10 +1503,10 @@
                         <div class="stats-date-popover" id="resetDatePopover" style="display:none;">
                             <div class="stats-calendar-header">
                                 <button type="button" class="stats-calendar-nav"
-                                    onclick="app.changeSharedCalendarMonth('reset', -1)">&#8249;</button>
+                                    data-onclick="app.changeSharedCalendarMonth('reset', -1)">&#8249;</button>
                                 <div class="stats-calendar-title" id="resetCalendarTitle"></div>
                                 <button type="button" class="stats-calendar-nav"
-                                    onclick="app.changeSharedCalendarMonth('reset', 1)">&#8250;</button>
+                                    data-onclick="app.changeSharedCalendarMonth('reset', 1)">&#8250;</button>
                             </div>
                             <div class="stats-calendar-weekdays">
                                 <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
@@ -1518,7 +1515,7 @@
                         </div>
                     </div>
                     <button type="button" class="btn danger reset-date-action-btn"
-                        onclick="app.resetScheduleByCustomRange()">按日期重置</button>
+                        data-onclick="app.resetScheduleByCustomRange()">按日期重置</button>
                 </div>
                 <div style="margin-top: 8px; color: #888; font-size: 12px; line-height: 1.6;">
                     依次选择起点和终点，只清除所选日期范围内的课程。
@@ -1538,7 +1535,7 @@
                     <h3>导出选项</h3>
                     <p class="modal-subtitle">选择需要导出的内容和文件格式</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭" onclick="app.closeExportModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeExportModal()">×</button>
             </div>
             <div class="export-page">
                 <section class="export-section export-date-section">
@@ -1550,7 +1547,7 @@
                         <input type="hidden" id="lessonSheetStartDate">
                         <input type="hidden" id="lessonSheetEndDate">
                         <button type="button" class="stats-date-range-picker"
-                            onclick="app.toggleSharedDateRangePicker('lessonSheet')">
+                            data-onclick="app.toggleSharedDateRangePicker('lessonSheet')">
                             <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                     <path
                                         d="M7 3V6M17 3V6M4 9H20M6 5H18C19.1 5 20 5.9 20 7V19C20 20.1 19.1 21 18 21H6C4.9 21 4 20.1 4 19V7C4 5.9 4.9 5 6 5Z"
@@ -1565,10 +1562,10 @@
                         <div class="stats-date-popover" id="lessonSheetDatePopover" style="display:none;">
                             <div class="stats-calendar-header">
                                 <button type="button" class="stats-calendar-nav"
-                                    onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
+                                    data-onclick="app.changeSharedCalendarMonth('lessonSheet', -1)">&#8249;</button>
                                 <div class="stats-calendar-title" id="lessonSheetCalendarTitle"></div>
                                 <button type="button" class="stats-calendar-nav"
-                                    onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
+                                    data-onclick="app.changeSharedCalendarMonth('lessonSheet', 1)">&#8250;</button>
                             </div>
                             <div class="stats-calendar-weekdays">
                                 <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
@@ -1577,7 +1574,7 @@
                         </div>
                     </div>
                     <button type="button" class="export-option-card export-lesson-sheet-action"
-                        onclick="app.handleExportOption('lessonSheetExcel')">
+                        data-onclick="app.handleExportOption('lessonSheetExcel')">
                         <span class="export-option-title">导出课时表 Excel</span>
                         <span class="export-option-desc">按所选日期范围导出课时、学生、出勤和实际上课时长。</span>
                     </button>
@@ -1588,11 +1585,11 @@
                         <span>导出当前显示的课表内容</span>
                     </div>
                     <div class="export-options">
-                        <button type="button" class="export-option-card" onclick="app.handleExportOption('image')">
+                        <button type="button" class="export-option-card" data-onclick="app.handleExportOption('image')">
                             <span class="export-option-title">导出课表图片</span>
                             <span class="export-option-desc">将当前课表保存为高清 PNG 图片，方便分享和打印。</span>
                         </button>
-                        <button type="button" class="export-option-card" onclick="app.handleExportOption('excel')">
+                        <button type="button" class="export-option-card" data-onclick="app.handleExportOption('excel')">
                             <span class="export-option-title">导出课表 Excel</span>
                             <span class="export-option-desc">将当前课表导出为表格文件，适合归档和二次处理。</span>
                         </button>
@@ -1602,7 +1599,7 @@
         </div>
     </div>
 
-    <div id="quickStartModal" class="modal tutorial-modal" onclick="if(event.target===this)app.closeQuickStartModal()">
+    <div id="quickStartModal" class="modal tutorial-modal" data-onclick="if(event.target===this)app.closeQuickStartModal()">
         <div class="modal-content tutorial-modal-content quick-start-modal-content">
             <div class="modal-header">
                 <div class="modal-title-block">
@@ -1610,7 +1607,7 @@
                     <p class="modal-subtitle">按照下面的流程完成首次配置与排课</p>
                 </div>
                 <button type="button" class="modal-close" aria-label="关闭"
-                    onclick="app.closeQuickStartModal()">×</button>
+                    data-onclick="app.closeQuickStartModal()">×</button>
             </div>
             <div class="tutorial-content quick-start-content">
                 <ol class="quick-start-steps">

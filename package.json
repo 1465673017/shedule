@@ -1,20 +1,21 @@
 {
   "name": "kebiao-app",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Timetable app",
   "author": "A大橙子",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node tests/schedule-erp.test.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
+    "test": "node tests/schedule-erp.test.js && node tests/time-settings.test.js && node tests/salary-stats.test.js && node tests/security-regressions.test.js && node --check main.js && node --check preload.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
+    "test:electron": "node tests/electron-smoke.test.js",
     "build": "electron-builder",
     "build:mac": "electron-builder --mac --publish never",
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
   "build": {
     "appId": "com.example.kebiao",
-    "productName": "A大橙子课时统计（内测版）",
-    "artifactName": "A大橙子课时统计（内测版）-${version}.${ext}",
+    "productName": "A大橙子课时统计",
+    "artifactName": "A大橙子课时统计（正式版-${version}）.${ext}",
     "asar": true,
     "directories": {
       "output": "dist"
@@ -36,7 +37,7 @@
     },
     "mac": {
       "icon": "icon/orange.png",
-      "artifactName": "A大橙子课时统计（${version}）-${arch}.${ext}",
+      "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}",
       "target": [
         {
           "target": "dmg",
@@ -54,8 +55,8 @@
     }
   },
   "devDependencies": {
-    "electron": "^28.3.3",
-    "electron-builder": "^24.9.1",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
     "playwright": "^1.61.1"
   },
   "dependencies": {

@@ -263,7 +263,7 @@ TimetableApp.prototype.renderSubjectPicker = function(selectedId = '') {
                 '跨学科': '◎', '未分类': '▦', '地理': '◎', '政治': '▥'
             };
             const icon = subjectIcons[subject.name] || subject.name.slice(0, 1);
-            chip.innerHTML = `<span class="sc-name">${subject.name}</span>`;
+            chip.innerHTML = `<span class="sc-name">${this.escapeHtml(subject.name)}</span>`;
 
             chip.addEventListener('click', () => {
 
@@ -424,9 +424,9 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
             chip.innerHTML = `
 
-                <span class="sc-name">${student.name}</span>
+                <span class="sc-name">${this.escapeHtml(student.name)}</span>
 
-                <span class="sc-grade">${student.grade || ''}</span>
+                <span class="sc-grade">${this.escapeHtml(student.grade || '')}</span>
 
                 ${oneV1Badge}
 
@@ -1270,7 +1270,7 @@ TimetableApp.prototype.renderCoursePool = function(pool) {
 
             const studentsHtml = displayStudents.length > 0
 
-                ? `<div class="course-card-students">${displayStudents.map(s => `<span class="course-student-tag">${s.name}</span>`).join('')}</div>`
+                ? `<div class="course-card-students">${displayStudents.map(s => `<span class="course-student-tag">${this.escapeHtml(s.name)}</span>`).join('')}</div>`
 
                 : '';
 
@@ -1284,9 +1284,9 @@ TimetableApp.prototype.renderCoursePool = function(pool) {
 
                 <div class="course-card-header">
 
-                    <span class="course-card-subject" style="background:${course.subjectColor};color:${this.getContrastColor(course.subjectColor)};">
+                    <span class="course-card-subject" style="background:${this.escapeHtml(course.subjectColor)};color:${this.escapeHtml(this.getContrastColor(course.subjectColor))};">
 
-                        ${course.subjectName}
+                        ${this.escapeHtml(course.subjectName)}
 
                     </span>
 

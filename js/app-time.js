@@ -46,17 +46,18 @@ TimetableApp.prototype.renderAllPeriods = function() {
             const item = document.createElement('div');
             item.className = 'time-period-item';
             item.innerHTML = `
-                <input type="text" class="period-name-input" value="${period.name}" 
-                    onchange="app.updatePeriod(${index}, 'name', this.value)">
-                <input type="time" class="period-time-input" value="${start}" 
-                    onchange="app.updatePeriodTime(${index}, 'start', this.value)">
+                <input type="text" class="period-name-input" value="${this.escapeHtml(period.name)}">
+                <input type="time" class="period-time-input period-start-input" value="${this.escapeHtml(start)}">
                 <span class="period-time-separator">-</span>
-                <input type="time" class="period-time-input" value="${end}" 
-                    onchange="app.updatePeriodTime(${index}, 'end', this.value)">
-                <button type="button" class="delete-period-btn" title="删除该时间段" aria-label="删除${period.name}" onclick="app.deletePeriod(${index})">
+                <input type="time" class="period-time-input period-end-input" value="${this.escapeHtml(end)}">
+                <button type="button" class="delete-period-btn" title="删除该时间段" aria-label="删除${this.escapeHtml(period.name)}">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
             `;
+            item.querySelector('.period-name-input').addEventListener('change', event => this.updatePeriod(index, 'name', event.currentTarget.value));
+            item.querySelector('.period-start-input').addEventListener('change', event => this.updatePeriodTime(index, 'start', event.currentTarget.value));
+            item.querySelector('.period-end-input').addEventListener('change', event => this.updatePeriodTime(index, 'end', event.currentTarget.value));
+            item.querySelector('.delete-period-btn').addEventListener('click', () => this.deletePeriod(index));
             container.appendChild(item);
         });
         

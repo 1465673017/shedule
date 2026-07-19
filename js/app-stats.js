@@ -822,7 +822,7 @@ TimetableApp.prototype.getStatsRowNameHtml = function (lesson, expanded = false)
     return `
             <span class="grade-expand-icon" style="display:inline-block;width:16px;text-align:center;margin-right:4px;font-size:10px;transition:transform 0.2s;">${expanded ? '▼' : '▶'}</span>
             <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${lesson.color};margin-right:8px"></span>
-            ${lesson.subject} ${studentLabel}${auditionBadge}${suffix}
+            ${this.escapeHtml(lesson.subject)} ${studentLabel}${auditionBadge}${suffix}
         `;
 }
 
@@ -987,7 +987,7 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
         const durationBadge = `<small class="student-actual-duration">实上 ${this.formatDuration(Math.floor(detailMinutes / 60), detailMinutes % 60)}</small>`;
         html += `
                 <div class="att-inline-row" style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
-                    <span style="display:inline-flex;align-items:center;">${name}${oneV1Badge}${auditionBadge}${durationBadge}</span>
+                    <span style="display:inline-flex;align-items:center;">${this.escapeHtml(name)}${oneV1Badge}${auditionBadge}${durationBadge}</span>
                     <div class="att-inline-btns" style="display:flex;gap:4px;">
                         <button class="att-inline-btn ${status === 'present' ? 'active' : ''}"
                             data-key="${key}" data-sid="${id}" data-status="present"
@@ -2548,7 +2548,7 @@ TimetableApp.prototype.getNaturalWeekStatsRange = function (startDate, endDate) 
 };
 
 TimetableApp.prototype.getSalarySettings = function () {
-    var defaults = { basePay: 3800, starLevel: 0, basicHours: 8 };
+    var defaults = { basePay: 0, starLevel: 0, basicHours: 8 };
     try {
         var saved = JSON.parse(localStorage.getItem('timetableSalarySettings') || '{}');
         return {
@@ -2596,7 +2596,7 @@ TimetableApp.prototype.saveSalarySettings = function () {
         return Number.isFinite(value) ? value : fallback;
     };
     var settings = {
-        basePay: Math.max(0, numberValue('salaryBasePay', 3800)),
+        basePay: Math.max(0, numberValue('salaryBasePay', 0)),
         starLevel: Math.max(0, Math.min(5, Math.round(numberValue('salaryStarLevel', 0))))
     };
     localStorage.setItem('timetableSalarySettings', JSON.stringify(settings));
@@ -2858,6 +2858,10 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
     });
 
     if (!config.legacy && container.id === 'statsCards' && this._currentChartCategory === 'salary') {
+        var bindSalaryCardActions = function () {
+            container.querySelector('[data-salary-action="rules"]')?.addEventListener('click', this.openSalaryRuleModal.bind(this));
+            container.querySelector('[data-salary-action="settings"]')?.addEventListener('click', this.openSalarySettings.bind(this));
+        }.bind(this);
         var salary = config.startDate && config.endDate
             ? this.calculateSalaryStatsForRange(config.startDate, config.endDate)
             : this.calculateSalaryStats(validLessons);
@@ -2865,11 +2869,12 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         container.classList.remove('lesson-unit-summary-grid', 'student-summary-grid');
         if (validLessons.length === 0) {
             container.innerHTML = [
-                '<button type="button" class="stats-card stats-card-hours salary-rule-card" onclick="app.openSalaryRuleModal()"><div class="stats-card-copy"><div class="st-label">折算总课时</div><div class="st-num">-</div><div class="st-foot">点击查看计算规则</div></div></button>',
+                '<button type="button" class="stats-card stats-card-hours salary-rule-card" data-salary-action="rules"><div class="stats-card-copy"><div class="st-label">折算总课时</div><div class="st-num">-</div><div class="st-foot">点击查看计算规则</div></div></button>',
                 '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">本月阶梯进度</div><div class="st-num">-</div></div></div>',
                 '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">课时费</div><div class="st-num">-</div></div></div>',
-                '<button type="button" class="stats-card stats-card-average salary-settings-card" onclick="app.openSalarySettings()"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">-</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
+                '<button type="button" class="stats-card stats-card-average salary-settings-card" data-salary-action="settings"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">-</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
             ].join('');
+            bindSalaryCardActions();
             this.animateStatsCards(container, true);
             return { empty: true, totalHours: '0.00', lessonCount: 0 };
         }
@@ -2889,11 +2894,12 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
             progressFoot = '已进入最高档';
         }
         container.innerHTML = [
-            '<button type="button" class="stats-card stats-card-hours salary-rule-card" onclick="app.openSalaryRuleModal()"><div class="stats-card-copy"><div class="st-label">折算总课时</div><div class="st-num">' + salary.weightedHours.toFixed(2) + 'h</div><div class="st-foot">按年级与班型系数折算 · 点击查看规则</div></div></button>',
+            '<button type="button" class="stats-card stats-card-hours salary-rule-card" data-salary-action="rules"><div class="stats-card-copy"><div class="st-label">折算总课时</div><div class="st-num">' + salary.weightedHours.toFixed(2) + 'h</div><div class="st-foot">按年级与班型系数折算 · 点击查看规则</div></div></button>',
             '<div class="stats-card stats-card-lessons"><div class="stats-card-copy"><div class="st-label">本月阶梯进度</div><div class="st-num">' + progressValue + '</div><div class="st-foot">' + progressFoot + '</div></div></div>',
             '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">课时费</div><div class="st-num">' + money(salary.coursePay) + '</div><div class="st-foot">当前阶段：' + salary.currentRate + '元/小时 · ' + salary.settings.starLevel + '星</div></div></div>',
-            '<button type="button" class="stats-card stats-card-average salary-settings-card" onclick="app.openSalarySettings()"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">' + money(salary.grossPay) + '</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
+            '<button type="button" class="stats-card stats-card-average salary-settings-card" data-salary-action="settings"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">' + money(salary.grossPay) + '</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
         ].join('');
+        bindSalaryCardActions();
         this.animateStatsCards(container, validLessons.length === 0);
         return { empty: validLessons.length === 0, totalHours: salary.weightedHours.toFixed(2), lessonCount: validLessons.length };
     }
