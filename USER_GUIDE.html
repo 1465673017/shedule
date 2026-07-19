@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>A大橙子课时统计 · 使用手册</title>
+  <style>
+    :root{--bg:#f4f7fb;--paper:#fff;--ink:#253044;--muted:#687386;--line:#e4e9f1;--brand:#ea6b43;--brand2:#fff2ec;--nav:#172033;--ok:#eaf8f1}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    aside{position:fixed;inset:0 auto 0 0;width:270px;padding:30px 22px;background:var(--nav);color:#fff;overflow:auto}aside h1{margin:0 0 5px;font-size:20px}aside p{margin:0 0 22px;color:#aeb8ca;font-size:13px}nav a{display:block;padding:7px 10px;border-radius:8px;color:#ccd4e3;text-decoration:none}nav a:hover{background:#263148;color:#fff}
+    main{max-width:1120px;margin-left:270px;padding:42px 5vw 80px}.hero,.chapter{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(33,45,70,.06)}.hero{padding:42px;margin-bottom:24px;background:linear-gradient(135deg,#fff 40%,var(--brand2))}.hero h1{margin:0;font-size:34px}.hero p{margin:8px 0 0;color:var(--muted)}.chapter{padding:34px 40px;margin:22px 0;scroll-margin-top:20px}h2{margin:0 0 20px;font-size:25px}h3{margin:27px 0 10px;font-size:18px}h2:before{content:attr(data-no);display:inline-grid;place-items:center;width:36px;height:36px;margin-right:12px;border-radius:11px;background:var(--brand);color:#fff;font-size:16px;vertical-align:3px}ol{padding-left:24px}li{margin:7px 0}code{padding:2px 6px;border-radius:5px;background:#f1f3f7}pre{padding:15px;border-radius:10px;background:#172033;color:#e8edf7;overflow:auto}.tip,.warn{margin:16px 0;padding:12px 16px;border-radius:10px}.tip{background:var(--ok)}.warn{background:#fff4e5;border-left:4px solid #f0a032}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:11px 13px;border:1px solid var(--line);text-align:left}th{background:#f5f7fa}
+    figure{margin:20px 0 28px}figure img{display:block;width:100%;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(35,47,70,.12);cursor:zoom-in}figcaption{margin-top:7px;color:var(--muted);text-align:center;font-size:13px}.shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.shots figure{margin:0}.shots figcaption{margin-bottom:10px}
+    #viewer{display:none;position:fixed;z-index:10;inset:0;padding:30px;background:rgba(7,12,23,.9);align-items:center;justify-content:center;cursor:zoom-out}#viewer.open{display:flex}#viewer img{max-width:96vw;max-height:94vh;border-radius:10px}footer{text-align:center;color:var(--muted);padding:20px}
+    @media(max-width:860px){aside{position:static;width:auto}nav{display:none}main{margin:0;padding:18px}.chapter,.hero{padding:24px}.shots{grid-template-columns:1fr}.hero h1{font-size:27px}}
+    @media print{aside{display:none}main{margin:0;padding:0}.chapter,.hero{box-shadow:none;break-inside:avoid}figure img{box-shadow:none}#viewer{display:none!important}}
+  </style>
+</head>
+<body>
+  <aside><h1>A大橙子课时统计</h1><p>1.2.x 图文使用手册</p><nav>
+    <a href="#start">1. 首次启动</a><a href="#layout">2. 主界面</a><a href="#settings">3. 基础配置</a><a href="#subjects">4. 科目管理</a><a href="#students">5. 学生管理</a><a href="#schedule">6. 排课</a><a href="#attendance">7. 点名出勤</a><a href="#import">8. 批量导入</a><a href="#stats">9. 课时统计</a><a href="#salary">10. 工资统计</a><a href="#export">11. 导出</a><a href="#reset">12. 重置备份</a><a href="#faq">13. 常见问题</a>
+  </nav></aside>
+  <main>
+    <header class="hero"><h1>A大橙子课时统计使用手册</h1><p>从首次配置、学生管理和排课，到点名、统计、工资与数据导出的完整操作说明。</p></header>
+
+    <section class="chapter" id="start"><h2 data-no="1">版本选择与首次启动</h2>
+      <table><thead><tr><th>macOS 文件</th><th>数据位置</th><th>适用场景</th></tr></thead><tbody><tr><td>macos-green-zip</td><td>macOS 标准应用数据目录</td><td>固定在一台电脑使用</td></tr><tr><td>macos-portable-zip</td><td>应用旁的 data 文件夹</td><td>应用与数据一起移动、备份</td></tr></tbody></table>
+      <ol><li>Apple Silicon（M 系列）下载 <code>arm64</code>，Intel Mac 下载 <code>x64</code>。</li><li>解压 ZIP；便携版须把整个文件夹放在可写位置。</li><li>双击应用。若系统拦截，在“系统设置 → 隐私与安全性”中允许打开。</li><li>进入后点击左侧“快速开始”。</li></ol>
+      <figure><img src="docs/images/user-guide/quick-start.png" alt="快速开始"><figcaption>快速开始向导</figcaption></figure>
+    </section>
+
+    <section class="chapter" id="layout"><h2 data-no="2">认识主界面</h2><figure><img src="docs/images/user-guide/main.png" alt="主界面"><figcaption>主界面布局</figcaption></figure>
+      <ol><li><b>操作区：</b>导出数据、重置课表、快速开始、基础设置和批量导入学生。</li><li><b>科目池/学生池：</b>管理并拖拽科目或学生。</li><li><b>周次导航：</b>左右箭头切换周次，“今天”返回本周。</li><li><b>课表：</b>横向为星期、纵向为课时；点击或拖入内容完成排课。</li><li><b>日期范围：</b>点击顶部周日期可打开统计。</li></ol>
+    </section>
+
+    <section class="chapter" id="settings"><h2 data-no="3">首次基础配置</h2>
+      <h3>3.1 基础设置与主题</h3><ol><li>点击左侧“基础设置”。</li><li>按需开启历史课表保护，避免误改过去课程。</li><li>选择教师类型；没有学科背景的课程会归到该科目。</li><li>选择默认、暗色或浅绿色主题并保存。</li></ol><figure><img src="docs/images/user-guide/settings-theme.png" alt="主题设置"><figcaption>基础设置与主题</figcaption></figure>
+      <h3>3.2 年级设置</h3><ol><li>切换“年级设置”。</li><li>点击“添加年级”，填写名称并选择颜色。</li><li>保存后可编辑、拖拽排序或随机配色。</li></ol><div class="shots"><figure><img src="docs/images/user-guide/settings-grade.png" alt="年级设置"><figcaption>年级列表</figcaption></figure><figure><img src="docs/images/user-guide/grade-add.png" alt="添加年级"><figcaption>添加年级</figcaption></figure></div>
+      <h3>3.3 阶段设置</h3><ol><li>需要按学期、季度或寒暑期独立排课时，开启分段排课。</li><li>填写阶段名称、起止日期；可增加至 12 个阶段。</li><li>保证日期不重叠，然后保存。</li></ol><figure><img src="docs/images/user-guide/settings-stage.png" alt="阶段设置"><figcaption>阶段与分段排课</figcaption></figure>
+      <h3>3.4 时间设置</h3><ol><li>设置每日节数、首节开始时间、单节和课间时长。</li><li>按需插入午休或晚间休息。</li><li>点击“应用快速设置”，再在高级设置中逐节微调并保存。</li></ol><div class="shots"><figure><img src="docs/images/user-guide/settings-time.png" alt="时间设置"><figcaption>时间设置</figcaption></figure><figure><img src="docs/images/user-guide/period-edit.png" alt="编辑课时"><figcaption>编辑单节时间</figcaption></figure></div>
+    </section>
+
+    <section class="chapter" id="subjects"><h2 data-no="4">科目管理</h2><ol><li>切换到“科目池”，点击“添加科目”。</li><li>填写名称，可选填老师姓名。</li><li>选择预设颜色或输入 HEX 自定义颜色。</li><li>点击保存。以后可通过卡片编辑图标修改或删除。</li></ol><figure><img src="docs/images/user-guide/subject-add.png" alt="添加科目"><figcaption>添加和编辑科目</figcaption></figure><div class="warn">删除已用于排课的科目前，建议先导出数据或调整相关课程。</div></section>
+
+    <section class="chapter" id="students"><h2 data-no="5">学生管理</h2>
+      <h3>5.1 添加单个学生</h3><ol><li>切换“学生池”，点击“添加学生”。</li><li>输入姓名并选择年级。</li><li>设置普通、1v1 或试听类型；1v1 与试听不能同时启用。</li><li>保存。可按全部、进行中、已结课和试听筛选。</li></ol><figure><img src="docs/images/user-guide/student-add.png" alt="添加学生"><figcaption>学生资料设置</figcaption></figure>
+      <h3>5.2 批量添加</h3><ol><li>点击“批量导入学生”。</li><li>粘贴名单，姓名可用顿号、逗号或换行分隔。</li><li>年级用 1–12 表示一年级至高三，例如 <code>1张三、2李四、3王五</code>；不写编号默认一年级。</li><li>点击“识别并导入”，检查结果。</li></ol><figure><img src="docs/images/user-guide/student-batch.png" alt="批量添加学生"><figcaption>批量导入学生</figcaption></figure>
+    </section>
+
+    <section class="chapter" id="schedule"><h2 data-no="6">排课与调整</h2><ol><li>先切换到目标周。</li><li>把科目卡片拖到目标日期和节次，或直接点击空白课位。</li><li>确认科目，搜索并勾选学生。</li><li>设置循环方式或生效范围并保存。</li><li>也可把学生卡片拖入已有课程。</li></ol><figure><img src="docs/images/user-guide/lesson-add.png" alt="添加课程"><figcaption>添加课程并选择学生</figcaption></figure>
+      <h3>手动课程</h3><ol><li>打开手动添加入口。</li><li>选择日期、时间、科目和学生。</li><li>填写实际上课时长并保存，课程将进入统计与课时表导出。</li></ol><figure><img src="docs/images/user-guide/course-manual.png" alt="手动课程"><figcaption>补录临时课、补课或历史课程</figcaption></figure>
+      <div class="tip">拖动整节课程可移动课位；拖动单个学生可调整所在课程；拖回左侧回收区域可移除。修改循环课程前请确认生效周次。</div>
+    </section>
+
+    <section class="chapter" id="attendance"><h2 data-no="7">学生点名与出勤</h2><ol><li>找到已排课程并打开点名窗口。</li><li>逐个记录到课、请假或缺勤状态。</li><li>实际时长与计划不同时，填写实际上课时长。</li><li>保存记录。</li></ol><figure><img src="docs/images/user-guide/attendance.png" alt="点名"><figcaption>学生点名与出勤记录</figcaption></figure><p>出勤与实际时长会影响文字统计、图表统计、工资和课时表 Excel。</p></section>
+
+    <section class="chapter" id="import"><h2 data-no="8">课程数据批量导入</h2><ol><li>打开“批量导入课程”。</li><li>粘贴符合应用格式的课程 JSON。</li><li>普通排课选择普通导入；已开启分段排课且数据带阶段标记时选择阶段导入。</li><li>执行导入并检查新增、跳过和异常项目。</li><li>回到对应周次核对课表。</li></ol><figure><img src="docs/images/user-guide/course-import.png" alt="课程导入"><figcaption>批量导入课程数据</figcaption></figure><div class="warn">导入前建议备份。阶段导入中的课程日期必须属于已配置阶段。</div></section>
+
+    <section class="chapter" id="stats"><h2 data-no="9">课时统计</h2><h3>9.1 图表统计</h3><ol><li>点击主界面顶部日期范围。</li><li>选择日、周、月或年统计。</li><li>用日期选择器切换范围。</li><li>切换课时、人数或课时费统计，查看总览、趋势和班型对比。</li></ol><div class="shots"><figure><img src="docs/images/user-guide/stats-chart-day.png" alt="日统计"><figcaption>日图表</figcaption></figure><figure><img src="docs/images/user-guide/stats-chart-week.png" alt="周统计"><figcaption>周图表</figcaption></figure><figure><img src="docs/images/user-guide/stats-chart-month.png" alt="月统计"><figcaption>月图表</figcaption></figure><figure><img src="docs/images/user-guide/stats-chart-year.png" alt="年统计"><figcaption>年图表</figcaption></figure></div>
+      <h3>9.2 文字统计</h3><ol><li>打开文字统计。</li><li>选择周期，用上一项、下一项或日期控件切换。</li><li>查看课程数、课时、到课和分类明细。</li></ol><div class="shots"><figure><img src="docs/images/user-guide/stats-text-day.png" alt="日文字统计"><figcaption>日文字统计</figcaption></figure><figure><img src="docs/images/user-guide/stats-text-month.png" alt="月文字统计"><figcaption>月文字统计</figcaption></figure></div>
+    </section>
+
+    <section class="chapter" id="salary"><h2 data-no="10">课时费与工资</h2><ol><li>打开图表统计并切换“课时费统计”。</li><li>打开工资设置，填写月底薪并选择教师星级。</li><li>保存后查看所选月份结果。</li></ol><pre>折算课时 = 实际上课时长 × 班型系数 × 年级系数</pre><p>系统每月先扣除固定 8 小时基本课时，再对剩余工资课时分段累进计价；星级加成叠加到各阶梯单价，不改变折算课时。</p><div class="tip">工资依赖学生年级、班型、出勤和实际时长。修改这些数据后请重新打开统计。</div></section>
+
+    <section class="chapter" id="export"><h2 data-no="11">导出数据</h2><figure><img src="docs/images/user-guide/export.png" alt="导出"><figcaption>导出选项</figcaption></figure>
+      <h3>课时表 Excel</h3><ol><li>点击“导出数据”。</li><li>选择开始与结束日期。</li><li>点击“导出课时表 Excel”并选择保存位置。</li></ol><p>内容包括课程、学生、出勤和实际上课时长。</p>
+      <h3>当前课表图片或 Excel</h3><ol><li>先切换到目标周。</li><li>打开导出，选择“导出课表图片”或“导出课表 Excel”。</li><li>选择文件名和保存位置。</li></ol><div class="tip">提示文件被占用时，关闭 Excel 中同名文件；提示无权限时改存到“下载”或“文稿”。</div>
+    </section>
+
+    <section class="chapter" id="reset"><h2 data-no="12">重置与备份</h2><figure><img src="docs/images/user-guide/reset.png" alt="重置"><figcaption>重置范围选择</figcaption></figure>
+      <ul><li><b>按日期重置：</b>依次选择起点和终点，仅清除范围内课程。</li><li><b>重置课表：</b>清空排课、循环和考勤，保留科目、学生、手动课程、年级、时间和设置。</li><li><b>全部重置：</b>清空课表、学生、手动课程、考勤和循环数据。</li></ul>
+      <h3>便携版备份</h3><ol><li>完全退出应用。</li><li>复制整个便携版文件夹，而不是只复制 `.app`。</li><li>恢复时保持应用、<code>.kebiao-portable</code> 和 <code>data</code> 的相对位置不变。</li></ol><div class="warn">全部重置不可轻易恢复，执行前请先导出或备份。</div>
+    </section>
+
+    <section class="chapter" id="faq"><h2 data-no="13">常见问题</h2><h3>课程拖不进去</h3><p>检查目标是否被占用、学生是否冲突、试听学生是否已排课，以及历史保护是否禁止修改过去日期。</p><h3>统计结果不正确</h3><p>依次核对日期、学生、点名状态、实际时长、年级、班型和工资星级。</p><h3>便携版移动后没有原数据</h3><p>必须移动整个文件夹；只移动 `.app` 会失去便携标记和旁边的 data 数据。</p><h3>macOS 阻止打开</h3><p>确认架构正确，并在“系统设置 → 隐私与安全性”中允许打开。</p></section>
+    <footer>本页面为独立离线手册 · 截图可点击放大 · 可直接使用浏览器打印为 PDF</footer>
+  </main>
+  <div id="viewer" role="dialog" aria-label="截图预览"><img alt="放大的截图"></div>
+  <script>
+    const viewer=document.getElementById('viewer'),preview=viewer.querySelector('img');
+    document.querySelectorAll('figure img').forEach(img=>img.addEventListener('click',()=>{preview.src=img.src;preview.alt=img.alt;viewer.classList.add('open')}));
+    viewer.addEventListener('click',()=>viewer.classList.remove('open'));
+    addEventListener('keydown',e=>{if(e.key==='Escape')viewer.classList.remove('open')});
+  </script>
+</body>
+</html>

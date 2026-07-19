@@ -23,6 +23,8 @@ const views = [
     { name: 'lesson-add', title: '添加课程', action: 'lesson' },
     { name: 'course-manual', title: '手动添加课程', action: 'manualCourse' },
     { name: 'attendance', title: '出勤记录', action: 'attendance' },
+    { name: 'salary-settings', title: '工资设置', action: 'salarySettings' },
+    { name: 'salary-rule', title: '课时计算规则', action: 'salaryRule' },
     ...['day', 'week', 'month', 'year'].map(tab => ({
         name: `stats-chart-${tab}`, title: `图表统计-${tab}`, action: 'statsChart', arg: tab
     })),
@@ -83,6 +85,12 @@ async function prepareView(page, view) {
             break;
         case 'attendance':
             safely(() => app.openAttendanceModal(document.querySelector('.cell')), 'attendanceModal', 'flex');
+            break;
+        case 'salarySettings':
+            safely(() => app.openSalarySettings(), 'salarySettingsModal', 'block');
+            break;
+        case 'salaryRule':
+            safely(() => app.openSalaryRuleModal(), 'salaryRuleModal', 'block');
             break;
         case 'statsChart':
             safely(() => {
@@ -150,6 +158,16 @@ async function prepareView(page, view) {
 
             for (const view of views) {
                 await prepareView(page, view);
+                const modalHeight = await page.evaluate(() => {
+                    const visibleModal = [...document.querySelectorAll('.modal')]
+                        .find(element => getComputedStyle(element).display !== 'none');
+                    const content = visibleModal && visibleModal.querySelector('.modal-content');
+                    return content ? Math.ceil(content.scrollHeight) : 0;
+                });
+                await page.setViewportSize({
+                    width: 1440,
+                    height: Math.max(1000, Math.min(2000, modalHeight + 100))
+                });
                 const relativePath = path.join(theme, `${view.name}.png`);
                 const screenshotPath = path.join(outputDir, relativePath);
                 fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
