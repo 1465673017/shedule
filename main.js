@@ -8,15 +8,32 @@ const APP_NAME = 'A大橙子课时统计';
 const LEGACY_APP_NAME = 'A大橙子课时统计（内测版）';
 const appDataPath = app.getPath('appData');
 app.setName(APP_NAME);
+const formalUserDataPath = path.join(appDataPath, APP_NAME);
+const isolatedTestDataPath = process.env.KEBIAO_E2E_USER_DATA_DIR;
+app.setPath('userData', isolatedTestDataPath ? path.resolve(isolatedTestDataPath) : formalUserDataPath);
+
+// A renderer crash on a small number of Windows graphics drivers used to look
+// like the application simply did not start. A crash-triggered relaunch adds
+// this flag once; it is deliberately not enabled for every user.
+const GPU_FALLBACK_ARG = '--kebiao-disable-gpu';
+if (process.argv.includes(GPU_FALLBACK_ARG)) app.disableHardwareAcceleration();
+
+// Acquire the lock before touching a potentially large Chromium profile. This
+// also prevents two launches from attempting the one-time migration together.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+    app.quit();
+}
+
+let staleUserDataPath = null;
 
 function migrateLegacyUserDataDirectory() {
-    const isolatedTestDataPath = process.env.KEBIAO_E2E_USER_DATA_DIR;
     if (isolatedTestDataPath) {
-        app.setPath('userData', path.resolve(isolatedTestDataPath));
         return;
     }
     const legacyPath = path.join(appDataPath, LEGACY_APP_NAME);
-    const formalPath = path.join(appDataPath, APP_NAME);
+    const formalPath = formalUserDataPath;
     if (!fs.existsSync(legacyPath)) {
         app.setPath('userData', formalPath);
         return;
@@ -51,18 +68,33 @@ function migrateLegacyUserDataDirectory() {
 
     if (displacedFormalPath && fs.existsSync(displacedFormalPath)) {
         try {
-            fs.rmSync(displacedFormalPath, { recursive: true, force: true });
-        } catch (cleanupError) {
-            console.warn('清理迁移前的空正式版目录失败，可稍后手动删除:', cleanupError);
+            // Cleanup is intentionally deferred until after a window exists.
+            staleUserDataPath = displacedFormalPath;
+        } catch (_) {
+            staleUserDataPath = null;
         }
     }
 }
 
-migrateLegacyUserDataDirectory();
-const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (gotSingleInstanceLock) migrateLegacyUserDataDirectory();
 
-if (!gotSingleInstanceLock) {
-    app.quit();
+function appendStartupLog(message, error) {
+    try {
+        const detail = error && (error.stack || error.message || String(error));
+        const line = `[${new Date().toISOString()}] ${message}${detail ? `: ${detail}` : ''}\n`;
+        fs.appendFileSync(path.join(app.getPath('userData'), 'startup.log'), line, 'utf8');
+    } catch (_) {
+        // Diagnostics must never become another startup failure.
+    }
+}
+
+function cleanupStaleUserDataDirectory() {
+    if (!staleUserDataPath) return;
+    const cleanupPath = staleUserDataPath;
+    staleUserDataPath = null;
+    fs.promises.rm(cleanupPath, { recursive: true, force: true }).catch(error => {
+        appendStartupLog(`Failed to clean migrated profile ${cleanupPath}`, error);
+    });
 }
 
 function requireAppIcon() {
@@ -108,10 +140,22 @@ function createWindow() {
     });
 
     const appPageUrl = pathToFileURL(path.join(__dirname, 'index.html')).toString();
+    let gpuFallbackStarted = false;
+    win.webContents.on('did-fail-load', (_event, code, description, validatedURL, isMainFrame) => {
+        if (isMainFrame) appendStartupLog(`Main page failed to load (${code}) ${description} ${validatedURL}`);
+    });
+    win.webContents.on('render-process-gone', (_event, details) => {
+        appendStartupLog(`Renderer exited: ${details.reason} (${details.exitCode})`);
+        if (gpuFallbackStarted || process.argv.includes(GPU_FALLBACK_ARG) || details.reason === 'clean-exit') return;
+        gpuFallbackStarted = true;
+        app.relaunch({ args: process.argv.slice(1).concat(GPU_FALLBACK_ARG) });
+        app.exit(0);
+    });
     win.webContents.on('will-navigate', (event, targetUrl) => {
         if (targetUrl !== appPageUrl) event.preventDefault();
     });
-    win.loadURL(appPageUrl);
+    win.loadURL(appPageUrl).catch(error => appendStartupLog('loadURL rejected', error));
+    win.webContents.once('did-finish-load', cleanupStaleUserDataDirectory);
 }
 
 ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileExt }) => {
@@ -185,6 +229,10 @@ if (gotSingleInstanceLock) {
                 createWindow();
             }
         });
+    }).catch(error => {
+        appendStartupLog('Application readiness failed', error);
+        dialog.showErrorBox('无法启动A大橙子课时统计', `启动失败，请将 startup.log 发给开发者。\n${error.message || error}`);
+        app.quit();
     });
 
     app.on('window-all-closed', () => {
