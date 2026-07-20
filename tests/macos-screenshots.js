@@ -60,73 +60,73 @@ async function prepareView(page, view) {
         };
 
         switch (action) {
-        case 'main':
-            break;
-        case 'subject':
-            safely(() => app.openSubjectModal(), 'subjectModal', 'flex');
-            break;
-        case 'student':
-            safely(() => app.openStudentModal(), 'subjectModal', 'flex');
-            break;
-        case 'studentBatch':
-            safely(() => app.openStudentBatchModal(), 'studentBatchModal', 'flex');
-            break;
-        case 'courseImport':
-            safely(() => app.openCourseDataImportModal(), 'courseDataImportModal', 'flex');
-            break;
-        case 'time':
-            safely(() => app.openTimeModal(null, 0), 'timeModal', 'flex');
-            break;
-        case 'lesson':
-            safely(() => app.openAddLessonModal(document.querySelector('.cell')), 'addLessonModal', 'flex');
-            break;
-        case 'manualCourse':
-            safely(() => app.openManualCourseModal(), 'addLessonModal', 'flex');
-            break;
-        case 'attendance':
-            safely(() => app.openAttendanceModal(document.querySelector('.cell')), 'attendanceModal', 'flex');
-            break;
-        case 'salarySettings':
-            safely(() => app.openSalarySettings(), 'salarySettingsModal', 'block');
-            break;
-        case 'salaryRule':
-            safely(() => app.openSalaryRuleModal(), 'salaryRuleModal', 'block');
-            break;
-        case 'statsChart':
-            safely(() => {
-                app.openStatsModal(new Date());
-                app.switchStatsTab(arg);
-            }, 'statsModal', 'block');
-            break;
-        case 'statsText':
-            safely(() => {
-                app.openTextStatsModal(new Date());
-                app.switchTextStatsTab(arg);
-            }, 'textStatsModal', 'block');
-            break;
-        case 'settings':
-            safely(() => app.openSettingsModal(arg), 'settingsModal', 'block');
-            break;
-        case 'grade':
-            safely(() => app.addGrade(), 'gradeModal', 'block');
-            break;
-        case 'reset':
-            safely(() => app.openResetModal(), 'resetModal', 'block');
-            break;
-        case 'export':
-            safely(() => app.openExportModal(), 'exportModal', 'block');
-            break;
-        case 'quickStart':
-            safely(() => app.openQuickStartModal(), 'quickStartModal', 'flex');
-            break;
-        case 'message': {
-            const title = document.getElementById('appMessageTitle');
-            const text = document.getElementById('appMessageText');
-            if (title) title.textContent = '操作提示';
-            if (text) text.textContent = '这是 macOS 自动化截图使用的消息弹窗示例。';
-            show('appMessageModal', 'flex');
-            break;
-        }
+            case 'main':
+                break;
+            case 'subject':
+                safely(() => app.openSubjectModal(), 'subjectModal', 'flex');
+                break;
+            case 'student':
+                safely(() => app.openStudentModal(), 'subjectModal', 'flex');
+                break;
+            case 'studentBatch':
+                safely(() => app.openStudentBatchModal(), 'studentBatchModal', 'flex');
+                break;
+            case 'courseImport':
+                safely(() => app.openCourseDataImportModal(), 'courseDataImportModal', 'flex');
+                break;
+            case 'time':
+                safely(() => app.openTimeModal(null, 0), 'timeModal', 'flex');
+                break;
+            case 'lesson':
+                safely(() => app.openAddLessonModal(document.querySelector('.cell')), 'addLessonModal', 'flex');
+                break;
+            case 'manualCourse':
+                safely(() => app.openManualCourseModal(), 'addLessonModal', 'flex');
+                break;
+            case 'attendance':
+                safely(() => app.openAttendanceModal(document.querySelector('.cell')), 'attendanceModal', 'flex');
+                break;
+            case 'salarySettings':
+                safely(() => app.openSalarySettings(), 'salarySettingsModal', 'block');
+                break;
+            case 'salaryRule':
+                safely(() => app.openSalaryRuleModal(), 'salaryRuleModal', 'block');
+                break;
+            case 'statsChart':
+                safely(() => {
+                    app.openStatsModal(new Date());
+                    app.switchStatsTab(arg);
+                }, 'statsModal', 'block');
+                break;
+            case 'statsText':
+                safely(() => {
+                    app.openTextStatsModal(new Date());
+                    app.switchTextStatsTab(arg);
+                }, 'textStatsModal', 'block');
+                break;
+            case 'settings':
+                safely(() => app.openSettingsModal(arg), 'settingsModal', 'block');
+                break;
+            case 'grade':
+                safely(() => app.addGrade(), 'gradeModal', 'block');
+                break;
+            case 'reset':
+                safely(() => app.openResetModal(), 'resetModal', 'block');
+                break;
+            case 'export':
+                safely(() => app.openExportModal(), 'exportModal', 'block');
+                break;
+            case 'quickStart':
+                safely(() => app.openQuickStartModal(), 'quickStartModal', 'flex');
+                break;
+            case 'message': {
+                const title = document.getElementById('appMessageTitle');
+                const text = document.getElementById('appMessageText');
+                if (title) title.textContent = '操作提示';
+                if (text) text.textContent = '这是 macOS 自动化截图使用的消息弹窗示例。';
+                show('appMessageModal', 'flex');
+                break;
+            }
         }
     }, view);
     await page.waitForTimeout(250);
