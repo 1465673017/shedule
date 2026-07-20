@@ -23,6 +23,16 @@ const { _electron: electron } = require('playwright');
         assert.notStrictEqual(await page.locator('#quickStartModal').evaluate(element => getComputedStyle(element).display), 'none');
         await page.click('#quickStartModal .modal-close');
         assert.strictEqual(await page.locator('#quickStartModal').evaluate(element => getComputedStyle(element).display), 'none');
+
+        await page.evaluate(() => {
+            const cell = document.querySelector('#timetableBody .cell[data-day][data-period]');
+            if (!cell) throw new Error('Attendance smoke test could not find a timetable cell');
+            app.openAttendanceModal(cell);
+        });
+        await page.click('#attendanceLessonInfo .actual-duration-display');
+        assert.strictEqual(await page.locator('#durationEditorDropdown').count(), 1);
+        await page.evaluate(() => app.closeAttendanceModal());
+
         const relevantErrors = errors.filter(text => /content security policy|refused|uncaught|referenceerror|typeerror/i.test(text));
         assert.deepStrictEqual(relevantErrors, []);
         console.log('Electron CSP smoke test passed');

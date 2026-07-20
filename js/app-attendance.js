@@ -64,6 +64,9 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
                 </div>
             </div>
         `;
+        lessonInfo.querySelector('.actual-duration-display')?.addEventListener('click', event => {
+            this.showDurationEditor(event, key);
+        });
         
         this._attModalClassFinished = this.isClassFinished(key, classDate);
         this._attModalDateKey = dateKey;
@@ -156,7 +159,6 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
                 }).join('') || '<div class="text-muted">暂无学生</div>'}
             </div>
         `;
-        lessonInfo.querySelector('.actual-duration-display')?.addEventListener('click', event => this.showDurationEditor(event, key));
         displayEl.appendChild(editor);
         editor.querySelector('.student-duration-master-range')?.addEventListener('input', event => {
             this.syncAllStudentActualDurations(key, event.currentTarget.value);
