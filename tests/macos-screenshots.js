@@ -158,6 +158,15 @@ async function prepareView(page, view) {
 
             for (const view of views) {
                 await prepareView(page, view);
+                if (view.action === 'attendance') {
+                    await page.click('#attendanceLessonInfo .actual-duration-display');
+                    await page.waitForFunction(() => !!document.getElementById('durationEditorDropdown'));
+                    if (await page.locator('#durationEditorDropdown').count() !== 1) {
+                        throw new Error('macOS attendance duration editor did not open');
+                    }
+                    await page.click('#attendanceLessonInfo .actual-duration-display');
+                    await page.waitForTimeout(100);
+                }
                 const modalHeight = await page.evaluate(() => {
                     const visibleModal = [...document.querySelectorAll('.modal')]
                         .find(element => getComputedStyle(element).display !== 'none');
