@@ -107,7 +107,38 @@
         const details = Array.isArray(course.attendentDetail) ? course.attendentDetail : [];
         const detail = details.find(d => String(d.studentId || d.id || '') === String(source.id));
         const raw = (detail && (detail.status || detail.attendentStatus || detail.attendanceStatus)) || source.attendentStatus || source.attendanceStatus;
-        return raw ? STATUS[String(raw).toUpperCase()] || null : null;
+        if (source.isLeave || (detail && detail.isLeave)) return 'leave';
+        if (!raw) return null;
+        const normalized = String(raw).trim();
+        const chineseStatuses = {
+            '上课': 'present', '已上课': 'present', '出勤': 'present', '正常': 'present',
+            '请假': 'leave', '病假': 'leave', '事假': 'leave',
+            '未上课': 'absent', '缺勤': 'absent', '旷课': 'absent'
+        };
+        return chineseStatuses[normalized] || STATUS[normalized.toUpperCase()] || null;
+    }
+
+    function sourceActualMinutes(source) {
+        if (source.actualMinutes !== undefined && source.actualMinutes !== null) return Math.max(0, Number(source.actualMinutes) || 0);
+        if (source.actualHours !== undefined && source.actualHours !== null) return Math.max(0, (Number(source.actualHours) || 0) * 60);
+        if (source.actualCourseHours !== undefined && source.actualCourseHours !== null) return Math.max(0, (Number(source.actualCourseHours) || 0) * 40);
+        return undefined;
+    }
+
+    function studentActualMinutesForSlot(source, slot, range) {
+        const explicitMinutes = sourceActualMinutes(source);
+        if (explicitMinutes === undefined) return undefined;
+        const actualTime = String(source.actualCourseTime || '').trim();
+        const match = actualTime.match(/^(\d{1,2}:\d{2})\s*[-–—~至]\s*(\d{1,2}:\d{2})$/);
+        if (match) {
+            const actualStart = appTimeToMinutes(match[1]);
+            const actualEnd = appTimeToMinutes(match[2]);
+            if (Number.isFinite(actualStart) && Number.isFinite(actualEnd) && actualEnd > actualStart) {
+                return Math.max(0, Math.min(actualEnd, slot.endMinutes) - Math.max(actualStart, slot.startMinutes));
+            }
+        }
+        if (explicitMinutes === 0 || range.durationMinutes <= 0) return 0;
+        return Math.max(0, Math.round(explicitMinutes * slot.overlapMinutes / range.durationMinutes));
     }
 
     function courseTimeRange(course) {
@@ -136,7 +167,7 @@
             const parts = String(x.period.time || '').split('-').map(v => appTimeToMinutes(v.trim().slice(0, 5)));
             if (parts.length !== 2 || parts.some(value => !Number.isFinite(value))) return null;
             const overlapMinutes = Math.max(0, Math.min(range.endMinutes, parts[1]) - Math.max(range.startMinutes, parts[0]));
-            return overlapMinutes > 0 ? { ...x, overlapMinutes } : null;
+            return overlapMinutes > 0 ? { ...x, startMinutes: parts[0], endMinutes: parts[1], overlapMinutes } : null;
         }).filter(Boolean);
         if (!slots.length) throw new Error(`未找到与 ${range.start}-${range.end} 重叠的课时，请先配置对应时间段`);
         return { range, slots };
@@ -271,12 +302,20 @@
             !app.isDateWithinCustomResetRange(record.dateKey, startDate, endDate)
         );
         (erp.courseInstances || []).forEach(instance => {
-            if (!instance.actualMinutesByDate) return;
-            instance.actualMinutesByDate = Object.fromEntries(
-                Object.entries(instance.actualMinutesByDate).filter(([dateKey]) =>
-                    !app.isDateWithinCustomResetRange(dateKey, startDate, endDate)
-                )
-            );
+            if (instance.actualMinutesByDate) {
+                instance.actualMinutesByDate = Object.fromEntries(
+                    Object.entries(instance.actualMinutesByDate).filter(([dateKey]) =>
+                        !app.isDateWithinCustomResetRange(dateKey, startDate, endDate)
+                    )
+                );
+            }
+            if (instance.studentActualMinutesByDate) {
+                instance.studentActualMinutesByDate = Object.fromEntries(
+                    Object.entries(instance.studentActualMinutesByDate).filter(([dateKey]) =>
+                        !app.isDateWithinCustomResetRange(dateKey, startDate, endDate)
+                    )
+                );
+            }
             instance.updatedAt = new Date().toISOString();
         });
         window.ScheduleErpService.buildTimetableProjection(app);
@@ -330,12 +369,25 @@
                 const erp = window.ScheduleErpService.ensureErpData(app);
                 const instance = erp.courseInstances.find(item => item.cellKey === cellKey && item.weekStart === weekStart);
                 if (instance) {
+                    const dateKey = app.formatLocalDate(date);
                     instance.importGroupId = importGroupId;
                     instance.importPartIndex = slotIndex;
                     instance.importPartCount = slots.length;
                     instance.importSourceTime = `${range.start}-${range.end}`;
                     instance.importTotalMinutes = range.durationMinutes;
-                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [app.formatLocalDate(date)]: slot.overlapMinutes };
+                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [dateKey]: slot.overlapMinutes };
+                    const studentMinutes = {};
+                    sourceStudents.forEach((source, i) => {
+                        const minutes = studentActualMinutesForSlot(source, slot, range);
+                        if (minutes !== undefined) studentMinutes[String(students[i].id)] = minutes;
+                    });
+                    if (Object.keys(studentMinutes).length) {
+                        instance.studentActualMinutesByDate = { ...(instance.studentActualMinutesByDate || {}) };
+                        instance.studentActualMinutesByDate[dateKey] = {
+                            ...(instance.studentActualMinutesByDate[dateKey] || {}),
+                            ...studentMinutes
+                        };
+                    }
                 }
                 sourceStudents.forEach((source, i) => {
                     const status = attendanceStatus(course, source);
@@ -352,6 +404,9 @@
         extractCourses,
         normalizeMarkedInput,
         isOneToOne,
+        attendanceStatus,
+        sourceActualMinutes,
+        studentActualMinutesForSlot,
         periodSlots,
         importCourses,
         shiftCoursesToStageStarts,

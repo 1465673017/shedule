@@ -45,6 +45,19 @@ assert.throws(
     () => CourseDataImportService.buildImportPlan({}, [{ courseDate: '2026-02-31', students: [] }]),
     /日期/
 );
+assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStatus: '上课' }), 'present');
+assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStatus: '未上课' }), 'absent');
+assert.strictEqual(CourseDataImportService.attendanceStatus({}, { isLeave: true, attendanceStatus: '未上课' }), 'leave');
+assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualMinutes: 75 }), 75);
+assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualHours: 1.5 }), 90);
+assert.strictEqual(
+    CourseDataImportService.studentActualMinutesForSlot(
+        { actualMinutes: 60, actualCourseTime: '10:30-11:30' },
+        { startMinutes: 600, endMinutes: 660, overlapMinutes: 60 },
+        { durationMinutes: 120 }
+    ),
+    30
+);
 
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);
 const coreSource = read('js/app-core.js');
