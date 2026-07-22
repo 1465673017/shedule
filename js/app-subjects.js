@@ -348,6 +348,13 @@ TimetableApp.prototype.saveStudentBatch = async function (e) {
     if (!namesInput) return;
 
     if (this.isStudentBatchJson()) {
+        const normalized = window.CourseDataImportService.normalizeMarkedInput(namesInput.value);
+        if (!normalized.hasStageMarker) {
+            const message = document.getElementById('studentBatchImportMessage');
+            if (message) message.textContent = '请输入口令后再导入。';
+            namesInput.focus();
+            return;
+        }
         await this.importCourseDataText(namesInput.value, document.getElementById('studentBatchImportMessage'));
         return;
     }

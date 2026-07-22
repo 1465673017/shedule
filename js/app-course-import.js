@@ -437,11 +437,10 @@
         try {
             const markedInput = normalizeMarkedInput(input);
             const segmentedScheduling = !!(this.settings && this.settings.segmentedScheduling);
-            if (markedInput.hasStageMarker && !segmentedScheduling) {
-                throw new Error('请先打开阶段排课');
+            if (!markedInput.hasStageMarker) {
+                throw new Error('请输入口令后再导入。');
             }
-            // 无标记 JSON 始终普通导入，只有标记和阶段排课同时存在才启用阶段导入。
-            const markerStageImport = markedInput.hasStageMarker && segmentedScheduling;
+            const markerStageImport = segmentedScheduling;
             const options = { fromCurrentStage: markerStageImport };
             const plan = buildImportPlan(this, markedInput.text, options);
             const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
