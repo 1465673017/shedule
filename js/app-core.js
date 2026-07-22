@@ -141,12 +141,22 @@ class TimetableApp {
         }
         this.loadGrades();
         this.bindEvents();
+        if (window.electronAPI && typeof window.electronAPI.onCourseSyncEvent === 'function') {
+            this._courseSyncQueue = Promise.resolve();
+            window.electronAPI.onCourseSyncEvent(event => {
+                this._courseSyncQueue = this._courseSyncQueue.then(() => this.handleCourseSyncEvent(event));
+            });
+            if (typeof window.electronAPI.courseRestoreLogin === 'function' && localStorage.getItem('courseAutoLogin') === 'true') {
+                window.electronAPI.courseRestoreLogin();
+            }
+        }
         this.renderSubjects();
         this.renderTimetable();
         this.applyThemeSettings(); // 先应用主题设置
         this.applySettings();
         this.updateThemeSettingsUI(); // Ensure UI matches loaded settings
         this.updateWeekRange();
+        this._courseAutoSyncTimer = setInterval(() => this.checkCourseAutoSync(), 30000);
     }
 
     bindEvents() {
@@ -160,10 +170,22 @@ class TimetableApp {
         bind('addStudentBtn', 'click', () => this.openStudentModal());
         bind('addCourseBtn', 'click', () => this.openManualCourseModal());
         bind('subjectForm', 'submit', (e) => this.saveSubject(e));
-        bind('studentBatchForm', 'submit', (e) => this.saveStudentBatch(e));
-        bind('importStudentsBtn', 'click', () => this.openStudentBatchModal());
+        bind('courseLoginBtn', 'click', () => this.openCourseLogin());
+        bind('courseLoginForm', 'submit', (e) => this.submitCourseLogin(e));
+        bind('courseSyncRangeButton', 'click', () => this.chooseCourseSyncRange());
+        bind('courseSyncStartBtn', 'click', () => this.startCourseSync());
+        bind('courseSyncStopBtn', 'click', () => this.stopCourseSync());
+        bind('courseAutoSyncToggle', 'click', () => this.toggleCourseAutoSync());
+        bind('courseLogoutBtn', 'click', () => this.logoutCourseAccount());
+        bind('courseAutoLoginOption', 'change', (e) => {
+            if (e.target.checked) document.getElementById('courseSavePasswordOption').checked = true;
+        });
+        bind('courseSavePasswordOption', 'change', (e) => {
+            if (!e.target.checked) document.getElementById('courseAutoLoginOption').checked = false;
+        });
+        document.querySelectorAll('input[name="courseAutoMode"]').forEach(input => input.addEventListener('change', () => this.saveCourseAutoSyncSettings()));
+        bind('courseTimedSyncTime', 'change', () => this.saveCourseAutoSyncSettings());
         bind('cancelBtn', 'click', () => this.closeSubjectModal());
-        bind('clearStudentBatchBtn', 'click', () => this.clearStudentBatchInput());
         bind('deleteSubjectBtn', 'click', () => this.deleteSubject());
         
         // 添加课程弹窗相关
@@ -328,9 +350,9 @@ class TimetableApp {
             settingsModal: () => this.closeSettingsModal(),
             gradeModal: () => this.closeGradeModal(),
             quickStartModal: () => this.closeQuickStartModal(),
-            studentBatchModal: () => this.closeStudentBatchModal(),
             resetModal: () => this.closeResetModal(),
-            exportModal: () => this.closeExportModal()
+            exportModal: () => this.closeExportModal(),
+            courseLoginModal: () => this.closeCourseLoginModal()
         };
         
         Object.keys(modalCloseHandlers).forEach(modalId => {
@@ -343,6 +365,215 @@ class TimetableApp {
                 });
             }
         });
+    }
+
+    async openCourseLogin() {
+        const modal = document.getElementById('courseLoginModal');
+        const range = this.getWeekRange(this.currentDate);
+        document.getElementById('courseSyncStartDate').value = this.formatLocalDate(range.start);
+        document.getElementById('courseSyncEndDate').value = this.formatLocalDate(range.end);
+        document.getElementById('courseLoginMessage').textContent = '';
+        this.updateCourseSyncRangeText();
+        this.renderCourseAutoSyncSettings();
+        document.getElementById('courseAutoLoginOption').checked = localStorage.getItem('courseAutoLogin') === 'true';
+        document.getElementById('courseSavePasswordOption').checked = localStorage.getItem('courseSavePassword') === 'true';
+        document.getElementById('courseCredentialsPanel').style.display = this._courseLoggedIn ? 'none' : 'block';
+        document.getElementById('courseLoggedInPanel').style.display = this._courseLoggedIn ? 'block' : 'none';
+        modal.style.display = 'block';
+        if (!this._courseLoggedIn) document.getElementById('courseLoginAccount').focus();
+    }
+
+    closeCourseLoginModal() {
+        document.getElementById('courseLoginModal').style.display = 'none';
+    }
+
+    async submitCourseLogin(event) {
+        event.preventDefault();
+        const message = document.getElementById('courseLoginMessage');
+        const submit = document.getElementById('courseLoginSubmitBtn');
+        const payload = {
+            account: document.getElementById('courseLoginAccount').value.trim(),
+            password: document.getElementById('courseLoginPassword').value,
+            autoLogin: document.getElementById('courseAutoLoginOption').checked,
+            savePassword: document.getElementById('courseSavePasswordOption').checked
+        };
+        if (!payload.account || !payload.password) {
+            message.textContent = '请输入账号和密码。';
+            return;
+        }
+        submit.disabled = true;
+        submit.textContent = '正在登录…';
+        message.textContent = '正在连接课程系统…';
+        localStorage.setItem('courseAutoLogin', payload.autoLogin ? 'true' : 'false');
+        localStorage.setItem('courseSavePassword', payload.savePassword ? 'true' : 'false');
+        const result = await window.electronAPI.courseLogin(payload);
+        document.getElementById('courseLoginPassword').value = '';
+        if (!result || !result.started) {
+            submit.disabled = false;
+            submit.textContent = '登录';
+            message.textContent = result && result.message ? result.message : '无法启动课程同步。';
+        }
+    }
+
+    chooseCourseSyncRange() {
+        const start = document.getElementById('courseSyncStartDate');
+        const end = document.getElementById('courseSyncEndDate');
+        const chooseEnd = () => {
+            start.removeEventListener('change', chooseEnd);
+            if (typeof end.showPicker === 'function') end.showPicker(); else end.click();
+        };
+        start.addEventListener('change', chooseEnd, { once: true });
+        end.addEventListener('change', () => this.updateCourseSyncRangeText(), { once: true });
+        if (typeof start.showPicker === 'function') start.showPicker(); else start.click();
+    }
+
+    updateCourseSyncRangeText() {
+        const start = document.getElementById('courseSyncStartDate').value;
+        const end = document.getElementById('courseSyncEndDate').value;
+        document.getElementById('courseSyncRangeButton').textContent = start && end ? `${start}  →  ${end}` : '请选择同步起点和终点';
+    }
+
+    async startCourseSync(range = null) {
+        const startDate = range ? range.startDate : document.getElementById('courseSyncStartDate').value;
+        const endDate = range ? range.endDate : document.getElementById('courseSyncEndDate').value;
+        const message = document.getElementById('courseLoginMessage');
+        if (!startDate || !endDate) { message.textContent = '请先选择同步日期范围。'; return; }
+        const result = await window.electronAPI.startCourseSync({ startDate, endDate });
+        if (!result || !result.started) { message.textContent = result && result.message ? result.message : '无法开始同步。'; return; }
+        this._courseSyncRunning = true;
+        document.getElementById('courseSyncStartBtn').disabled = true;
+        document.getElementById('courseSyncStopBtn').disabled = false;
+        message.textContent = '正在读取基础课程信息…';
+    }
+
+    async stopCourseSync() {
+        await window.electronAPI.stopCourseSync();
+        document.getElementById('courseLoginMessage').textContent = '正在停止同步…';
+    }
+
+    toggleCourseAutoSync() {
+        const button = document.getElementById('courseAutoSyncToggle');
+        button.classList.toggle('active');
+        this.saveCourseAutoSyncSettings();
+    }
+
+    saveCourseAutoSyncSettings() {
+        const enabled = document.getElementById('courseAutoSyncToggle').classList.contains('active');
+        const mode = document.querySelector('input[name="courseAutoMode"]:checked').value;
+        const time = document.getElementById('courseTimedSyncTime').value || '22:00';
+        localStorage.setItem('courseAutoSyncSettings', JSON.stringify({ enabled, mode, time }));
+        this.renderCourseAutoSyncSettings();
+    }
+
+    renderCourseAutoSyncSettings() {
+        let settings = { enabled: false, mode: 'async', time: '22:00' };
+        try { settings = { ...settings, ...JSON.parse(localStorage.getItem('courseAutoSyncSettings') || '{}') }; } catch (_) {}
+        const toggle = document.getElementById('courseAutoSyncToggle');
+        toggle.classList.toggle('active', !!settings.enabled);
+        toggle.setAttribute('aria-pressed', settings.enabled ? 'true' : 'false');
+        document.getElementById('courseAutoSyncOptions').style.display = settings.enabled ? 'grid' : 'none';
+        const radio = document.querySelector(`input[name="courseAutoMode"][value="${settings.mode}"]`);
+        if (radio) radio.checked = true;
+        document.getElementById('courseTimedSyncTime').value = settings.time;
+        document.getElementById('courseTimedSyncTime').style.display = settings.mode === 'timed' ? 'block' : 'none';
+    }
+
+    async handleCourseSyncEvent(event) {
+        const message = document.getElementById('courseLoginMessage');
+        const submit = document.getElementById('courseLoginSubmitBtn');
+        if (!event || !event.type) return;
+        if (event.type === 'restore-missing') return;
+        if (event.type === 'login') {
+            this._courseLoggedIn = true;
+            document.getElementById('courseCredentialsPanel').style.display = 'none';
+            document.getElementById('courseLoggedInPanel').style.display = 'block';
+            document.getElementById('courseExclusiveTitle').textContent = `尊贵的定制版用户「${event.teacherName || ''}」你好`;
+            submit.disabled = false;
+            submit.textContent = '登录';
+            message.textContent = '';
+            this.checkCourseAutoSync();
+            return;
+        }
+        if (event.type === 'basic') {
+            const result = { textContent: '' };
+            if (!Array.isArray(event.courses) || event.courses.length === 0) {
+                message.textContent = '登录成功，但所选日期范围内没有课程。';
+                return;
+            }
+            await this.importCourseDataText(event.courses, result, true, { updateExisting: true });
+            message.textContent = `${result.textContent}，正在逐节检查考勤…`;
+            return;
+        }
+        if (event.type === 'progress') {
+            message.textContent = `正在检查第 ${event.current}/${event.total} 节课的考勤…`;
+            return;
+        }
+        if (event.type === 'attendance') {
+            const result = { textContent: '' };
+            await this.importCourseDataText([event.course], result, true, { updateExisting: true });
+            message.textContent = `已更新第 ${event.current}/${event.total} 节课的考勤和实际时长`;
+            return;
+        }
+        submit.disabled = false;
+        submit.textContent = '登录';
+        if (event.type === 'done') {
+            message.textContent = `同步完成，共检查 ${event.total} 节课。`;
+            this._courseSyncRunning = false;
+            document.getElementById('courseSyncStartBtn').disabled = false;
+            document.getElementById('courseSyncStopBtn').disabled = true;
+        } else if (event.type === 'stopped') {
+            message.textContent = `同步已停止，已检查 ${event.current || 0}/${event.total || 0} 节课。`;
+            this._courseSyncRunning = false;
+            document.getElementById('courseSyncStartBtn').disabled = false;
+            document.getElementById('courseSyncStopBtn').disabled = true;
+        } else if (event.type === 'stopping') {
+            message.textContent = '正在停止同步…';
+        } else if (event.type === 'error') {
+            message.textContent = `同步失败：${event.message || '未知错误'}`;
+            document.getElementById('courseSyncStartBtn').disabled = false;
+            document.getElementById('courseSyncStopBtn').disabled = true;
+        }
+    }
+
+    checkCourseAutoSync() {
+        if (!this._courseLoggedIn || this._courseSyncRunning) return;
+        let settings;
+        try { settings = JSON.parse(localStorage.getItem('courseAutoSyncSettings') || '{}'); } catch (_) { return; }
+        if (!settings.enabled) return;
+        const now = new Date();
+        const dateKey = this.formatLocalDate(now);
+        if (settings.mode === 'async') {
+            if (now.getHours() < 6) return;
+            if (localStorage.getItem('courseAutoAsyncLastRun') === dateKey) return;
+            const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayKey = this.formatLocalDate(yesterday);
+            localStorage.setItem('courseAutoAsyncLastRun', dateKey);
+            this.startCourseSync({ startDate: yesterdayKey, endDate: yesterdayKey });
+            return;
+        }
+        if (settings.mode !== 'timed' || !settings.time) return;
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        if (currentTime !== settings.time || this._lastTimedCourseSyncDate === dateKey) return;
+        this._lastTimedCourseSyncDate = dateKey;
+        this.startCourseSync({ startDate: dateKey, endDate: dateKey });
+    }
+
+    async logoutCourseAccount() {
+        if (this._courseSyncRunning) await this.stopCourseSync();
+        await window.electronAPI.courseLogout();
+        localStorage.setItem('courseAutoLogin', 'false');
+        localStorage.setItem('courseSavePassword', 'false');
+        this._courseLoggedIn = false;
+        this._courseSyncRunning = false;
+        document.getElementById('courseLoggedInPanel').style.display = 'none';
+        document.getElementById('courseCredentialsPanel').style.display = 'block';
+        document.getElementById('courseLoginPassword').value = '';
+        document.getElementById('courseAutoLoginOption').checked = false;
+        document.getElementById('courseSavePasswordOption').checked = false;
+        document.getElementById('courseLoginMessage').textContent = '已退出登录。';
+        document.getElementById('courseLoginSubmitBtn').disabled = false;
+        document.getElementById('courseLoginSubmitBtn').textContent = '登录';
+        document.getElementById('courseLoginAccount').focus();
     }
 
 

@@ -1301,8 +1301,14 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
                 monday.setDate(current.getDate() - diffToMonday);
                 groupKey = formatLocalDate(monday);
             } else {
-                var weekOfMonth = Math.floor((current.getDate() - 1) / 7) + 1;
-                groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0') + '-W' + weekOfMonth;
+                // Natural Monday-Sunday week, clipped by the selected month.
+                var monthWeekDay = current.getDay();
+                var monthWeekDiff = monthWeekDay === 0 ? 6 : monthWeekDay - 1;
+                var monthWeekMonday = new Date(current);
+                monthWeekMonday.setDate(current.getDate() - monthWeekDiff);
+                groupKey = current.getFullYear() + '-'
+                    + String(current.getMonth() + 1).padStart(2, '0') + '-'
+                    + formatLocalDate(monthWeekMonday);
             }
         } else if (granularity === 'month') {
             groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0');
@@ -1362,12 +1368,15 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         return self.formatStatsChartAxisDate(d);
     };
 
+    var monthWeekOrdinals = {};
     groupOrder.forEach(function (key) {
         var g = groups[key];
         var label;
         if (granularity === 'week' && weekMode === 'monthWeeks') {
             var weekNames = ['第一周', '第二周', '第三周', '第四周', '第五周'];
-            var weekIndex = Math.floor((g.startDate.getDate() - 1) / 7);
+            var monthKey = g.startDate.getFullYear() + '-' + g.startDate.getMonth();
+            var weekIndex = monthWeekOrdinals[monthKey] || 0;
+            monthWeekOrdinals[monthKey] = weekIndex + 1;
             label = weekNames[weekIndex] || ('第' + (weekIndex + 1) + '周');
         } else if (granularity === 'week' && weekMode === 'naturalWeeks') {
             label = formatAxisDateLabel(g.startDate) + '-' + formatAxisDateLabel(g.endDate);
@@ -3293,8 +3302,21 @@ TimetableApp.prototype.renderWeekStats = function () {
     this.updateStatsHeader('周统计', this.getStatsViewSubtitle('周统计', startDate, endDate));
     this._chartGranularity = 'week';
     var lessons = this.aggregateLessons(statsRange.start, statsRange.end);
+    // Keep the overview on the exact same week bucket as the weekly chart.
+    // In monthWeeks mode the chart uses natural weeks clipped at month
+    // boundaries; in naturalWeeks mode it retains the cross-month days.
+    var weekSeries = this.collectChartSeriesData(statsRange.start, statsRange.end, 'week');
     var cardAnchor = new Date(this._statsDate || startDate);
-    var cardWeek = this.getWeekRange(cardAnchor);
+    cardAnchor.setHours(0, 0, 0, 0);
+    var cardWeekIndex = weekSeries.groupStartDates.findIndex(function (groupStart, index) {
+        var groupEnd = weekSeries.groupEndDates[index];
+        return cardAnchor >= groupStart && cardAnchor <= groupEnd;
+    });
+    if (cardWeekIndex < 0) cardWeekIndex = 0;
+    var cardWeek = {
+        start: new Date(weekSeries.groupStartDates[cardWeekIndex] || statsRange.start),
+        end: new Date(weekSeries.groupEndDates[cardWeekIndex] || statsRange.end)
+    };
     var cardLessons = this.aggregateLessons(cardWeek.start, cardWeek.end);
     var summary = this.renderStatsCards(cardLessons, { startDate: cardWeek.start, endDate: cardWeek.end });
     this._statsBaseCardLessons = cardLessons;

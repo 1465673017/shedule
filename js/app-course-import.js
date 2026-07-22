@@ -470,37 +470,23 @@
             if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
         }
     };
-    TimetableApp.prototype.pasteStudentBatchText = async function () {
-        const input = document.getElementById('studentBatchNames');
-        const message = document.getElementById('studentBatchImportMessage');
-        if (!input) return;
-        try {
-            const text = window.electronAPI && typeof window.electronAPI.readClipboardText === 'function'
-                ? await window.electronAPI.readClipboardText()
-                : await navigator.clipboard.readText();
-            if (!text) throw new Error('empty');
-            input.value = text;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
-            if (message) message.textContent = '';
-        } catch (_) {
-            if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
-        }
-    };
-    TimetableApp.prototype.importCourseDataText = async function (input, message) {
+    TimetableApp.prototype.importCourseDataText = async function (input, message, trusted = false, importOptions = {}) {
         message = message || { textContent: '' };
         try {
-            const markedInput = normalizeMarkedInput(input);
+            const markedInput = trusted
+                ? { text: typeof input === 'string' ? input : JSON.stringify(input), hasStageMarker: false }
+                : normalizeMarkedInput(input);
             const segmentedScheduling = !!(this.settings && this.settings.segmentedScheduling);
-            if (!markedInput.hasStageMarker) {
+            if (!trusted && !markedInput.hasStageMarker) {
                 throw new Error('请输入口令后再导入。');
             }
-            const markerStageImport = segmentedScheduling;
+            const markerStageImport = !trusted && segmentedScheduling;
             const options = { fromCurrentStage: markerStageImport };
             const plan = buildImportPlan(this, markedInput.text, options);
             const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
             let overwrite = false;
-            if (hasOldCourses) {
+            const updateExisting = trusted && !!importOptions.updateExisting;
+            if (hasOldCourses && !updateExisting) {
                 overwrite = await window.showAppConfirm(
                     `本周有旧数据未清理，是否覆盖旧数据？\n\n确定：清理 ${this.formatLocalDate(plan.rangeStart)} 至 ${this.formatLocalDate(plan.rangeEnd)} 内的所有课程后导入。\n取消：保留原课程，只在空课位新增数据。`
                 );
@@ -509,7 +495,11 @@
             }
             let result;
             try {
-                result = importCourses(this, markedInput.text, { ...options, plan, skipOccupied: hasOldCourses && !overwrite });
+                result = importCourses(this, markedInput.text, {
+                    ...options,
+                    plan,
+                    skipOccupied: hasOldCourses && !overwrite && !updateExisting
+                });
             } catch (error) {
                 if (importSnapshot) restoreImportSnapshot(this, importSnapshot);
                 throw error;

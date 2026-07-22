@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>A大橙子课时统计（正式版 1.2）</title>
+    <title>A大橙子课时统计（定制版 1.0.0）</title>
     <link rel="icon" type="image/png" href="./icon/orange.png">
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -18,7 +18,7 @@
             <img src="./icon/orange.png" alt="" class="electron-app-logo">
             <div class="electron-app-brand-copy">
                 <strong>A大橙子课时统计</strong>
-                <span>课表工作台 · 正式版 1.2</span>
+                <span>课表工作台 · 定制版 1.0.0</span>
             </div>
         </div>
     </header>
@@ -37,7 +37,7 @@
                 <img src="./icon/orange.png" alt="" class="app-message-logo">
                 <div>
                     <h3 id="appMessageTitle">A大橙子课时统计</h3>
-                    <span>正式版 1.2</span>
+                    <span>定制版 1.0.0</span>
                 </div>
             </div>
             <div id="appMessageText" class="app-message-text"></div>
@@ -57,7 +57,7 @@
                     <button id="resetBtn" class="btn secondary">重置课表</button>
                     <button id="tutorialBtn" class="btn tertiary">快速开始</button>
                     <button id="settingsBtn" class="btn tertiary">基础设置</button>
-                    <button id="importStudentsBtn" class="btn tertiary">批量导入学生</button>
+                    <button id="courseLoginBtn" class="btn tertiary">登录并导入课表</button>
                 </div>
                 <div class="subject-pool">
                     <div class="pool-tabs">
@@ -698,28 +698,37 @@
         </div>
     </div>
 
-    <div id="studentBatchModal" class="modal">
+    <div id="courseLoginModal" class="modal">
         <div class="modal-content standard-form-modal">
             <div class="modal-header">
                 <div class="modal-title-block">
-                    <h3>批量导入学生</h3>
-                    <p class="modal-subtitle">年级用 1–12 表示一年级至高三；不写年级时默认为一年级</p>
+                    <h3>登录并同步课表</h3>
+                    <p class="modal-subtitle">登录后先导入基础课程，再逐节同步考勤和实际上课时长</p>
                 </div>
-                <button type="button" class="modal-close" aria-label="关闭"
-                    data-onclick="app.closeStudentBatchModal()">×</button>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeCourseLoginModal()">×</button>
             </div>
-            <form id="studentBatchForm">
+            <form id="courseLoginForm">
                 <div class="modal-body">
-                    <div class="modal-section form-group">
-                        <textarea id="studentBatchNames" required rows="10"
-                            placeholder="例如：1张三、李四、王五1（均为一年级）；1张三、2李四、3王五（分别为一、二、三年级）；张三、李四（默认一年级）"></textarea>
+                    <div id="courseCredentialsPanel">
+                        <div class="modal-section form-group"><label for="courseLoginAccount">账号</label><input id="courseLoginAccount" type="text" autocomplete="username" required placeholder="请输入账号"></div>
+                        <div class="modal-section form-group"><label for="courseLoginPassword">密码</label><input id="courseLoginPassword" type="password" autocomplete="current-password" required placeholder="请输入密码"></div>
+                        <div class="course-login-options"><label><input id="courseAutoLoginOption" type="checkbox"> 自动登录</label><label><input id="courseSavePasswordOption" type="checkbox"> 保存密码</label></div>
+                        <button id="courseLoginSubmitBtn" type="submit" class="btn primary course-login-prominent">登录</button>
                     </div>
-                    <div id="studentBatchImportMessage" class="modal-subtitle"></div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="clearStudentBatchBtn" class="btn secondary">清除</button>
-                    <button type="button" class="btn secondary" data-onclick="app.pasteStudentBatchText()">粘贴</button>
-                    <button type="submit" class="btn primary">识别并导入</button>
+                    <div id="courseLoggedInPanel" style="display:none">
+                        <div class="course-login-success"><strong id="courseExclusiveTitle">尊贵的定制版用户你好</strong><span>✓ 登录成功</span><button id="courseLogoutBtn" type="button" class="course-logout-icon" title="退出登录" aria-label="退出登录"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 8l4 4-4 4M18 12H8M11 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+                        <div class="course-sync-toolbar">
+                            <button id="courseSyncRangeButton" type="button" class="course-range-button">请选择同步起点和终点</button>
+                            <input id="courseSyncStartDate" type="date" class="course-hidden-date" tabindex="-1"><input id="courseSyncEndDate" type="date" class="course-hidden-date" tabindex="-1">
+                            <button id="courseSyncStartBtn" type="button" class="btn primary">同步课程</button><button id="courseSyncStopBtn" type="button" class="btn danger" disabled>停止同步</button>
+                        </div>
+                        <div class="course-auto-row"><div><strong>自动同步</strong><small>开启后按所选规则执行</small></div><button id="courseAutoSyncToggle" type="button" class="course-auto-switch" aria-pressed="false"><span></span></button></div>
+                        <div id="courseAutoSyncOptions" class="course-auto-options" style="display:none">
+                            <label><input type="radio" name="courseAutoMode" value="async" checked> 异步同步（次日检查昨天）</label>
+                            <label class="course-timed-option"><span><input type="radio" name="courseAutoMode" value="timed"> 定时同步（当天）</span><input id="courseTimedSyncTime" type="time" value="22:00" style="display:none"></label>
+                        </div>
+                    </div>
+                    <div id="courseLoginMessage" class="modal-subtitle"></div>
                 </div>
             </form>
         </div>

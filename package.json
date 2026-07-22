@@ -1,6 +1,6 @@
 {
   "name": "kebiao-app",
-  "version": "1.2.1",
+  "version": "1.0.0",
   "description": "Timetable app",
   "author": "A大橙子",
   "main": "main.js",
@@ -9,30 +9,37 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node tests/schedule-erp.test.js && node tests/time-settings.test.js && node tests/salary-stats.test.js && node tests/security-regressions.test.js && node --check main.js && node --check preload.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
+    "test": "node tests/schedule-erp.test.js && node tests/time-settings.test.js && node tests/salary-stats.test.js && node tests/week-stats.test.js && node tests/security-regressions.test.js && node --check main.js && node --check preload.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
     "test:electron": "node tests/electron-smoke.test.js",
-    "build": "electron-builder --win portable --x64",
-    "build:mac": "electron-builder --mac --publish never && bash build/build-mac-portable.sh",
+    "build:bridge:win": "python -m PyInstaller --noconfirm --clean --onefile --name course-sync-bridge --distpath build/python-dist --workpath build/python-work --specpath build/python-spec main.py",
+    "build:bridge:mac": "python3 -m PyInstaller --noconfirm --clean --onefile --target-arch universal2 --name course-sync-bridge --distpath build/python-dist --workpath build/python-work --specpath build/python-spec main.py",
+    "build": "npm run build:bridge:win && electron-builder --win portable --x64",
+    "build:mac": "npm run build:bridge:mac && electron-builder --mac --publish never && bash build/build-mac-portable.sh",
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
   "build": {
-    "appId": "com.adachengzi.kebiao",
-    "productName": "A大橙子课时统计",
-    "artifactName": "A大橙子课时统计（正式版-${version}）.${ext}",
+    "appId": "com.adachengzi.kebiao.custom",
+    "productName": "A大橙子课时统计定制版",
+    "artifactName": "A大橙子课时统计（定制版-${version}）.${ext}",
     "electronDist": "node_modules/electron/dist",
     "electronVersion": "43.1.1",
     "asar": true,
+    "asarUnpack": [
+      "build/python-dist/**"
+    ],
     "directories": {
       "output": "dist"
     },
     "files": [
       "main.js",
+      "main.py",
       "preload.js",
       "index.html",
       "styles.css",
       "html2canvas.min.js",
       "chart.umd.min.js",
       "icon/**",
+      "build/python-dist/**",
       "js/**",
       "*.svg"
     ],
@@ -49,7 +56,7 @@
     },
     "mac": {
       "icon": "icon/orange.png",
-      "artifactName": "A大橙子课时统计（绿色压缩包版-${version}）-${arch}.${ext}",
+      "artifactName": "A大橙子课时统计（定制版-${version}）-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
@@ -74,7 +81,7 @@
       "category": "public.app-category.productivity"
     },
     "dmg": {
-      "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}"
+      "artifactName": "A大橙子课时统计（定制版-${version}）-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

@@ -2,13 +2,13 @@ const { app, BrowserWindow, dialog, ipcMain, Menu, clipboard, shell } = require(
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { spawn } = require('child_process');
 const isMac = process.platform === 'darwin';
 const appIconPath = path.join(__dirname, 'icon', isMac ? 'orange.png' : 'orange.ico');
-const APP_NAME = 'A大橙子课时统计';
-const LEGACY_APP_NAME = 'A大橙子课时统计（内测版）';
+const APP_NAME = 'A大橙子课时统计定制版';
 const appDataPath = app.getPath('appData');
 app.setName(APP_NAME);
-const formalUserDataPath = path.join(appDataPath, APP_NAME);
+const customUserDataPath = path.join(appDataPath, APP_NAME);
 const isolatedTestDataPath = process.env.KEBIAO_E2E_USER_DATA_DIR;
 const portableRoot = (() => {
     if (process.env.KEBIAO_PORTABLE_DIR) return path.resolve(process.env.KEBIAO_PORTABLE_DIR);
@@ -19,7 +19,7 @@ const portableRoot = (() => {
 const portableUserDataPath = portableRoot ? path.join(portableRoot, 'data') : null;
 app.setPath('userData', isolatedTestDataPath
     ? path.resolve(isolatedTestDataPath)
-    : (portableUserDataPath || formalUserDataPath));
+    : (portableUserDataPath || customUserDataPath));
 
 // A renderer crash on a small number of Windows graphics drivers used to look
 // like the application simply did not start. A crash-triggered relaunch adds
@@ -27,65 +27,12 @@ app.setPath('userData', isolatedTestDataPath
 const GPU_FALLBACK_ARG = '--kebiao-disable-gpu';
 if (process.argv.includes(GPU_FALLBACK_ARG)) app.disableHardwareAcceleration();
 
-// Acquire the lock before touching a potentially large Chromium profile. This
-// also prevents two launches from attempting the one-time migration together.
+// Acquire the lock before opening the isolated custom-edition profile.
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!gotSingleInstanceLock) {
     app.quit();
 }
-
-let staleUserDataPath = null;
-
-function migrateLegacyUserDataDirectory() {
-    if (isolatedTestDataPath || portableUserDataPath) {
-        return;
-    }
-    const legacyPath = path.join(appDataPath, LEGACY_APP_NAME);
-    const formalPath = formalUserDataPath;
-    if (!fs.existsSync(legacyPath)) {
-        app.setPath('userData', formalPath);
-        return;
-    }
-
-    let displacedFormalPath = null;
-    try {
-        // A formal-version directory may have been created by an earlier empty
-        // launch. Move it aside first so the complete legacy Chromium profile
-        // (including Local Storage/LevelDB) can be renamed as one unit.
-        if (fs.existsSync(formalPath)) {
-            displacedFormalPath = `${formalPath}.migration-${Date.now()}`;
-            fs.renameSync(formalPath, displacedFormalPath);
-        }
-        fs.renameSync(legacyPath, formalPath);
-        app.setPath('userData', formalPath);
-        console.log(`已将内测版数据目录迁移为正式版：${formalPath}`);
-    } catch (error) {
-        console.error('内测版数据目录改名失败，继续使用原数据目录:', error);
-        if (!fs.existsSync(formalPath) && displacedFormalPath && fs.existsSync(displacedFormalPath)) {
-            try {
-                fs.renameSync(displacedFormalPath, formalPath);
-                displacedFormalPath = null;
-            } catch (restoreError) {
-                console.error('恢复正式版目录失败:', restoreError);
-            }
-        }
-        // Never start with an empty profile merely because migration failed.
-        app.setPath('userData', legacyPath);
-        return;
-    }
-
-    if (displacedFormalPath && fs.existsSync(displacedFormalPath)) {
-        try {
-            // Cleanup is intentionally deferred until after a window exists.
-            staleUserDataPath = displacedFormalPath;
-        } catch (_) {
-            staleUserDataPath = null;
-        }
-    }
-}
-
-if (gotSingleInstanceLock) migrateLegacyUserDataDirectory();
 
 function appendStartupLog(message, error) {
     try {
@@ -97,20 +44,11 @@ function appendStartupLog(message, error) {
     }
 }
 
-function cleanupStaleUserDataDirectory() {
-    if (!staleUserDataPath) return;
-    const cleanupPath = staleUserDataPath;
-    staleUserDataPath = null;
-    fs.promises.rm(cleanupPath, { recursive: true, force: true }).catch(error => {
-        appendStartupLog(`Failed to clean migrated profile ${cleanupPath}`, error);
-    });
-}
-
 function requireAppIcon() {
     if (fs.existsSync(appIconPath)) return true;
     const message = `缺少必需的应用图标：${appIconPath}\n请恢复 ${path.basename(appIconPath)} 后重新启动。`;
     console.error(message);
-    dialog.showErrorBox('无法启动A大橙子课时统计', message);
+    dialog.showErrorBox(`无法启动${APP_NAME}`, message);
     return false;
 }
 
@@ -164,7 +102,6 @@ function createWindow() {
         if (targetUrl !== appPageUrl) event.preventDefault();
     });
     win.loadURL(appPageUrl).catch(error => appendStartupLog('loadURL rejected', error));
-    win.webContents.once('did-finish-load', cleanupStaleUserDataDirectory);
 }
 
 ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileExt }) => {
@@ -193,6 +130,96 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
 });
 
 ipcMain.handle('read-clipboard-text', () => clipboard.readText());
+
+let courseLoginProcess = null;
+let courseLoginOwner = null;
+function resolveCourseBridgePath() {
+    const bridgeName = process.platform === 'win32' ? 'course-sync-bridge.exe' : 'course-sync-bridge';
+    const candidates = [
+        path.join(process.resourcesPath, 'python-dist', bridgeName),
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'build', 'python-dist', bridgeName),
+        path.join(process.resourcesPath, 'build', 'python-dist', bridgeName),
+        path.join(path.dirname(app.getAppPath()), 'app.asar.unpacked', 'build', 'python-dist', bridgeName)
+    ];
+    return candidates.find(candidate => fs.existsSync(candidate)) || candidates[0];
+}
+function ensureCourseBridge(event) {
+    if (courseLoginProcess && !courseLoginProcess.killed) return courseLoginProcess;
+    const scriptPath = path.join(app.getAppPath(), 'main.py');
+    const packagedBridge = resolveCourseBridgePath();
+    const bridgeCwd = app.isPackaged ? path.dirname(packagedBridge) : path.dirname(scriptPath);
+    const bridgeCommand = app.isPackaged
+        ? packagedBridge
+        : (process.platform === 'win32' ? 'python' : 'python3');
+    const bridgeArgs = app.isPackaged ? ['--bridge'] : [scriptPath, '--bridge'];
+    const child = spawn(bridgeCommand, bridgeArgs, {
+        cwd: bridgeCwd,
+        windowsHide: true,
+        env: {
+            ...process.env,
+            COURSE_SYNC_DATA_DIR: path.join(app.getPath('userData'), 'course-sync')
+        },
+        stdio: ['pipe', 'pipe', 'pipe']
+    });
+    courseLoginProcess = child;
+    courseLoginOwner = event.sender;
+    let output = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', chunk => {
+        output += chunk;
+        const lines = output.split(/\r?\n/);
+        output = lines.pop() || '';
+        lines.forEach(line => {
+            if (!line.startsWith('COURSE_SYNC:')) return;
+            try {
+                const data = JSON.parse(Buffer.from(line.slice(12), 'base64').toString('utf8'));
+                if (courseLoginOwner && !courseLoginOwner.isDestroyed()) courseLoginOwner.send('course-sync-event', data);
+            } catch (error) {
+                appendStartupLog('Failed to decode course sync event', error);
+            }
+        });
+    });
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', chunk => appendStartupLog('Course login helper', String(chunk).trim()));
+    child.once('error', error => {
+        appendStartupLog(`Failed to start course sync bridge from ${bridgeCommand}`, error);
+        courseLoginProcess = null;
+        if (courseLoginOwner && !courseLoginOwner.isDestroyed()) courseLoginOwner.send('course-sync-event', { type: 'error', message: `无法启动同步服务：${error.message}` });
+    });
+    child.once('exit', () => {
+        courseLoginProcess = null;
+        courseLoginOwner = null;
+    });
+    return child;
+}
+function sendCourseBridgeCommand(event, command) {
+    const child = ensureCourseBridge(event);
+    child.stdin.write(`${JSON.stringify(command)}\n`);
+    return { started: true };
+}
+ipcMain.handle('course-login', (event, credentials) => {
+    return sendCourseBridgeCommand(event, { action: 'login', ...(credentials || {}) });
+});
+ipcMain.handle('course-restore-login', event => {
+    return sendCourseBridgeCommand(event, { action: 'restore' });
+});
+ipcMain.handle('start-course-sync', (event, options) => {
+    if (!courseLoginProcess || courseLoginProcess.killed) return { started: false, message: '请先登录' };
+    courseLoginProcess.stdin.write(`${JSON.stringify({ action: 'sync', ...(options || {}) })}\n`);
+    return { started: true };
+});
+ipcMain.handle('stop-course-sync', () => {
+    if (courseLoginProcess && !courseLoginProcess.killed) courseLoginProcess.stdin.write(`${JSON.stringify({ action: 'stop' })}\n`);
+    return { stopped: true };
+});
+ipcMain.handle('course-logout', () => {
+    if (courseLoginProcess && !courseLoginProcess.killed) {
+        const child = courseLoginProcess;
+        child.stdin.write(`${JSON.stringify({ action: 'logout' })}\n`);
+        setTimeout(() => { if (!child.killed) child.kill(); }, 250);
+    }
+    return { loggedOut: true };
+});
 
 ipcMain.on('window-control', (event, action) => {
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -240,7 +267,7 @@ if (gotSingleInstanceLock) {
         });
     }).catch(error => {
         appendStartupLog('Application readiness failed', error);
-        dialog.showErrorBox('无法启动A大橙子课时统计', `启动失败，请将 startup.log 发给开发者。\n${error.message || error}`);
+        dialog.showErrorBox(`无法启动${APP_NAME}`, `启动失败，请将 startup.log 发给开发者。\n${error.message || error}`);
         app.quit();
     });
 

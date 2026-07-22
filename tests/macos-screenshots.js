@@ -17,7 +17,6 @@ const views = [
     { name: 'main', title: '主界面', action: 'main' },
     { name: 'subject-add', title: '添加科目', action: 'subject' },
     { name: 'student-add', title: '添加学生', action: 'student' },
-    { name: 'student-batch', title: '批量添加学生', action: 'studentBatch' },
     { name: 'course-import', title: '批量导入课程', action: 'courseImport' },
     { name: 'period-edit', title: '编辑课时时间', action: 'time' },
     { name: 'lesson-add', title: '添加课程', action: 'lesson' },
@@ -67,9 +66,6 @@ async function prepareView(page, view) {
                 break;
             case 'student':
                 safely(() => app.openStudentModal(), 'subjectModal', 'flex');
-                break;
-            case 'studentBatch':
-                safely(() => app.openStudentBatchModal(), 'studentBatchModal', 'flex');
                 break;
             case 'courseImport':
                 safely(() => app.openCourseDataImportModal(), 'courseDataImportModal', 'flex');

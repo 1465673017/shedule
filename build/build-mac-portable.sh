@@ -4,14 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 VERSION="$(node -p "require('$ROOT_DIR/package.json').version")"
+PRODUCT_NAME="$(node -p "require('$ROOT_DIR/package.json').build.productName")"
 
 make_portable_zip() {
   local arch="$1"
   local app_dir="$2"
-  local source_app="$app_dir/A大橙子课时统计.app"
+  local source_app="$app_dir/$PRODUCT_NAME.app"
   local stage_dir="$DIST_DIR/.portable-$arch"
-  local package_dir="$stage_dir/A大橙子课时统计（便携版）"
-  local output="$DIST_DIR/A大橙子课时统计（便携版-${VERSION}）-${arch}.zip"
+  local package_dir="$stage_dir/${PRODUCT_NAME}（便携版）"
+  local output="$DIST_DIR/${PRODUCT_NAME}（便携版-${VERSION}）-${arch}.zip"
 
   if [[ ! -d "$source_app" ]]; then
     echo "找不到 $arch 应用包：$source_app" >&2
