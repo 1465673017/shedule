@@ -3,12 +3,30 @@ name: Build macOS Packages
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
     runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Delete old workflow artifacts
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh api --paginate \
+          "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+          --jq '.artifacts[].id' |
+        while read -r artifact_id; do
+          if [[ -n "$artifact_id" ]]; then
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+          fi
+        done
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -44,6 +62,7 @@ jobs:
         name: macos-green-zip
         path: dist/*绿色压缩包版*.zip
         if-no-files-found: error
+        retention-days: 1
 
     - name: Upload macOS portable ZIP
       uses: actions/upload-artifact@v4
@@ -51,6 +70,7 @@ jobs:
         name: macos-portable-zip
         path: dist/*便携版*.zip
         if-no-files-found: error
+        retention-days: 1
 
     - name: Upload macOS DMG
       uses: actions/upload-artifact@v4
@@ -58,3 +78,4 @@ jobs:
         name: macos-dmg
         path: dist/*.dmg
         if-no-files-found: error
+        retention-days: 1
