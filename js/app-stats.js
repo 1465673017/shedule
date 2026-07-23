@@ -1294,16 +1294,13 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         if (granularity === 'day') {
             groupKey = formatLocalDate(current);
         } else if (granularity === 'week') {
-            if (weekMode === 'naturalWeeks') {
-                var dayOfWeek = current.getDay();
-                var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                var monday = new Date(current);
-                monday.setDate(current.getDate() - diffToMonday);
-                groupKey = formatLocalDate(monday);
-            } else {
-                var weekOfMonth = Math.floor((current.getDate() - 1) / 7) + 1;
-                groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0') + '-W' + weekOfMonth;
-            }
+            // Both modes use Monday-Sunday buckets. monthWeeks clips the
+            // outer buckets; naturalWeeks expands the range to complete weeks.
+            var dayOfWeek = current.getDay();
+            var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            var monday = new Date(current);
+            monday.setDate(current.getDate() - diffToMonday);
+            groupKey = formatLocalDate(monday);
         } else if (granularity === 'month') {
             groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0');
         } else {
@@ -1367,7 +1364,7 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         var label;
         if (granularity === 'week' && weekMode === 'monthWeeks') {
             var weekNames = ['第一周', '第二周', '第三周', '第四周', '第五周'];
-            var weekIndex = Math.floor((g.startDate.getDate() - 1) / 7);
+            var weekIndex = groupOrder.indexOf(key);
             label = weekNames[weekIndex] || ('第' + (weekIndex + 1) + '周');
         } else if (granularity === 'week' && weekMode === 'naturalWeeks') {
             label = formatAxisDateLabel(g.startDate) + '-' + formatAxisDateLabel(g.endDate);
@@ -3294,13 +3291,22 @@ TimetableApp.prototype.renderWeekStats = function () {
     this._chartGranularity = 'week';
     var lessons = this.aggregateLessons(statsRange.start, statsRange.end);
     var cardAnchor = new Date(this._statsDate || startDate);
+    cardAnchor.setHours(0, 0, 0, 0);
+    if (cardAnchor < startDate) cardAnchor = new Date(startDate);
+    if (cardAnchor > endDate) cardAnchor = new Date(endDate);
     var cardWeek = this.getWeekRange(cardAnchor);
-    var cardLessons = this.aggregateLessons(cardWeek.start, cardWeek.end);
-    var summary = this.renderStatsCards(cardLessons, { startDate: cardWeek.start, endDate: cardWeek.end });
+    var cardStart = new Date(cardWeek.start);
+    var cardEnd = new Date(cardWeek.end);
+    if (this._statsWeekMode !== 'naturalWeeks') {
+        if (cardStart < startDate) cardStart = new Date(startDate);
+        if (cardEnd > endDate) cardEnd = new Date(endDate);
+    }
+    var cardLessons = this.aggregateLessons(cardStart, cardEnd);
+    var summary = this.renderStatsCards(cardLessons, { startDate: cardStart, endDate: cardEnd });
     this._statsBaseCardLessons = cardLessons;
-    this._statsBaseCardStart = cardWeek.start;
-    this._statsBaseCardEnd = cardWeek.end;
-    this.updateStatsOverview(summary, cardWeek.start, cardWeek.end);
+    this._statsBaseCardStart = cardStart;
+    this._statsBaseCardEnd = cardEnd;
+    this.updateStatsOverview(summary, cardStart, cardEnd);
     this.renderStatsByGrade(lessons);
     this._lastChartLessons = lessons;
     this._lastChartStart = statsRange.start;
