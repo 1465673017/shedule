@@ -19,7 +19,6 @@
     "appId": "com.adachengzi.kebiao",
     "productName": "A大橙子课时统计",
     "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}",
-    "electronDist": "node_modules/electron/dist",
     "electronVersion": "43.1.1",
     "asar": true,
     "directories": {
