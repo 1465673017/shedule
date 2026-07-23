@@ -10,6 +10,7 @@ import json
 import os
 import random
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -53,6 +54,7 @@ class CredentialStore:
             app_data = os.environ.get("APPDATA") or str(Path.home())
             data_dir = str(Path(app_data) / "A大橙子课时统计定制版" / "course-sync")
         self.path = Path(data_dir) / "login_history.json"
+        self.keychain_service = "com.adachengzi.kebiao.course-sync"
 
     @staticmethod
     def _protect(text: str) -> str:
@@ -86,6 +88,28 @@ class CredentialStore:
             ctypes.windll.kernel32.LocalFree(output.pbData)
 
     def load(self) -> dict[str, str]:
+        if sys.platform == "darwin":
+            try:
+                content = json.loads(self.path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError):
+                return {}
+            credentials: dict[str, str] = {}
+            for item in content:
+                account = str(item.get("account") or "") if isinstance(item, dict) else ""
+                if not account:
+                    continue
+                result = subprocess.run(
+                    [
+                        "/usr/bin/security", "find-generic-password",
+                        "-s", self.keychain_service, "-a", account, "-w",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    credentials[account] = result.stdout.rstrip("\r\n")
+            return credentials
         try:
             content = json.loads(self.path.read_text(encoding="utf-8"))
             return {
@@ -98,6 +122,42 @@ class CredentialStore:
 
     def save(self, credentials: dict[str, str]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if sys.platform == "darwin":
+            try:
+                previous = json.loads(self.path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError):
+                previous = []
+            previous_accounts = {
+                str(item.get("account"))
+                for item in previous
+                if isinstance(item, dict) and item.get("account")
+            }
+            for account in previous_accounts - set(credentials):
+                subprocess.run(
+                    [
+                        "/usr/bin/security", "delete-generic-password",
+                        "-s", self.keychain_service, "-a", account,
+                    ],
+                    capture_output=True,
+                    check=False,
+                )
+            for account, password in credentials.items():
+                result = subprocess.run(
+                    [
+                        "/usr/bin/security", "add-generic-password", "-U",
+                        "-s", self.keychain_service, "-a", account, "-w", password,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode != 0:
+                    raise OSError(result.stderr.strip() or "Unable to save credentials to macOS Keychain")
+            content = [{"account": account, "storage": "keychain"} for account in credentials]
+            self.path.write_text(
+                json.dumps(content, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            return
         content = [
             {"account": account, "password": self._protect(password)}
             for account, password in credentials.items()
@@ -116,6 +176,10 @@ class EduBossClient:
         self.teacher_name = ""
         self._attendance_cache: dict[tuple[str, str], Any] = {}
         self._last_attendance_request_at = 0.0
+
+    def begin_attendance_sync(self) -> None:
+        """Discard mutable attendance responses before a new sync run."""
+        self._attendance_cache.clear()
 
     @staticmethod
     def _crypt_body(account: str, password: str) -> str:
@@ -948,6 +1012,7 @@ class CourseApp:
 
         def work() -> None:
             try:
+                self.client.begin_attendance_sync()
                 data = self.client.get_courses(start, end)
                 attendance_data: dict[str, Any] = {}
                 courses = self._find_courses_for_attendance(data)
@@ -1113,6 +1178,9 @@ def bridge_main() -> None:
             end = date.fromisoformat(str(request.get("endDate") or ""))
             if start > end:
                 raise EduBossError("开始日期不能晚于结束日期")
+            # The bridge can remain logged in across days. Attendance changes
+            # after roll call, so responses from a previous run are stale.
+            client.begin_attendance_sync()
             raw_data = client.get_courses(start, end)
             basic_courses = CourseApp._simplify_courses(raw_data, {})
             _emit_bridge_event({"type": "basic", "courses": basic_courses})

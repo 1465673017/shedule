@@ -894,6 +894,18 @@
                     stageId: !recalculateStage && existing && existing.stageId || (configuredStage && (configuredStage.stage.id || configuredStage.stage.name)) || null,
                     stageStartDate: !recalculateStage && existing && existing.stageStartDate || (configuredStage ? formatLocalDate(configuredStage.start) : null),
                     stageEndDate: !recalculateStage && existing && existing.stageEndDate || (configuredStage ? formatLocalDate(configuredStage.end) : null),
+                    actualMinutesByDate: existing && existing.actualMinutesByDate
+                        ? { ...existing.actualMinutesByDate }
+                        : undefined,
+                    studentActualMinutesByDate: existing && existing.studentActualMinutesByDate
+                        ? JSON.parse(JSON.stringify(existing.studentActualMinutesByDate))
+                        : undefined,
+                    manualActualMinutesByDate: existing && existing.manualActualMinutesByDate
+                        ? { ...existing.manualActualMinutesByDate }
+                        : undefined,
+                    manualStudentActualMinutesByDate: existing && existing.manualStudentActualMinutesByDate
+                        ? JSON.parse(JSON.stringify(existing.manualStudentActualMinutesByDate))
+                        : undefined,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
@@ -1211,8 +1223,9 @@
             );
         },
 
-        upsertAttendance(app, cellKey, studentId, status, dateKey) {
+        upsertAttendance(app, cellKey, studentId, status, dateKey, options = {}) {
             const erp = ensureErpData(app);
+            const source = options.source || 'manual';
             const dateParts = String(dateKey || '').split('-').map(Number);
             const attendanceDate = dateParts.length === 3 && dateParts.every(Number.isFinite)
                 ? new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
@@ -1226,19 +1239,24 @@
                 record.studentId === String(studentId) &&
                 record.dateKey === dateKey
             );
+            if (existing && options.preserveManual && existing.source === 'manual') {
+                return existing;
+            }
             const payload = {
                 courseInstanceId,
                 cellKey,
                 studentId: String(studentId),
                 dateKey,
                 status,
+                source,
                 updatedAt: new Date().toISOString()
             };
             if (existing) Object.assign(existing, payload);
             else erp.attendanceRecords.push({ id: makeId('att'), ...payload, createdAt: new Date().toISOString() });
+            return existing || erp.attendanceRecords[erp.attendanceRecords.length - 1];
         },
 
-        setActualMinutes(app, cellKey, minutes, dateKey = null) {
+        setActualMinutes(app, cellKey, minutes, dateKey = null, options = {}) {
             const erp = ensureErpData(app);
             const weekStartStr = app.formatLocalDate(app.getWeekRange(app.currentDate).start);
             const version = this.getCellVersion(app, cellKey, weekStartStr);
@@ -1247,10 +1265,14 @@
             if (!instance.actualMinutesByDate) instance.actualMinutesByDate = {};
             const key = dateKey || weekStartStr;
             instance.actualMinutesByDate[key] = minutes;
+            if (options.source !== 'course-sync') {
+                instance.manualActualMinutesByDate = instance.manualActualMinutesByDate || {};
+                instance.manualActualMinutesByDate[key] = true;
+            }
             instance.updatedAt = new Date().toISOString();
         },
 
-        setStudentActualMinutes(app, cellKey, studentId, minutes, dateKey = null) {
+        setStudentActualMinutes(app, cellKey, studentId, minutes, dateKey = null, options = {}) {
             const erp = ensureErpData(app);
             const weekStartStr = app.formatLocalDate(app.getWeekRange(app.currentDate).start);
             const version = this.getCellVersion(app, cellKey, weekStartStr);
@@ -1260,6 +1282,11 @@
             const key = dateKey || weekStartStr;
             if (!instance.studentActualMinutesByDate[key]) instance.studentActualMinutesByDate[key] = {};
             instance.studentActualMinutesByDate[key][String(studentId)] = Math.max(0, Number(minutes) || 0);
+            if (options.source !== 'course-sync') {
+                instance.manualStudentActualMinutesByDate = instance.manualStudentActualMinutesByDate || {};
+                instance.manualStudentActualMinutesByDate[key] = instance.manualStudentActualMinutesByDate[key] || {};
+                instance.manualStudentActualMinutesByDate[key][String(studentId)] = true;
+            }
             instance.updatedAt = new Date().toISOString();
         },
 

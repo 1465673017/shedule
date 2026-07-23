@@ -433,10 +433,34 @@ class TimetableApp {
         document.getElementById('courseSyncRangeButton').textContent = start && end ? `${start}  →  ${end}` : '请选择同步起点和终点';
     }
 
+    hasManualSyncData(startDate, endDate) {
+        const erp = window.ScheduleErpService.ensureErpData(this);
+        const inRange = value => String(value || '') >= startDate && String(value || '') <= endDate;
+        if ((erp.attendanceRecords || []).some(record =>
+            inRange(record.dateKey) && record.source === 'manual'
+        )) return true;
+        return (erp.courseInstances || []).some(instance => {
+            if (!instance || instance.source === 'course-import' || !instance.weekStart || !instance.cellKey) return false;
+            const day = Number(String(instance.cellKey).split('-')[0]);
+            if (!Number.isFinite(day) || day < 1 || day > 7) return false;
+            const weekStart = this.parseDateInputValue(instance.weekStart);
+            if (!weekStart) return false;
+            return inRange(this.formatLocalDate(this.addDays(weekStart, day - 1)));
+        });
+    }
+
     async startCourseSync(range = null) {
         const startDate = range ? range.startDate : document.getElementById('courseSyncStartDate').value;
         const endDate = range ? range.endDate : document.getElementById('courseSyncEndDate').value;
         const message = document.getElementById('courseLoginMessage');
+        const automatic = !!(range && range.automatic);
+        let overwriteManual = false;
+        if (startDate && endDate && !automatic && this.hasManualSyncData(startDate, endDate)) {
+            overwriteManual = await window.showAppConfirm(
+                '所选同步范围内存在手动修改的出勤数据或人员名单。是否用线上同步数据覆盖这些手动修改？\n\n确定：覆盖手动修改。\n取消：保留手动修改，并继续同步。'
+            );
+        }
+        this._courseSyncPreserveManual = automatic || !overwriteManual;
         if (!startDate || !endDate) { message.textContent = '请先选择同步日期范围。'; return; }
         const result = await window.electronAPI.startCourseSync({ startDate, endDate });
         if (!result || !result.started) { message.textContent = result && result.message ? result.message : '无法开始同步。'; return; }
@@ -500,7 +524,10 @@ class TimetableApp {
                 message.textContent = '登录成功，但所选日期范围内没有课程。';
                 return;
             }
-            await this.importCourseDataText(event.courses, result, true, { updateExisting: true });
+            await this.importCourseDataText(event.courses, result, true, {
+                updateExisting: true,
+                preserveManual: this._courseSyncPreserveManual !== false
+            });
             message.textContent = `${result.textContent}，正在逐节检查考勤…`;
             return;
         }
@@ -510,7 +537,10 @@ class TimetableApp {
         }
         if (event.type === 'attendance') {
             const result = { textContent: '' };
-            await this.importCourseDataText([event.course], result, true, { updateExisting: true });
+            await this.importCourseDataText([event.course], result, true, {
+                updateExisting: true,
+                preserveManual: this._courseSyncPreserveManual !== false
+            });
             message.textContent = `已更新第 ${event.current}/${event.total} 节课的考勤和实际时长`;
             return;
         }
@@ -548,14 +578,14 @@ class TimetableApp {
             const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayKey = this.formatLocalDate(yesterday);
             localStorage.setItem('courseAutoAsyncLastRun', dateKey);
-            this.startCourseSync({ startDate: yesterdayKey, endDate: yesterdayKey });
+            this.startCourseSync({ startDate: yesterdayKey, endDate: yesterdayKey, automatic: true });
             return;
         }
         if (settings.mode !== 'timed' || !settings.time) return;
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         if (currentTime !== settings.time || this._lastTimedCourseSyncDate === dateKey) return;
         this._lastTimedCourseSyncDate = dateKey;
-        this.startCourseSync({ startDate: dateKey, endDate: dateKey });
+        this.startCourseSync({ startDate: dateKey, endDate: dateKey, automatic: true });
     }
 
     async logoutCourseAccount() {
@@ -857,6 +887,17 @@ class TimetableApp {
         if (options.weekRange) {
             this.updateWeekRange();
         }
+        const statsModal = document.getElementById('statsModal');
+        if (statsModal && statsModal.style.display === 'block' && typeof this.onStatsDateChange === 'function') {
+            this.onStatsDateChange();
+        }
+        const textStatsModal = document.getElementById('textStatsModal');
+        if (textStatsModal && textStatsModal.style.display === 'block' && typeof this.renderTextStatsModal === 'function') {
+            this.renderTextStatsModal();
+        }
+    }
+
+    refreshOpenStatsViews() {
         const statsModal = document.getElementById('statsModal');
         if (statsModal && statsModal.style.display === 'block' && typeof this.onStatsDateChange === 'function') {
             this.onStatsDateChange();

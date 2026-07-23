@@ -362,8 +362,18 @@
             const importGroupId = `course_import_${course.id || app.formatLocalDate(date)}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
             slots.forEach((slot, slotIndex) => {
                 const cellKey = app.buildCellKey(day, slot.index);
-                window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), {
-                    source: 'course-import',
+                const previousVersion = app.getCellVersion(cellKey, weekStart);
+                const previousInstance = previousVersion && previousVersion.courseInstanceId
+                    ? window.ScheduleErpService.ensureErpData(app).courseInstances.find(item => item.id === previousVersion.courseInstanceId)
+                    : null;
+                const preserveManualRoster = !!options.preserveManual
+                    && previousInstance
+                    && previousInstance.source !== 'course-import';
+                const importedStudentIds = preserveManualRoster
+                    ? (previousVersion.student || []).map(String)
+                    : students.map(s => String(s.id));
+                window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, importedStudentIds, {
+                    source: preserveManualRoster ? previousInstance.source : 'course-import',
                     recalculateStage: true
                 });
                 const erp = window.ScheduleErpService.ensureErpData(app);
@@ -375,11 +385,41 @@
                     instance.importPartCount = slots.length;
                     instance.importSourceTime = `${range.start}-${range.end}`;
                     instance.importTotalMinutes = range.durationMinutes;
-                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [dateKey]: slot.overlapMinutes };
+                    const preserveLocalActual = !!options.preserveManual
+                        && instance.manualActualMinutesByDate
+                        && instance.manualActualMinutesByDate[dateKey];
+                    if (!preserveLocalActual) {
+                        instance.actualMinutesByDate = {
+                            ...(instance.actualMinutesByDate || {}),
+                            [dateKey]: slot.overlapMinutes
+                        };
+                        if (instance.manualActualMinutesByDate) {
+                            delete instance.manualActualMinutesByDate[dateKey];
+                        }
+                    }
+                    if (!options.preserveManual) {
+                        if (instance.studentActualMinutesByDate) {
+                            delete instance.studentActualMinutesByDate[dateKey];
+                        }
+                        if (instance.manualStudentActualMinutesByDate) {
+                            delete instance.manualStudentActualMinutesByDate[dateKey];
+                        }
+                    }
                     const studentMinutes = {};
                     sourceStudents.forEach((source, i) => {
                         const minutes = studentActualMinutesForSlot(source, slot, range);
-                        if (minutes !== undefined) studentMinutes[String(students[i].id)] = minutes;
+                        const studentId = String(students[i].id);
+                        const preserveLocalStudentActual = !!options.preserveManual
+                            && instance.manualStudentActualMinutesByDate
+                            && instance.manualStudentActualMinutesByDate[dateKey]
+                            && instance.manualStudentActualMinutesByDate[dateKey][studentId];
+                        if (minutes !== undefined && !preserveLocalStudentActual) {
+                            studentMinutes[studentId] = minutes;
+                            if (instance.manualStudentActualMinutesByDate
+                                && instance.manualStudentActualMinutesByDate[dateKey]) {
+                                delete instance.manualStudentActualMinutesByDate[dateKey][studentId];
+                            }
+                        }
                     });
                     if (Object.keys(studentMinutes).length) {
                         instance.studentActualMinutesByDate = { ...(instance.studentActualMinutesByDate || {}) };
@@ -389,9 +429,23 @@
                         };
                     }
                 }
+                if (!options.preserveManual) {
+                    const dateKey = app.formatLocalDate(date);
+                    const erp = window.ScheduleErpService.ensureErpData(app);
+                    erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
+                        !(record.cellKey === cellKey && record.dateKey === dateKey)
+                    );
+                }
                 sourceStudents.forEach((source, i) => {
                     const status = attendanceStatus(course, source);
-                    if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
+                    if (status) window.ScheduleErpService.upsertAttendance(
+                        app,
+                        cellKey,
+                        students[i].id,
+                        status,
+                        app.formatLocalDate(date),
+                        { source: 'course-sync', preserveManual: !!options.preserveManual }
+                    );
                 });
             });
             studentCount += students.length;
@@ -481,7 +535,10 @@
                 throw new Error('请输入口令后再导入。');
             }
             const markerStageImport = !trusted && segmentedScheduling;
-            const options = { fromCurrentStage: markerStageImport };
+            const options = {
+                fromCurrentStage: markerStageImport,
+                preserveManual: trusted && importOptions.preserveManual !== false
+            };
             const plan = buildImportPlan(this, markedInput.text, options);
             const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
             let overwrite = false;

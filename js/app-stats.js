@@ -1022,7 +1022,10 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
             const sid = btn.dataset.sid;
             const newStatus = btn.dataset.status;
 
-            this.setAttendanceStatus(btnKey, sid, newStatus);
+            this.setAttendanceStatus(btnKey, sid, newStatus, {
+                refreshStats: false,
+                dateKey: lessonDates[0]
+            });
             this.syncLessonAttendanceSummary(lesson);
             this._expandedTextStatsLessonKey = lesson.key;
 
@@ -1044,6 +1047,11 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
 }
 
 TimetableApp.prototype.refreshStatsAfterAttendanceChange = function () {
+    const statsModal = document.getElementById('statsModal');
+    if (statsModal && statsModal.style.display === 'block' && typeof this.onStatsDateChange === 'function') {
+        this.onStatsDateChange();
+        return;
+    }
     const textStatsModal = document.getElementById('textStatsModal');
     if (textStatsModal && textStatsModal.style.display === 'block') {
         this.renderTextStatsModal();

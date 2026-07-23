@@ -16,8 +16,24 @@ jobs:
         node-version: '22.x'
         cache: 'npm'
 
+    - name: Set up universal Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        architecture: 'x64'
+        cache: 'pip'
+        cache-dependency-path: build/requirements-mac.txt
+
+    - name: Install macOS bridge dependencies
+      run: python3 -m pip install -r build/requirements-mac.txt
+
     - name: Install dependencies
       run: npm ci
+
+    - name: Run tests
+      run: |
+        npm test
+        python3 -m py_compile main.py
 
     - name: Cache electron-builder
       uses: actions/cache@v4
