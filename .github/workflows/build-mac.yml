@@ -19,10 +19,14 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Run tests
+      run: npm test
+
     - name: Cache electron-builder
       uses: actions/cache@v4
       with:
         path: |
+          ~/Library/Caches/electron
           ~/Library/Caches/electron-builder
           ~/.cache/electron-builder
         key: ${{ runner.os }}-electron-builder-${{ hashFiles('package-lock.json') }}

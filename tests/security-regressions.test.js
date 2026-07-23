@@ -5,6 +5,12 @@ const vm = require('vm');
 
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const packageConfig = JSON.parse(read('package.json'));
+assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(packageConfig.build, 'electronDist'),
+    false,
+    'packaging must let electron-builder resolve/download the platform-specific Electron runtime'
+);
 
 const mainSource = read('main.js');
 assert.match(mainSource, /setWindowOpenHandler/);
