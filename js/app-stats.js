@@ -1022,7 +1022,10 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
             const sid = btn.dataset.sid;
             const newStatus = btn.dataset.status;
 
-            this.setAttendanceStatus(btnKey, sid, newStatus);
+            this.setAttendanceStatus(btnKey, sid, newStatus, {
+                refreshStats: false,
+                dateKey: lessonDates[0]
+            });
             this.syncLessonAttendanceSummary(lesson);
             this._expandedTextStatsLessonKey = lesson.key;
 
@@ -1044,6 +1047,11 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
 }
 
 TimetableApp.prototype.refreshStatsAfterAttendanceChange = function () {
+    const statsModal = document.getElementById('statsModal');
+    if (statsModal && statsModal.style.display === 'block' && typeof this.onStatsDateChange === 'function') {
+        this.onStatsDateChange();
+        return;
+    }
     const textStatsModal = document.getElementById('textStatsModal');
     if (textStatsModal && textStatsModal.style.display === 'block') {
         this.renderTextStatsModal();
@@ -1294,13 +1302,22 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         if (granularity === 'day') {
             groupKey = formatLocalDate(current);
         } else if (granularity === 'week') {
-            // Both modes use Monday-Sunday buckets. monthWeeks clips the
-            // outer buckets; naturalWeeks expands the range to complete weeks.
-            var dayOfWeek = current.getDay();
-            var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-            var monday = new Date(current);
-            monday.setDate(current.getDate() - diffToMonday);
-            groupKey = formatLocalDate(monday);
+            if (weekMode === 'naturalWeeks') {
+                var dayOfWeek = current.getDay();
+                var diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                var monday = new Date(current);
+                monday.setDate(current.getDate() - diffToMonday);
+                groupKey = formatLocalDate(monday);
+            } else {
+                // Natural Monday-Sunday week, clipped by the selected month.
+                var monthWeekDay = current.getDay();
+                var monthWeekDiff = monthWeekDay === 0 ? 6 : monthWeekDay - 1;
+                var monthWeekMonday = new Date(current);
+                monthWeekMonday.setDate(current.getDate() - monthWeekDiff);
+                groupKey = current.getFullYear() + '-'
+                     + String(current.getMonth() + 1).padStart(2, '0') + '-'
+                     + formatLocalDate(monthWeekMonday);
+            }
         } else if (granularity === 'month') {
             groupKey = current.getFullYear() + '-' + String(current.getMonth() + 1).padStart(2, '0');
         } else {
@@ -1359,12 +1376,15 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         return self.formatStatsChartAxisDate(d);
     };
 
+    var monthWeekOrdinals = {};
     groupOrder.forEach(function (key) {
         var g = groups[key];
         var label;
         if (granularity === 'week' && weekMode === 'monthWeeks') {
             var weekNames = ['第一周', '第二周', '第三周', '第四周', '第五周'];
-            var weekIndex = groupOrder.indexOf(key);
+            var monthKey = g.startDate.getFullYear() + '-' + g.startDate.getMonth();
+            var weekIndex = monthWeekOrdinals[monthKey] || 0;
+            monthWeekOrdinals[monthKey] = weekIndex + 1;
             label = weekNames[weekIndex] || ('第' + (weekIndex + 1) + '周');
         } else if (granularity === 'week' && weekMode === 'naturalWeeks') {
             label = formatAxisDateLabel(g.startDate) + '-' + formatAxisDateLabel(g.endDate);
@@ -3290,23 +3310,27 @@ TimetableApp.prototype.renderWeekStats = function () {
     this.updateStatsHeader('周统计', this.getStatsViewSubtitle('周统计', startDate, endDate));
     this._chartGranularity = 'week';
     var lessons = this.aggregateLessons(statsRange.start, statsRange.end);
+    // Keep the overview on the exact same week bucket as the weekly chart.
+    // In monthWeeks mode the chart uses natural weeks clipped at month
+    // boundaries; in naturalWeeks mode it retains the cross-month days.
+    var weekSeries = this.collectChartSeriesData(statsRange.start, statsRange.end, 'week');
     var cardAnchor = new Date(this._statsDate || startDate);
     cardAnchor.setHours(0, 0, 0, 0);
-    if (cardAnchor < startDate) cardAnchor = new Date(startDate);
-    if (cardAnchor > endDate) cardAnchor = new Date(endDate);
-    var cardWeek = this.getWeekRange(cardAnchor);
-    var cardStart = new Date(cardWeek.start);
-    var cardEnd = new Date(cardWeek.end);
-    if (this._statsWeekMode !== 'naturalWeeks') {
-        if (cardStart < startDate) cardStart = new Date(startDate);
-        if (cardEnd > endDate) cardEnd = new Date(endDate);
-    }
-    var cardLessons = this.aggregateLessons(cardStart, cardEnd);
-    var summary = this.renderStatsCards(cardLessons, { startDate: cardStart, endDate: cardEnd });
+    var cardWeekIndex = weekSeries.groupStartDates.findIndex(function (groupStart, index) {
+        var groupEnd = weekSeries.groupEndDates[index];
+        return cardAnchor >= groupStart && cardAnchor <= groupEnd;
+    });
+    if (cardWeekIndex < 0) cardWeekIndex = 0;
+    var cardWeek = {
+        start: new Date(weekSeries.groupStartDates[cardWeekIndex] || statsRange.start),
+        end: new Date(weekSeries.groupEndDates[cardWeekIndex] || statsRange.end)
+    };
+    var cardLessons = this.aggregateLessons(cardWeek.start, cardWeek.end);
+    var summary = this.renderStatsCards(cardLessons, { startDate: cardWeek.start, endDate: cardWeek.end });
     this._statsBaseCardLessons = cardLessons;
-    this._statsBaseCardStart = cardStart;
-    this._statsBaseCardEnd = cardEnd;
-    this.updateStatsOverview(summary, cardStart, cardEnd);
+    this._statsBaseCardStart = cardWeek.start;
+    this._statsBaseCardEnd = cardWeek.end;
+    this.updateStatsOverview(summary, cardWeek.start, cardWeek.end);
     this.renderStatsByGrade(lessons);
     this._lastChartLessons = lessons;
     this._lastChartStart = statsRange.start;

@@ -362,8 +362,18 @@
             const importGroupId = `course_import_${course.id || app.formatLocalDate(date)}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
             slots.forEach((slot, slotIndex) => {
                 const cellKey = app.buildCellKey(day, slot.index);
-                window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, students.map(s => s.id), {
-                    source: 'course-import',
+                const previousVersion = app.getCellVersion(cellKey, weekStart);
+                const previousInstance = previousVersion && previousVersion.courseInstanceId
+                    ? window.ScheduleErpService.ensureErpData(app).courseInstances.find(item => item.id === previousVersion.courseInstanceId)
+                    : null;
+                const preserveManualRoster = !!options.preserveManual
+                    && previousInstance
+                    && previousInstance.source !== 'course-import';
+                const importedStudentIds = preserveManualRoster
+                    ? (previousVersion.student || []).map(String)
+                    : students.map(s => String(s.id));
+                window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, importedStudentIds, {
+                    source: preserveManualRoster ? previousInstance.source : 'course-import',
                     recalculateStage: true
                 });
                 const erp = window.ScheduleErpService.ensureErpData(app);
@@ -375,11 +385,41 @@
                     instance.importPartCount = slots.length;
                     instance.importSourceTime = `${range.start}-${range.end}`;
                     instance.importTotalMinutes = range.durationMinutes;
-                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [dateKey]: slot.overlapMinutes };
+                    const preserveLocalActual = !!options.preserveManual
+                        && instance.manualActualMinutesByDate
+                        && instance.manualActualMinutesByDate[dateKey];
+                    if (!preserveLocalActual) {
+                        instance.actualMinutesByDate = {
+                            ...(instance.actualMinutesByDate || {}),
+                            [dateKey]: slot.overlapMinutes
+                        };
+                        if (instance.manualActualMinutesByDate) {
+                            delete instance.manualActualMinutesByDate[dateKey];
+                        }
+                    }
+                    if (!options.preserveManual) {
+                        if (instance.studentActualMinutesByDate) {
+                            delete instance.studentActualMinutesByDate[dateKey];
+                        }
+                        if (instance.manualStudentActualMinutesByDate) {
+                            delete instance.manualStudentActualMinutesByDate[dateKey];
+                        }
+                    }
                     const studentMinutes = {};
                     sourceStudents.forEach((source, i) => {
                         const minutes = studentActualMinutesForSlot(source, slot, range);
-                        if (minutes !== undefined) studentMinutes[String(students[i].id)] = minutes;
+                        const studentId = String(students[i].id);
+                        const preserveLocalStudentActual = !!options.preserveManual
+                            && instance.manualStudentActualMinutesByDate
+                            && instance.manualStudentActualMinutesByDate[dateKey]
+                            && instance.manualStudentActualMinutesByDate[dateKey][studentId];
+                        if (minutes !== undefined && !preserveLocalStudentActual) {
+                            studentMinutes[studentId] = minutes;
+                            if (instance.manualStudentActualMinutesByDate
+                                && instance.manualStudentActualMinutesByDate[dateKey]) {
+                                delete instance.manualStudentActualMinutesByDate[dateKey][studentId];
+                            }
+                        }
                     });
                     if (Object.keys(studentMinutes).length) {
                         instance.studentActualMinutesByDate = { ...(instance.studentActualMinutesByDate || {}) };
@@ -389,9 +429,23 @@
                         };
                     }
                 }
+                if (!options.preserveManual) {
+                    const dateKey = app.formatLocalDate(date);
+                    const erp = window.ScheduleErpService.ensureErpData(app);
+                    erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
+                        !(record.cellKey === cellKey && record.dateKey === dateKey)
+                    );
+                }
                 sourceStudents.forEach((source, i) => {
                     const status = attendanceStatus(course, source);
-                    if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
+                    if (status) window.ScheduleErpService.upsertAttendance(
+                        app,
+                        cellKey,
+                        students[i].id,
+                        status,
+                        app.formatLocalDate(date),
+                        { source: 'course-sync', preserveManual: !!options.preserveManual }
+                    );
                 });
             });
             studentCount += students.length;
@@ -470,37 +524,26 @@
             if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
         }
     };
-    TimetableApp.prototype.pasteStudentBatchText = async function () {
-        const input = document.getElementById('studentBatchNames');
-        const message = document.getElementById('studentBatchImportMessage');
-        if (!input) return;
-        try {
-            const text = window.electronAPI && typeof window.electronAPI.readClipboardText === 'function'
-                ? await window.electronAPI.readClipboardText()
-                : await navigator.clipboard.readText();
-            if (!text) throw new Error('empty');
-            input.value = text;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
-            if (message) message.textContent = '';
-        } catch (_) {
-            if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
-        }
-    };
-    TimetableApp.prototype.importCourseDataText = async function (input, message) {
+    TimetableApp.prototype.importCourseDataText = async function (input, message, trusted = false, importOptions = {}) {
         message = message || { textContent: '' };
         try {
-            const markedInput = normalizeMarkedInput(input);
+            const markedInput = trusted
+                ? { text: typeof input === 'string' ? input : JSON.stringify(input), hasStageMarker: false }
+                : normalizeMarkedInput(input);
             const segmentedScheduling = !!(this.settings && this.settings.segmentedScheduling);
-            if (!markedInput.hasStageMarker) {
+            if (!trusted && !markedInput.hasStageMarker) {
                 throw new Error('请输入口令后再导入。');
             }
-            const markerStageImport = segmentedScheduling;
-            const options = { fromCurrentStage: markerStageImport };
+            const markerStageImport = !trusted && segmentedScheduling;
+            const options = {
+                fromCurrentStage: markerStageImport,
+                preserveManual: trusted && importOptions.preserveManual !== false
+            };
             const plan = buildImportPlan(this, markedInput.text, options);
             const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);
             let overwrite = false;
-            if (hasOldCourses) {
+            const updateExisting = trusted && !!importOptions.updateExisting;
+            if (hasOldCourses && !updateExisting) {
                 overwrite = await window.showAppConfirm(
                     `本周有旧数据未清理，是否覆盖旧数据？\n\n确定：清理 ${this.formatLocalDate(plan.rangeStart)} 至 ${this.formatLocalDate(plan.rangeEnd)} 内的所有课程后导入。\n取消：保留原课程，只在空课位新增数据。`
                 );
@@ -509,7 +552,11 @@
             }
             let result;
             try {
-                result = importCourses(this, markedInput.text, { ...options, plan, skipOccupied: hasOldCourses && !overwrite });
+                result = importCourses(this, markedInput.text, {
+                    ...options,
+                    plan,
+                    skipOccupied: hasOldCourses && !overwrite && !updateExisting
+                });
             } catch (error) {
                 if (importSnapshot) restoreImportSnapshot(this, importSnapshot);
                 throw error;

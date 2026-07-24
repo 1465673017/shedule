@@ -62,6 +62,69 @@ function studentIds(version) {
     return version ? version.student.slice().sort() : [];
 }
 
+const statsAttendanceDateApp = makeApp();
+ScheduleErpService.setCellVersion(statsAttendanceDateApp, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
+statsAttendanceDateApp.currentDate = new Date(2026, 6, 22);
+statsAttendanceDateApp.isHistoricalDateProtected = () => false;
+statsAttendanceDateApp.getAttendanceDateKeyForCell = () => '2026-07-22';
+statsAttendanceDateApp.saveData = () => {};
+TimetableApp.prototype.setAttendanceStatus.call(
+    statsAttendanceDateApp,
+    '3-afternoon-0',
+    's1',
+    'leave',
+    { dateKey: '2026-07-08', refreshStats: false }
+);
+assert.strictEqual(
+    statsAttendanceDateApp.erpData.attendanceRecords[0].dateKey,
+    '2026-07-08',
+    'attendance edited from statistics must be stored against the viewed lesson date'
+);
+
+const syncedZeroMinutesApp = makeApp();
+ScheduleErpService.setCellVersion(
+    syncedZeroMinutesApp, '3-afternoon-0', '2026-07-06', 'math', ['s1'],
+    { source: 'course-import' }
+);
+const syncedZeroInstance = syncedZeroMinutesApp.erpData.courseInstances[0];
+syncedZeroInstance.actualMinutesByDate = { '2026-07-08': 0 };
+syncedZeroInstance.studentActualMinutesByDate = { '2026-07-08': { s1: 0 } };
+syncedZeroMinutesApp.currentDate = new Date(2026, 6, 8);
+syncedZeroMinutesApp.isHistoricalDateProtected = () => false;
+syncedZeroMinutesApp.getAttendanceDateKeyForCell = () => '2026-07-08';
+syncedZeroMinutesApp.parseCellKey = () => ({ day: 3, periodIndex: 0 });
+syncedZeroMinutesApp.getPeriod = () => ({ time: '16:00-17:00' });
+syncedZeroMinutesApp.timeToMinutes = value => {
+    const [hours, minutes] = value.trim().split(':').map(Number);
+    return hours * 60 + minutes;
+};
+syncedZeroMinutesApp.getCellVersion = (key, weekStart) =>
+    ScheduleErpService.getCellVersion(syncedZeroMinutesApp, key, weekStart);
+syncedZeroMinutesApp.saveData = () => {};
+syncedZeroMinutesApp.restoreSyncedZeroMinutesForPresent =
+    TimetableApp.prototype.restoreSyncedZeroMinutesForPresent;
+TimetableApp.prototype.setAttendanceStatus.call(
+    syncedZeroMinutesApp, '3-afternoon-0', 's1', 'present',
+    { dateKey: '2026-07-08', refreshStats: false }
+);
+assert.strictEqual(syncedZeroInstance.actualMinutesByDate['2026-07-08'], 60);
+assert.strictEqual(syncedZeroInstance.studentActualMinutesByDate['2026-07-08'].s1, 60);
+assert.strictEqual(syncedZeroInstance.manualActualMinutesByDate['2026-07-08'], true);
+assert.strictEqual(syncedZeroInstance.manualStudentActualMinutesByDate['2026-07-08'].s1, true);
+ScheduleErpService.setCellVersion(
+    syncedZeroMinutesApp, '3-afternoon-0', '2026-07-06', 'math', ['s1'],
+    { source: 'course-import' }
+);
+const rebuiltSyncedInstance = syncedZeroMinutesApp.erpData.courseInstances.find(
+    instance => instance.cellKey === '3-afternoon-0' && instance.weekStart === '2026-07-06'
+);
+assert.strictEqual(
+    rebuiltSyncedInstance.studentActualMinutesByDate['2026-07-08'].s1,
+    60,
+    'rebuilding an imported course must retain locally confirmed actual minutes'
+);
+assert.strictEqual(rebuiltSyncedInstance.manualStudentActualMinutesByDate['2026-07-08'].s1, true);
+
 const singleStudentEditApp = makeApp();
 ScheduleErpService.setCellVersion(singleStudentEditApp, '2-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);
 ScheduleErpService.setSingleCellOccurrence(singleStudentEditApp, '2-afternoon-0', '2026-07-13', 'math', ['s1']);
@@ -361,6 +424,25 @@ const app4 = makeApp();
 ScheduleErpService.setCellVersion(app4, '3-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);
 app4.currentDate = new Date(2026, 6, 8);
 ScheduleErpService.upsertAttendance(app4, '3-afternoon-0', 's1', 'present', '2026-07-08');
+assert.strictEqual(app4.erpData.attendanceRecords[0].source, 'manual');
+ScheduleErpService.upsertAttendance(
+    app4, '3-afternoon-0', 's1', 'absent', '2026-07-08',
+    { source: 'course-sync', preserveManual: true }
+);
+assert.strictEqual(
+    app4.erpData.attendanceRecords[0].status,
+    'present',
+    'automatic sync should preserve manually edited attendance'
+);
+ScheduleErpService.upsertAttendance(
+    app4, '3-afternoon-0', 's1', 'absent', '2026-07-08',
+    { source: 'course-sync', preserveManual: false }
+);
+assert.strictEqual(
+    app4.erpData.attendanceRecords[0].status,
+    'absent',
+    'confirmed manual sync overwrite should replace manually edited attendance'
+);
 ScheduleErpService.removeStudentEverywhere(app4, 's1');
 assert.deepStrictEqual(
     studentIds(ScheduleErpService.getCellVersion(app4, '3-afternoon-0', '2026-07-06')),

@@ -373,7 +373,7 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
             let autoSaved = false;
             students.forEach(student => {
                 if (!att[student.id]) {
-                    this.setAttendanceStatus(key, student.id, 'present');
+                    this.setAttendanceStatus(key, student.id, 'present', { refreshStats: false });
                     att[student.id] = 'present';
                     autoSaved = true;
                 }
@@ -416,15 +416,57 @@ TimetableApp.prototype.setAttendance = function(key, studentId, status, btn) {
         
     }
 
-TimetableApp.prototype.setAttendanceStatus = function(key, studentId, status) {
-        const dateKey = this.getAttendanceDateKeyForCell(key);
+TimetableApp.prototype.setAttendanceStatus = function(key, studentId, status, options) {
+        const opts = options || {};
+        const dateKey = opts.dateKey || this._attModalDateKey || this.getAttendanceDateKeyForCell(key);
         if (this.isHistoricalDateProtected(dateKey)) {
             this.showHistoryProtectionNotice();
             return false;
         }
-        window.ScheduleErpService.upsertAttendance(this, key, studentId, status, dateKey);
+        window.ScheduleErpService.upsertAttendance(this, key, studentId, status, dateKey, { source: 'manual' });
+        if (status === 'present') {
+            this.restoreSyncedZeroMinutesForPresent(key, studentId, dateKey);
+        }
         this.saveData();
+        if (opts.refreshStats !== false && typeof this.refreshOpenStatsViews === 'function') {
+            this.refreshOpenStatsViews();
+        }
         return true;
+    }
+
+TimetableApp.prototype.restoreSyncedZeroMinutesForPresent = function(key, studentId, dateKey) {
+        const parsed = this.parseCellKey(key);
+        const period = parsed ? this.getPeriod(parsed.periodIndex) : null;
+        const times = period && String(period.time || '').split('-');
+        if (!times || times.length !== 2) return;
+        const scheduledMinutes = Math.max(0, this.timeToMinutes(times[1]) - this.timeToMinutes(times[0]));
+        if (!scheduledMinutes) return;
+
+        const attendanceDate = new Date(`${dateKey}T00:00:00`);
+        if (Number.isNaN(attendanceDate.getTime())) return;
+        const weekStart = this.formatLocalDate(this.getWeekRange(attendanceDate).start);
+        const version = this.getCellVersion(key, weekStart);
+        const erp = window.ScheduleErpService.ensureErpData(this);
+        const instance = version && version.courseInstanceId
+            ? (erp.courseInstances || []).find(item => item.id === version.courseInstanceId)
+            : null;
+        if (!instance) return;
+
+        instance.actualMinutesByDate = instance.actualMinutesByDate || {};
+        if (!(Number(instance.actualMinutesByDate[dateKey]) > 0)) {
+            instance.actualMinutesByDate[dateKey] = scheduledMinutes;
+        }
+        instance.manualActualMinutesByDate = instance.manualActualMinutesByDate || {};
+        instance.manualActualMinutesByDate[dateKey] = true;
+        instance.studentActualMinutesByDate = instance.studentActualMinutesByDate || {};
+        instance.studentActualMinutesByDate[dateKey] = instance.studentActualMinutesByDate[dateKey] || {};
+        if (!(Number(instance.studentActualMinutesByDate[dateKey][String(studentId)]) > 0)) {
+            instance.studentActualMinutesByDate[dateKey][String(studentId)] = scheduledMinutes;
+        }
+        instance.manualStudentActualMinutesByDate = instance.manualStudentActualMinutesByDate || {};
+        instance.manualStudentActualMinutesByDate[dateKey] = instance.manualStudentActualMinutesByDate[dateKey] || {};
+        instance.manualStudentActualMinutesByDate[dateKey][String(studentId)] = true;
+        instance.updatedAt = new Date().toISOString();
     }
 
 TimetableApp.prototype.getAttendanceDateKeyForCell = function(key) {
