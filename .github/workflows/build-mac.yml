@@ -3,6 +3,10 @@ name: Build macOS Packages
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -51,12 +55,27 @@ jobs:
         CSC_IDENTITY_AUTO_DISCOVERY: false
       run: npm run build:mac
 
+    - name: Delete old workflow artifacts
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh api --paginate \
+          "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+          --jq '.artifacts[].id' |
+        while read -r artifact_id; do
+          if [[ -n "$artifact_id" ]]; then
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+          fi
+        done
+
     - name: Upload macOS green ZIP
       uses: actions/upload-artifact@v4
       with:
         name: macos-green-zip
         path: dist/*绿色压缩包版*.zip
         if-no-files-found: error
+        retention-days: 7
 
     - name: Upload macOS portable ZIP
       uses: actions/upload-artifact@v4
@@ -64,6 +83,7 @@ jobs:
         name: macos-portable-zip
         path: dist/*便携版*.zip
         if-no-files-found: error
+        retention-days: 7
 
     - name: Upload macOS DMG
       uses: actions/upload-artifact@v4
@@ -71,3 +91,4 @@ jobs:
         name: macos-dmg
         path: dist/*.dmg
         if-no-files-found: error
+        retention-days: 7

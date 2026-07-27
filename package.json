@@ -5,7 +5,7 @@
   "author": "A大橙子",
   "main": "main.js",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "start": "electron .",
@@ -21,8 +21,7 @@
     "appId": "com.adachengzi.kebiao.custom",
     "productName": "A大橙子课时统计定制版",
     "artifactName": "A大橙子课时统计（定制版-${version}）.${ext}",
-    "electronVersion": "43.1.1",
-    "electronDist": "node_modules/electron/dist",
+    "electronVersion": "26.0.0",
     "asar": true,
     "asarUnpack": [
       "build/python-dist/**"
@@ -61,7 +60,7 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": true,
+      "notarize": false,
       "target": [
         {
           "target": "dmg",
@@ -88,7 +87,7 @@
     }
   },
   "devDependencies": {
-    "electron": "^43.1.1",
+    "electron": "^26.0.0",
     "electron-builder": "^26.15.3",
     "playwright": "^1.61.1"
   },

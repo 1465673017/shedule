@@ -2,19 +2,6 @@ name: macOS UI Screenshots
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'index.html'
-      - 'styles.css'
-      - 'main.js'
-      - 'preload.js'
-      - 'js/**'
-      - 'icon/**'
-      - 'tests/macos-screenshots.js'
-      - '.github/workflows/macos-screenshots.yml'
-      - 'package.json'
-      - 'package-lock.json'
 
 jobs:
   screenshots:
