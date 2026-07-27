@@ -70,8 +70,18 @@ assert.strictEqual(
         { startMinutes: 600, endMinutes: 660, overlapMinutes: 60 },
         { durationMinutes: 120 }
     ),
-    30
+    60
 );
+const startMapped = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [
+            { index: 0, period: { time: '08:00-10:00' } },
+            { index: 1, period: { time: '10:30-12:00' } }
+        ];
+    }
+}, { courseTime: '08:30', courseEndTime: '10:30' });
+assert.strictEqual(startMapped.slots.length, 1);
+assert.strictEqual(startMapped.slots[0].index, 0);
 
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);
 const coreSource = read('js/app-core.js');
@@ -83,5 +93,75 @@ assert.doesNotMatch(coreSource, /JSON\.parse\(previous\)/);
 vm.runInThisContext(read('js/app-export.js'), { filename: 'app-export.js' });
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('=1+1'), "'=1+1");
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('正常姓名'), '正常姓名');
+assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('-'), '-');
+const expandedApp = new TimetableApp();
+expandedApp.formatDuration = (hours, minutes) => hours === 0 && minutes === 0
+    ? '0h'
+    : `${hours}h${minutes}min`;
+const leaveDetail = expandedApp.getLessonSheetExpandedRows([{
+    dateKey: '2026-07-23',
+    subject: '物理',
+    time: '08:00-10:00',
+    typeLabel: '1v1(0.8)',
+    durationMinutes: 120,
+    studentDetails: [{ name: '成皓', grade: '九年级', status: 'leave', actualMinutes: 0 }]
+}])[0];
+assert.strictEqual(leaveDetail.typeLabel, '-');
+assert.strictEqual(leaveDetail.actualDuration, '0h');
+assert.strictEqual(leaveDetail.isZeroDuration, true);
+assert.strictEqual(leaveDetail.isUnderTwoHours, false);
+assert.strictEqual(leaveDetail.isOverTwoHours, false);
+const shortDetail = expandedApp.getLessonSheetExpandedRows([{
+    dateKey: '2026-07-23',
+    subject: '物理',
+    time: '08:00-10:00',
+    typeLabel: '1v1(0.8)',
+    durationMinutes: 80,
+    studentDetails: [{ name: '成皓', grade: '九年级', status: 'present', actualMinutes: 80 }]
+}])[0];
+assert.strictEqual(shortDetail.isZeroDuration, false);
+assert.strictEqual(shortDetail.isUnderTwoHours, true);
+assert.strictEqual(shortDetail.isOverTwoHours, false);
+const lessonRowsApp = new TimetableApp();
+lessonRowsApp.erpData = { courseInstances: [] };
+lessonRowsApp.collectLessonsForDate = () => [{
+    subject: '物理',
+    period: 0,
+    time: '08:00-10:00',
+    dates: ['2026-07-23'],
+    students: [{ name: '成皓', grade: '九年级', status: 'present', actualMinutes: 80 }],
+    studentCount: 1,
+    leaveCount: 0,
+    absentCount: 0
+}];
+lessonRowsApp.formatLocalDate = date => date.toISOString().slice(0, 10);
+lessonRowsApp.getLessonActualMinutesForStats = () => 120;
+lessonRowsApp.getLessonDurationMinutesForStats = () => 120;
+lessonRowsApp.getLessonPeriodLabel = () => '上午';
+lessonRowsApp.getPeriodNumber = () => 1;
+lessonRowsApp.getLessonTypeKeyForStats = () => '1v1(0.8)';
+lessonRowsApp.formatDuration = expandedApp.formatDuration;
+const actualDurationRow = lessonRowsApp.getLessonSheetRowsByRange(
+    new Date('2026-07-23T00:00:00'),
+    new Date('2026-07-23T00:00:00')
+)[0];
+assert.strictEqual(actualDurationRow.durationMinutes, 80);
+assert.strictEqual(actualDurationRow.actualDuration, '1h20min');
+const summaryApp = new TimetableApp();
+summaryApp.formatLocalDate = date => date.toISOString().slice(0, 10);
+summaryApp.getLessonSegmentTypeStats = lesson => {
+    assert.deepStrictEqual(lesson.students.map(student => student.actualMinutes), [75, 75]);
+    return { typeStats: { '1v2': 75 }, totalMinutes: 75 };
+};
+const summary = summaryApp.getLessonSheetSummaryMatrix([{
+    dateKey: '2026-07-01',
+    durationMinutes: 120,
+    typeLabel: '1v2',
+    studentDetails: [
+        { name: '学生甲', grade: '七年级', status: 'present', actualMinutes: 75 },
+        { name: '学生乙', grade: '七年级', status: 'present', actualMinutes: 75 }
+    ]
+}]);
+assert.strictEqual(summary.totalValues[1], '1.25');
 
 console.log('Security regression tests passed');

@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>A大橙子课时统计（定制版 1.1.0）</title>
+    <title>A大橙子课时统计（定制版 1.2.0）</title>
     <link rel="icon" type="image/png" href="./icon/orange.png">
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -18,7 +18,7 @@
             <img src="./icon/orange.png" alt="" class="electron-app-logo">
             <div class="electron-app-brand-copy">
                 <strong>A大橙子课时统计</strong>
-                <span>课表工作台 · 定制版 1.1.0</span>
+                <span>课表工作台 · 定制版 1.2.0</span>
             </div>
         </div>
     </header>
@@ -37,7 +37,7 @@
                 <img src="./icon/orange.png" alt="" class="app-message-logo">
                 <div>
                     <h3 id="appMessageTitle">A大橙子课时统计</h3>
-                    <span>定制版 1.1.0</span>
+                    <span>定制版 1.2.0</span>
                 </div>
             </div>
             <div id="appMessageText" class="app-message-text"></div>
@@ -557,6 +557,7 @@
                             </div>
                         </div>
                         <div class="date-display">
+                            <button type="button" id="courseCheckBtn" class="today-btn course-check-btn">检查</button>
                             <label class="date-picker-shell" for="datePicker"><span class="calendar-icon"
                                     aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                         <path
@@ -698,6 +699,51 @@
         </div>
     </div>
 
+    <div id="courseCheckModal" class="modal">
+        <div class="modal-content course-check-modal-content">
+            <div class="modal-header">
+                <div class="modal-title-block">
+                    <h3>检查课表数据</h3>
+                    <p class="modal-subtitle">只读比较当前课表与网络课程，不会自动修改本地数据</p>
+                </div>
+                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeCourseCheckModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="course-check-controls">
+                    <div class="course-check-mode-tabs">
+                        <button type="button" class="course-check-mode active" data-mode="range">时段抽检</button>
+                        <button type="button" class="course-check-mode" data-mode="day">定点抽检</button>
+                    </div>
+                    <div id="courseCheckDayFields" class="course-check-date-fields" style="display:none">
+                        <input type="date" id="courseCheckDay">
+                    </div>
+                    <div id="courseCheckRangeFields" class="course-check-date-fields course-check-range-picker">
+                        <input type="hidden" id="courseCheckStartDate">
+                        <input type="hidden" id="courseCheckEndDate">
+                        <button type="button" id="courseCheckRangeButton" class="stats-date-range-picker">
+                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                            <span id="courseCheckRangeText" class="stats-date-range-value">请选择抽检日期范围</span>
+                            <span class="stats-date-range-caret">&#9662;</span>
+                        </button>
+                        <div class="stats-date-popover course-check-date-popover" id="courseCheckDatePopover" style="display:none;">
+                            <div class="stats-calendar-header">
+                                <button type="button" id="courseCheckCalendarPrev" class="stats-calendar-nav">&#8249;</button>
+                                <div class="stats-calendar-title" id="courseCheckCalendarTitle"></div>
+                                <button type="button" id="courseCheckCalendarNext" class="stats-calendar-nav">&#8250;</button>
+                            </div>
+                            <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                            <div class="stats-calendar-grid" id="courseCheckCalendarGrid"></div>
+                        </div>
+                    </div>
+                    <button type="button" id="courseCheckRunBtn" class="btn primary">开始检查</button>
+                    <button type="button" id="courseCheckSyncBtn" class="btn primary" disabled>一键同步</button>
+                </div>
+                <div id="courseCheckStatus" class="course-check-status">请选择检查方式和日期。</div>
+                <div id="courseCheckResults" class="course-check-results"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="courseLoginModal" class="modal">
         <div class="modal-content standard-form-modal">
             <div class="modal-header">
@@ -718,15 +764,26 @@
                     <div id="courseLoggedInPanel" style="display:none">
                         <div class="course-login-success"><strong id="courseExclusiveTitle">尊贵的定制版用户你好</strong><span>✓ 登录成功</span><button id="courseLogoutBtn" type="button" class="course-logout-icon" title="退出登录" aria-label="退出登录"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 8l4 4-4 4M18 12H8M11 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
                         <div class="course-sync-toolbar">
-                            <button id="courseSyncRangeButton" type="button" class="course-range-button">请选择同步起点和终点</button>
-                            <input id="courseSyncStartDate" type="date" class="course-hidden-date" tabindex="-1"><input id="courseSyncEndDate" type="date" class="course-hidden-date" tabindex="-1">
-                            <button id="courseSyncStartBtn" type="button" class="btn primary">同步课程</button><button id="courseSyncStopBtn" type="button" class="btn danger" disabled>停止同步</button>
+                            <div class="course-sync-range-wrap" id="courseSyncRangePicker">
+                                <button id="courseSyncRangeButton" type="button" class="stats-date-range-picker course-range-button">
+                                    <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                    <span id="courseSyncRangeText" class="stats-date-range-value">请选择同步起点和终点</span>
+                                    <span class="stats-date-range-caret">&#9662;</span>
+                                </button>
+                                <input id="courseSyncStartDate" type="hidden"><input id="courseSyncEndDate" type="hidden">
+                                <div class="stats-date-popover course-sync-date-popover" id="courseSyncDatePopover" style="display:none;">
+                                    <div class="stats-calendar-header">
+                                        <button id="courseSyncCalendarPrev" type="button" class="stats-calendar-nav">&#8249;</button>
+                                        <div class="stats-calendar-title" id="courseSyncCalendarTitle"></div>
+                                        <button id="courseSyncCalendarNext" type="button" class="stats-calendar-nav">&#8250;</button>
+                                    </div>
+                                    <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                                    <div class="stats-calendar-grid" id="courseSyncCalendarGrid"></div>
+                                </div>
+                            </div>
+                            <button id="courseSyncStartBtn" type="button" class="btn primary">同步课程</button><button id="courseSyncTodayBtn" type="button" class="btn secondary">同步当天</button><button id="courseSyncStopBtn" type="button" class="btn danger" disabled>停止同步</button>
                         </div>
-                        <div class="course-auto-row"><div><strong>自动同步</strong><small>开启后按所选规则执行</small></div><button id="courseAutoSyncToggle" type="button" class="course-auto-switch" aria-pressed="false"><span></span></button></div>
-                        <div id="courseAutoSyncOptions" class="course-auto-options" style="display:none">
-                            <label><input type="radio" name="courseAutoMode" value="async" checked> 异步同步（次日检查昨天）</label>
-                            <label class="course-timed-option"><span><input type="radio" name="courseAutoMode" value="timed"> 定时同步（当天）</span><input id="courseTimedSyncTime" type="time" value="22:00" style="display:none"></label>
-                        </div>
+                        <div class="course-auto-row"><div><strong>自动同步</strong><small>开启后每2小时自动同步一次当天课程考勤</small></div><button id="courseAutoSyncToggle" type="button" class="course-auto-switch" aria-pressed="false"><span></span></button></div>
                     </div>
                     <div id="courseLoginMessage" class="modal-subtitle"></div>
                 </div>

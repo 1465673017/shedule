@@ -173,7 +173,10 @@ class TimetableApp {
         bind('courseLoginBtn', 'click', () => this.openCourseLogin());
         bind('courseLoginForm', 'submit', (e) => this.submitCourseLogin(e));
         bind('courseSyncRangeButton', 'click', () => this.chooseCourseSyncRange());
+        bind('courseSyncCalendarPrev', 'click', () => this.changeCourseSyncCalendarMonth(-1));
+        bind('courseSyncCalendarNext', 'click', () => this.changeCourseSyncCalendarMonth(1));
         bind('courseSyncStartBtn', 'click', () => this.startCourseSync());
+        bind('courseSyncTodayBtn', 'click', () => this.syncTodayCourses());
         bind('courseSyncStopBtn', 'click', () => this.stopCourseSync());
         bind('courseAutoSyncToggle', 'click', () => this.toggleCourseAutoSync());
         bind('courseLogoutBtn', 'click', () => this.logoutCourseAccount());
@@ -183,8 +186,6 @@ class TimetableApp {
         bind('courseSavePasswordOption', 'change', (e) => {
             if (!e.target.checked) document.getElementById('courseAutoLoginOption').checked = false;
         });
-        document.querySelectorAll('input[name="courseAutoMode"]').forEach(input => input.addEventListener('change', () => this.saveCourseAutoSyncSettings()));
-        bind('courseTimedSyncTime', 'change', () => this.saveCourseAutoSyncSettings());
         bind('cancelBtn', 'click', () => this.closeSubjectModal());
         bind('deleteSubjectBtn', 'click', () => this.deleteSubject());
         
@@ -272,6 +273,15 @@ class TimetableApp {
             this.updateWeekRange();
             this.renderTimetable();
         });
+        bind('courseCheckBtn', 'click', () => this.openCourseCheckModal());
+        bind('courseCheckRunBtn', 'click', () => this.runCourseCheck());
+        bind('courseCheckRangeButton', 'click', () => this.toggleCourseCheckDatePicker());
+        bind('courseCheckCalendarPrev', 'click', () => this.changeCourseCheckCalendarMonth(-1));
+        bind('courseCheckCalendarNext', 'click', () => this.changeCourseCheckCalendarMonth(1));
+        bind('courseCheckSyncBtn', 'click', () => this.syncCourseCheckRange());
+        document.querySelectorAll('.course-check-mode').forEach(button => {
+            button.addEventListener('click', () => this.setCourseCheckMode(button.dataset.mode));
+        });
         bind('datePicker', 'change', (e) => this.handleDateChange(e));
         const calendarIcon = document.querySelector('.calendar-icon');
         if (calendarIcon) {
@@ -353,6 +363,7 @@ class TimetableApp {
             resetModal: () => this.closeResetModal(),
             exportModal: () => this.closeExportModal(),
             courseLoginModal: () => this.closeCourseLoginModal()
+            ,courseCheckModal: () => this.closeCourseCheckModal()
         };
         
         Object.keys(modalCloseHandlers).forEach(modalId => {
@@ -365,6 +376,425 @@ class TimetableApp {
                 });
             }
         });
+    }
+
+    openCourseCheckModal() {
+        const loggedInPanel = document.getElementById('courseLoggedInPanel');
+        if (!this._courseLoggedIn && loggedInPanel && loggedInPanel.style.display === 'block') {
+            this._courseLoggedIn = true;
+        }
+        if (!this._courseLoggedIn) {
+            this._openCourseCheckAfterLogin = true;
+            this.openCourseLogin();
+            const message = document.getElementById('courseLoginMessage');
+            if (message) message.textContent = '正在恢复登录，完成后将自动打开课表检查。';
+            return;
+        }
+        this._openCourseCheckAfterLogin = false;
+        const today = this.formatLocalDate(new Date());
+        const week = this.getWeekRange(new Date());
+        const weekStart = this.formatLocalDate(week.start);
+        const weekEnd = this.formatLocalDate(week.end);
+        document.getElementById('courseCheckDay').value = today;
+        document.getElementById('courseCheckStartDate').value = weekStart;
+        document.getElementById('courseCheckEndDate').value = weekEnd;
+        document.getElementById('courseCheckRangeText').textContent = `${weekStart} → ${weekEnd}`;
+        if (!this._courseCheckRunning) {
+            document.getElementById('courseCheckStatus').textContent =
+                document.querySelector('#courseCheckResults .course-check-record')
+                    ? '当前显示最新一次检查结果，可重新检查以更新。'
+                    : '请选择检查方式和日期。';
+        }
+        this.setCourseCheckMode('range');
+        document.getElementById('courseCheckModal').style.display = 'block';
+    }
+
+    closeCourseCheckModal() {
+        this.closeCourseCheckDatePicker();
+        document.getElementById('courseCheckModal').style.display = 'none';
+    }
+
+    setCourseCheckMode(mode) {
+        this._courseCheckMode = mode === 'range' ? 'range' : 'day';
+        document.querySelectorAll('.course-check-mode').forEach(button => {
+            button.classList.toggle('active', button.dataset.mode === this._courseCheckMode);
+        });
+        document.getElementById('courseCheckDayFields').style.display = this._courseCheckMode === 'day' ? 'flex' : 'none';
+        document.getElementById('courseCheckRangeFields').style.display = this._courseCheckMode === 'range' ? 'flex' : 'none';
+        if (this._courseCheckMode !== 'range') this.closeCourseCheckDatePicker();
+    }
+
+    toggleCourseCheckDatePicker() {
+        const popover = document.getElementById('courseCheckDatePopover');
+        if (!popover) return;
+        if (popover.style.display === 'none' || !popover.style.display) {
+            const start = this.parseDateInputValue(document.getElementById('courseCheckStartDate').value) || new Date();
+            this._courseCheckCalendarMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+            this._pendingCourseCheckStartDate = null;
+            popover.style.display = 'block';
+            this.renderCourseCheckDatePicker();
+            setTimeout(() => this.bindCourseCheckDatePickerOutsideClick(), 0);
+        } else {
+            this.closeCourseCheckDatePicker();
+        }
+    }
+
+    closeCourseCheckDatePicker() {
+        const popover = document.getElementById('courseCheckDatePopover');
+        if (popover) popover.style.display = 'none';
+        this._pendingCourseCheckStartDate = null;
+        if (this._courseCheckDatePickerOutsideHandler) {
+            document.removeEventListener('mousedown', this._courseCheckDatePickerOutsideHandler);
+            this._courseCheckDatePickerOutsideHandler = null;
+        }
+    }
+
+    bindCourseCheckDatePickerOutsideClick() {
+        if (this._courseCheckDatePickerOutsideHandler) {
+            document.removeEventListener('mousedown', this._courseCheckDatePickerOutsideHandler);
+        }
+        this._courseCheckDatePickerOutsideHandler = event => {
+            const picker = document.getElementById('courseCheckRangeFields');
+            const popover = document.getElementById('courseCheckDatePopover');
+            if (!popover || popover.style.display === 'none' || (picker && picker.contains(event.target))) return;
+            this.closeCourseCheckDatePicker();
+        };
+        document.addEventListener('mousedown', this._courseCheckDatePickerOutsideHandler);
+    }
+
+    changeCourseCheckCalendarMonth(delta) {
+        const base = this._courseCheckCalendarMonth || new Date();
+        this._courseCheckCalendarMonth = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+        this.renderCourseCheckDatePicker();
+    }
+
+    renderCourseCheckDatePicker() {
+        const title = document.getElementById('courseCheckCalendarTitle');
+        const grid = document.getElementById('courseCheckCalendarGrid');
+        if (!title || !grid) return;
+        const month = this._courseCheckCalendarMonth || new Date();
+        const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+        const gridStart = new Date(monthStart);
+        gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+        const storedStart = this.parseDateInputValue(document.getElementById('courseCheckStartDate').value);
+        const storedEnd = this.parseDateInputValue(document.getElementById('courseCheckEndDate').value);
+        const rangeStart = this._pendingCourseCheckStartDate || storedStart;
+        const rangeEnd = this._pendingCourseCheckStartDate || storedEnd;
+        title.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+        grid.innerHTML = '';
+        for (let index = 0; index < 42; index++) {
+            const day = new Date(gridStart);
+            day.setDate(gridStart.getDate() + index);
+            day.setHours(0, 0, 0, 0);
+            const dayKey = this.formatLocalDate(day);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'stats-calendar-day';
+            button.textContent = String(day.getDate());
+            if (day.getMonth() !== month.getMonth()) button.classList.add('other-month');
+            if (rangeStart && rangeEnd && day >= rangeStart && day <= rangeEnd) button.classList.add('in-range');
+            if ((rangeStart && day.getTime() === rangeStart.getTime()) || (rangeEnd && day.getTime() === rangeEnd.getTime())) {
+                button.classList.add('range-edge');
+            }
+            button.addEventListener('click', () => this.selectCourseCheckCalendarDate(dayKey));
+            grid.appendChild(button);
+        }
+    }
+
+    selectCourseCheckCalendarDate(dateValue) {
+        const picked = this.parseDateInputValue(dateValue);
+        if (!picked) return;
+        if (!this._pendingCourseCheckStartDate) {
+            this._pendingCourseCheckStartDate = picked;
+            document.getElementById('courseCheckRangeText').textContent =
+                `${this.formatLocalDate(picked)} → 请选择结束日期`;
+            this.renderCourseCheckDatePicker();
+            return;
+        }
+        const start = this._pendingCourseCheckStartDate <= picked ? this._pendingCourseCheckStartDate : picked;
+        const end = this._pendingCourseCheckStartDate <= picked ? picked : this._pendingCourseCheckStartDate;
+        const startKey = this.formatLocalDate(start);
+        const endKey = this.formatLocalDate(end);
+        document.getElementById('courseCheckStartDate').value = startKey;
+        document.getElementById('courseCheckEndDate').value = endKey;
+        document.getElementById('courseCheckRangeText').textContent = `${startKey} → ${endKey}`;
+        this.closeCourseCheckDatePicker();
+    }
+
+    async runCourseCheck() {
+        if (this._courseSyncRunning) {
+            document.getElementById('courseCheckStatus').textContent = '当前有同步任务正在运行，请稍后再检查。';
+            return;
+        }
+        let startDate;
+        let endDate;
+        if (this._courseCheckMode === 'range') {
+            startDate = document.getElementById('courseCheckStartDate').value;
+            endDate = document.getElementById('courseCheckEndDate').value;
+        } else {
+            startDate = document.getElementById('courseCheckDay').value;
+            endDate = startDate;
+        }
+        if (!startDate || !endDate) {
+            document.getElementById('courseCheckStatus').textContent = '请先选择完整日期。';
+            return;
+        }
+        if (startDate > endDate) [startDate, endDate] = [endDate, startDate];
+        this._courseCheckRange = { startDate, endDate };
+        this._courseCheckRunning = true;
+        this._courseSyncRunning = true;
+        // A sync may only consume the snapshot produced by this check.
+        this._courseCheckLastResult = null;
+        this._courseCheckNetworkCourses = null;
+        this._courseCheckSelections = new Map();
+        this._courseCheckRunId = `course-check-${Date.now()}`;
+        document.getElementById('courseCheckRunBtn').disabled = true;
+        document.getElementById('courseCheckSyncBtn').disabled = true;
+        document.getElementById('courseCheckResults').innerHTML = `
+            <section id="${this._courseCheckRunId}" class="course-check-record is-running">
+                <div class="course-check-record-title">
+                    <strong>${this.escapeHtml(startDate === endDate ? startDate : `${startDate} → ${endDate}`)}</strong>
+                    <span>检查中</span>
+                </div>
+                <div class="course-check-record-content"><div class="course-check-empty">正在读取课程列表…</div></div>
+            </section>
+        `;
+        document.getElementById('courseCheckStatus').textContent = '正在读取网络课表并进行只读比较…';
+        const result = await window.electronAPI.startCourseSync({ startDate, endDate, checkOnly: true });
+        if (!result || !result.started) {
+            this._courseCheckRunning = false;
+            this._courseSyncRunning = false;
+            document.getElementById('courseCheckRunBtn').disabled = false;
+            const failedRecord = document.getElementById(this._courseCheckRunId);
+            if (failedRecord) failedRecord.remove();
+            document.getElementById('courseCheckStatus').textContent = result && result.message ? result.message : '无法开始检查。';
+        }
+    }
+
+    buildCourseCheckItems(startDate, endDate) {
+        const items = new Map();
+        let cursor = this.parseDateInputValue(startDate);
+        const end = this.parseDateInputValue(endDate);
+        while (cursor && end && cursor <= end) {
+            const dateKey = this.formatLocalDate(cursor);
+            const day = cursor.getDay() || 7;
+            const weekStart = this.formatLocalDate(this.getWeekRange(cursor).start);
+            this.periods.forEach((period, periodIndex) => {
+                const cellKey = this.buildCellKey(day, periodIndex);
+                const version = this.getCellVersion(cellKey, weekStart);
+                if (!version || !version.subject) return;
+                const subject = this.subjects.find(item => String(item.id) === String(version.subject));
+                const instance = version.courseInstanceId && this.erpData
+                    ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
+                    : null;
+                const students = (version.student || []).map(id => {
+                    const student = this.students.find(item => String(item.id) === String(id));
+                    if (!student) return null;
+                    const record = (this.erpData && this.erpData.attendanceRecords || []).find(item =>
+                        String(item.studentId) === String(id)
+                        && item.dateKey === dateKey
+                        && (item.courseInstanceId === version.courseInstanceId || item.cellKey === cellKey)
+                    );
+                    const savedMinutes = instance && instance.studentActualMinutesByDate
+                        && instance.studentActualMinutesByDate[dateKey]
+                        ? instance.studentActualMinutesByDate[dateKey][String(id)]
+                        : undefined;
+                    const courseMinutes = instance && instance.actualMinutesByDate
+                        ? instance.actualMinutesByDate[dateKey]
+                        : undefined;
+                    return {
+                        name: student.name,
+                        status: record ? record.status : (this.isClassFinished(cellKey, cursor) ? 'present' : null),
+                        statusDetail: record && (record.detail || record.reason || record.remark) || '',
+                        actualMinutes: savedMinutes !== undefined ? Number(savedMinutes) : (courseMinutes !== undefined ? Number(courseMinutes) : undefined)
+                    };
+                }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+                const time = instance && instance.actualStartTime && instance.actualEndTime
+                    ? `${instance.actualStartTime}-${instance.actualEndTime}`
+                    : String(period.time || '');
+                items.set(`${dateKey}|${periodIndex}`, {
+                    date: dateKey,
+                    periodIndex,
+                    periodName: period.name || `第${periodIndex + 1}节`,
+                    subject: subject ? subject.name : '未分类',
+                    time,
+                    students
+                });
+            });
+            cursor = this.addDays(cursor, 1);
+        }
+        return items;
+    }
+
+    buildNetworkCourseCheckItems(courses) {
+        const items = new Map();
+        const service = window.CourseDataImportService;
+        (courses || []).forEach(course => {
+            try {
+                const date = this.parseDateInputValue(String(course.courseDate || '').slice(0, 10));
+                if (!date) return;
+                const dateKey = this.formatLocalDate(date);
+                const day = date.getDay() || 7;
+                const slot = service.periodSlots(this, course).slots[0];
+                const students = (course.students || []).map(student => ({
+                    name: String(student.name || '').trim(),
+                    status: service.attendanceStatus(course, student),
+                    statusDetail: String(student.attendanceStatus || student.attendentStatus || student.leaveReason || student.remark || '').trim(),
+                    actualMinutes: service.sourceActualMinutes(student)
+                })).filter(student => student.name).sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+                items.set(`${dateKey}|${slot.index}`, {
+                    date: dateKey,
+                    periodIndex: slot.index,
+                    periodName: slot.period.name || `第${slot.index + 1}节`,
+                    subject: String(course.subject && course.subject.name || '未分类').trim(),
+                    time: `${String(course.courseTime || '').slice(0, 5)}-${String(course.courseEndTime || '').slice(0, 5)}`,
+                    attendanceLoaded: course.__attendanceLoaded === true,
+                    students
+                });
+            } catch (_) {
+                // Invalid remote rows are ignored by the same rules as normal import.
+            }
+        });
+        return items;
+    }
+
+    getNetworkCourseCheckKey(course) {
+        try {
+            const date = this.parseDateInputValue(String(course.courseDate || '').slice(0, 10));
+            if (!date) return null;
+            const slot = window.CourseDataImportService.periodSlots(this, course).slots[0];
+            return `${this.formatLocalDate(date)}|${slot.index}`;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    getCourseCheckDifferences(courses, includeAttendance = false) {
+        const range = this._courseCheckRange;
+        const local = this.buildCourseCheckItems(range.startDate, range.endDate);
+        const remote = this.buildNetworkCourseCheckItems(courses);
+        const keys = [...new Set([...local.keys(), ...remote.keys()])].sort();
+        return keys.map(key => {
+            const left = local.get(key) || null;
+            const right = remote.get(key) || null;
+            const localNames = left ? left.students.map(student => student.name) : [];
+            const remoteNames = right ? right.students.map(student => student.name) : [];
+            let same = left && right
+                && left.subject === right.subject
+                && left.time === right.time
+                && JSON.stringify(localNames) === JSON.stringify(remoteNames);
+            if (same && includeAttendance && right.attendanceLoaded) {
+                const normalize = students => students.map(student => ({
+                    name: student.name,
+                    status: student.status || null,
+                    actualMinutes: student.actualMinutes === undefined ? null : Math.max(0, Number(student.actualMinutes) || 0)
+                }));
+                same = JSON.stringify(normalize(left.students)) === JSON.stringify(normalize(right.students));
+            }
+            return same ? null : { key, local: left, remote: right };
+        }).filter(Boolean);
+    }
+
+    renderCourseCheckResults(courses, includeAttendance = false) {
+        const differences = this.getCourseCheckDifferences(courses, includeAttendance);
+        const selections = this._courseCheckSelections || new Map();
+        const record = this._courseCheckRunId && document.getElementById(this._courseCheckRunId);
+        const container = record
+            ? record.querySelector('.course-check-record-content')
+            : document.getElementById('courseCheckResults');
+        const status = document.getElementById('courseCheckStatus');
+        const syncButton = document.getElementById('courseCheckSyncBtn');
+        if (!differences.length) {
+            status.textContent = '检查完成：当前课表与网络数据一致。';
+            container.innerHTML = '<div class="course-check-empty">没有发现不一致的课程。</div>';
+            syncButton.disabled = true;
+            return;
+        }
+        status.textContent = `检查完成：发现 ${differences.length} 处课程数据不一致。`;
+        const statusLabel = status => ({ present: '出勤', leave: '请假', absent: '缺勤' }[status] || '未记录');
+        const studentLabel = student => {
+            if (!includeAttendance) return student.name;
+            const duration = student.actualMinutes === undefined
+                ? '未记录时长'
+                : this.formatDuration(Math.floor(Number(student.actualMinutes) / 60), Number(student.actualMinutes) % 60);
+            const detail = student.statusDetail && student.status !== 'present'
+                ? `：${student.statusDetail}`
+                : '';
+            return `${student.name}（${statusLabel(student.status)}${detail} · ${duration}）`;
+        };
+        const detail = item => item
+            ? `<strong>${this.escapeHtml(item.subject)}</strong><span>${this.escapeHtml(item.date)} · ${this.escapeHtml(item.periodName)}</span><span>${this.escapeHtml(item.time)}</span><small>${item.attendanceLoaded === false && this._courseCheckRunning ? '出勤记录排队检查中' : (item.students.length ? this.escapeHtml(item.students.map(studentLabel).join('、')) : '无学生')}</small>`
+            : '<span class="course-check-missing">无课程</span>';
+        container.innerHTML = `
+            <div class="course-check-columns"><strong>本地课表数据</strong><strong>网络数据</strong></div>
+            ${differences.map(item => `
+                <div class="course-check-diff-row" data-key="${this.escapeHtml(item.key)}">
+                    <div class="course-check-choice${selections.get(item.key) === 'local' ? ' is-selected' : ''}" data-choice="local" role="button" tabindex="0" aria-pressed="${selections.get(item.key) === 'local'}">
+                        ${detail(item.local)}
+                    </div>
+                    <div class="course-check-choice${selections.get(item.key) === 'network' ? ' is-selected' : ''}" data-choice="network" role="button" tabindex="0" aria-pressed="${selections.get(item.key) === 'network'}">
+                        ${detail(item.remote)}
+                    </div>
+                </div>
+            `).join('')}
+        `;
+        container.querySelectorAll('.course-check-choice').forEach(choice => {
+            const select = () => {
+                const row = choice.closest('.course-check-diff-row');
+                if (!row) return;
+                this._courseCheckSelections.set(row.dataset.key, choice.dataset.choice);
+                this.renderCourseCheckResults(courses, includeAttendance);
+            };
+            choice.addEventListener('click', select);
+            choice.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    select();
+                }
+            });
+        });
+        // The network snapshot is complete only after all attendance rows arrive.
+        syncButton.disabled = !!this._courseCheckRunning
+            || differences.some(item => !selections.has(item.key));
+        if (!this._courseCheckRunning) {
+            const selectedCount = differences.filter(item => selections.has(item.key)).length;
+            status.textContent = selectedCount === differences.length
+                ? `已选择全部 ${differences.length} 处差异，可以同步。`
+                : `发现 ${differences.length} 处差异，请逐行选择保留本地或使用网络数据（${selectedCount}/${differences.length}）。`;
+        }
+    }
+
+    async syncCourseCheckRange() {
+        const cached = this._courseCheckLastResult;
+        if (!cached || !cached.range || !Array.isArray(cached.courses)) {
+            document.getElementById('courseCheckStatus').textContent = '没有可同步的已完成检查数据，请先完成检查。';
+            return;
+        }
+        const button = document.getElementById('courseCheckSyncBtn');
+        button.disabled = true;
+        const status = document.getElementById('courseCheckStatus');
+        const differences = this.getCourseCheckDifferences(cached.courses, true);
+        const selections = this._courseCheckSelections || new Map();
+        if (differences.some(item => !selections.has(item.key))) {
+            status.textContent = '请先为每一处差异选择“本地数据”或“网络数据”。';
+            button.disabled = false;
+            return;
+        }
+        status.textContent = '正在按选择结果同步最新课程快照…';
+        try {
+            const result = window.CourseDataImportService.applyCourseCheckSelections(
+                this,
+                cached.courses,
+                selections
+            );
+            this.renderCourseCheckResults(cached.courses, true);
+            status.textContent = `同步完成：保留本地 ${result.localCount} 处，使用网络数据 ${result.networkCount} 处。`;
+            button.disabled = true;
+        } catch (error) {
+            const detail = String(error && error.message ? error.message : '未知错误');
+            status.textContent = `同步失败，原课表已恢复：${detail}`;
+            button.disabled = false;
+        }
     }
 
     async openCourseLogin() {
@@ -384,6 +814,7 @@ class TimetableApp {
     }
 
     closeCourseLoginModal() {
+        this.closeCourseSyncDatePicker();
         document.getElementById('courseLoginModal').style.display = 'none';
     }
 
@@ -416,21 +847,104 @@ class TimetableApp {
     }
 
     chooseCourseSyncRange() {
-        const start = document.getElementById('courseSyncStartDate');
-        const end = document.getElementById('courseSyncEndDate');
-        const chooseEnd = () => {
-            start.removeEventListener('change', chooseEnd);
-            if (typeof end.showPicker === 'function') end.showPicker(); else end.click();
+        const popover = document.getElementById('courseSyncDatePopover');
+        if (!popover) return;
+        if (popover.style.display === 'none' || !popover.style.display) {
+            const current = this.parseDateInputValue(document.getElementById('courseSyncStartDate').value) || new Date();
+            this._courseSyncCalendarMonth = new Date(current.getFullYear(), current.getMonth(), 1);
+            this._pendingCourseSyncStartDate = null;
+            popover.style.display = 'block';
+            this.renderCourseSyncDatePicker();
+            setTimeout(() => this.bindCourseSyncDatePickerOutsideClick(), 0);
+        } else {
+            this.closeCourseSyncDatePicker();
+        }
+    }
+
+    closeCourseSyncDatePicker() {
+        const popover = document.getElementById('courseSyncDatePopover');
+        if (popover) popover.style.display = 'none';
+        this._pendingCourseSyncStartDate = null;
+        if (this._courseSyncDatePickerOutsideHandler) {
+            document.removeEventListener('mousedown', this._courseSyncDatePickerOutsideHandler);
+            this._courseSyncDatePickerOutsideHandler = null;
+        }
+    }
+
+    bindCourseSyncDatePickerOutsideClick() {
+        if (this._courseSyncDatePickerOutsideHandler) {
+            document.removeEventListener('mousedown', this._courseSyncDatePickerOutsideHandler);
+        }
+        this._courseSyncDatePickerOutsideHandler = event => {
+            const picker = document.getElementById('courseSyncRangePicker');
+            const popover = document.getElementById('courseSyncDatePopover');
+            if (!popover || popover.style.display === 'none' || (picker && picker.contains(event.target))) return;
+            this.closeCourseSyncDatePicker();
         };
-        start.addEventListener('change', chooseEnd, { once: true });
-        end.addEventListener('change', () => this.updateCourseSyncRangeText(), { once: true });
-        if (typeof start.showPicker === 'function') start.showPicker(); else start.click();
+        document.addEventListener('mousedown', this._courseSyncDatePickerOutsideHandler);
+    }
+
+    changeCourseSyncCalendarMonth(delta) {
+        const base = this._courseSyncCalendarMonth || new Date();
+        this._courseSyncCalendarMonth = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+        this.renderCourseSyncDatePicker();
+    }
+
+    renderCourseSyncDatePicker() {
+        const title = document.getElementById('courseSyncCalendarTitle');
+        const grid = document.getElementById('courseSyncCalendarGrid');
+        if (!title || !grid) return;
+        const month = this._courseSyncCalendarMonth || new Date();
+        const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+        const gridStart = new Date(monthStart);
+        gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+        const storedStart = this.parseDateInputValue(document.getElementById('courseSyncStartDate').value);
+        const storedEnd = this.parseDateInputValue(document.getElementById('courseSyncEndDate').value);
+        const rangeStart = this._pendingCourseSyncStartDate || storedStart;
+        const rangeEnd = this._pendingCourseSyncStartDate || storedEnd;
+        title.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+        grid.innerHTML = '';
+        for (let index = 0; index < 42; index++) {
+            const day = new Date(gridStart);
+            day.setDate(gridStart.getDate() + index);
+            day.setHours(0, 0, 0, 0);
+            const dayKey = this.formatLocalDate(day);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'stats-calendar-day';
+            button.textContent = String(day.getDate());
+            if (day.getMonth() !== month.getMonth()) button.classList.add('other-month');
+            if (rangeStart && rangeEnd && day >= rangeStart && day <= rangeEnd) button.classList.add('in-range');
+            if ((rangeStart && day.getTime() === rangeStart.getTime()) || (rangeEnd && day.getTime() === rangeEnd.getTime())) {
+                button.classList.add('range-edge');
+            }
+            button.addEventListener('click', () => this.selectCourseSyncCalendarDate(dayKey));
+            grid.appendChild(button);
+        }
+    }
+
+    selectCourseSyncCalendarDate(dateValue) {
+        const picked = this.parseDateInputValue(dateValue);
+        if (!picked) return;
+        if (!this._pendingCourseSyncStartDate) {
+            this._pendingCourseSyncStartDate = picked;
+            document.getElementById('courseSyncRangeText').textContent =
+                `${this.formatLocalDate(picked)} → 请选择结束日期`;
+            this.renderCourseSyncDatePicker();
+            return;
+        }
+        const start = this._pendingCourseSyncStartDate <= picked ? this._pendingCourseSyncStartDate : picked;
+        const end = this._pendingCourseSyncStartDate <= picked ? picked : this._pendingCourseSyncStartDate;
+        document.getElementById('courseSyncStartDate').value = this.formatLocalDate(start);
+        document.getElementById('courseSyncEndDate').value = this.formatLocalDate(end);
+        this.updateCourseSyncRangeText();
+        this.closeCourseSyncDatePicker();
     }
 
     updateCourseSyncRangeText() {
         const start = document.getElementById('courseSyncStartDate').value;
         const end = document.getElementById('courseSyncEndDate').value;
-        document.getElementById('courseSyncRangeButton').textContent = start && end ? `${start}  →  ${end}` : '请选择同步起点和终点';
+        document.getElementById('courseSyncRangeText').textContent = start && end ? `${start}  →  ${end}` : '请选择同步起点和终点';
     }
 
     hasManualSyncData(startDate, endDate) {
@@ -457,15 +971,24 @@ class TimetableApp {
         let overwriteManual = false;
         if (startDate && endDate && !automatic && this.hasManualSyncData(startDate, endDate)) {
             overwriteManual = await window.showAppConfirm(
-                '所选同步范围内存在手动修改的出勤数据或人员名单。是否用线上同步数据覆盖这些手动修改？\n\n确定：覆盖手动修改。\n取消：保留手动修改，并继续同步。'
+                '所选同步范围内存在手动修改的课程、出勤数据或人员名单。是否完全使用线上数据覆盖？\n\n确定：清空该范围后重新导入，线上没有的手动课程也会删除。\n取消：保留手动修改，并继续合并同步。'
             );
         }
         this._courseSyncPreserveManual = automatic || !overwriteManual;
+        this._courseSyncAttendanceOnly = !!(range && range.attendanceOnly);
+        this._courseSyncReplaceRange = overwriteManual && !this._courseSyncAttendanceOnly
+            ? { startDate, endDate }
+            : null;
         if (!startDate || !endDate) { message.textContent = '请先选择同步日期范围。'; return; }
-        const result = await window.electronAPI.startCourseSync({ startDate, endDate });
+        const result = await window.electronAPI.startCourseSync({
+            startDate,
+            endDate,
+            attendanceOnly: this._courseSyncAttendanceOnly
+        });
         if (!result || !result.started) { message.textContent = result && result.message ? result.message : '无法开始同步。'; return; }
         this._courseSyncRunning = true;
         document.getElementById('courseSyncStartBtn').disabled = true;
+        document.getElementById('courseSyncTodayBtn').disabled = true;
         document.getElementById('courseSyncStopBtn').disabled = false;
         message.textContent = '正在读取基础课程信息…';
     }
@@ -483,23 +1006,26 @@ class TimetableApp {
 
     saveCourseAutoSyncSettings() {
         const enabled = document.getElementById('courseAutoSyncToggle').classList.contains('active');
-        const mode = document.querySelector('input[name="courseAutoMode"]:checked').value;
-        const time = document.getElementById('courseTimedSyncTime').value || '22:00';
-        localStorage.setItem('courseAutoSyncSettings', JSON.stringify({ enabled, mode, time }));
+        localStorage.setItem('courseAutoSyncSettings', JSON.stringify({ enabled, intervalHours: 2 }));
         this.renderCourseAutoSyncSettings();
     }
 
     renderCourseAutoSyncSettings() {
-        let settings = { enabled: false, mode: 'async', time: '22:00' };
+        let settings = { enabled: false, intervalHours: 2 };
         try { settings = { ...settings, ...JSON.parse(localStorage.getItem('courseAutoSyncSettings') || '{}') }; } catch (_) {}
         const toggle = document.getElementById('courseAutoSyncToggle');
         toggle.classList.toggle('active', !!settings.enabled);
         toggle.setAttribute('aria-pressed', settings.enabled ? 'true' : 'false');
-        document.getElementById('courseAutoSyncOptions').style.display = settings.enabled ? 'grid' : 'none';
-        const radio = document.querySelector(`input[name="courseAutoMode"][value="${settings.mode}"]`);
-        if (radio) radio.checked = true;
-        document.getElementById('courseTimedSyncTime').value = settings.time;
-        document.getElementById('courseTimedSyncTime').style.display = settings.mode === 'timed' ? 'block' : 'none';
+    }
+
+    syncTodayCourses(automatic = false) {
+        const today = this.formatLocalDate(new Date());
+        return this.startCourseSync({
+            startDate: today,
+            endDate: today,
+            automatic,
+            attendanceOnly: true
+        });
     }
 
     async handleCourseSyncEvent(event) {
@@ -507,6 +1033,67 @@ class TimetableApp {
         const submit = document.getElementById('courseLoginSubmitBtn');
         if (!event || !event.type) return;
         if (event.type === 'restore-missing') return;
+        if (event.type === 'check-basic') {
+            this._courseCheckNetworkCourses = new Map();
+            (event.courses || []).forEach(course => {
+                const key = this.getNetworkCourseCheckKey(course);
+                if (key) this._courseCheckNetworkCourses.set(key, course);
+            });
+            this.renderCourseCheckResults([...this._courseCheckNetworkCourses.values()], false);
+            const total = this._courseCheckNetworkCourses.size;
+            document.getElementById('courseCheckStatus').textContent =
+                `课程列表初检完成，正在检查考勤（0/${total}）…`;
+            return;
+        }
+        if (event.type === 'check-progress') {
+            document.getElementById('courseCheckStatus').textContent =
+                `课程列表初检完成，正在检查第 ${event.current}/${event.total} 节课程的考勤详情…`;
+            return;
+        }
+        if (event.type === 'check-attendance') {
+            if (!this._courseCheckNetworkCourses) this._courseCheckNetworkCourses = new Map();
+            event.course.__attendanceLoaded = true;
+            const key = this.getNetworkCourseCheckKey(event.course || {});
+            if (key) this._courseCheckNetworkCourses.set(key, event.course);
+            this.renderCourseCheckResults(
+                [...this._courseCheckNetworkCourses.values()],
+                true
+            );
+            document.getElementById('courseCheckStatus').textContent =
+                `已检查 ${event.current}/${event.total} 节课程：学生出勤、请假/缺勤及实际上课时长`;
+            return;
+        }
+        if (event.type === 'check-done') {
+            this._courseCheckRunning = false;
+            this._courseSyncRunning = false;
+            document.getElementById('courseCheckRunBtn').disabled = false;
+            const completedCourses = [...(this._courseCheckNetworkCourses || new Map()).values()];
+            this.renderCourseCheckResults(
+                completedCourses,
+                true
+            );
+            this._courseCheckLastResult = {
+                range: this._courseCheckRange ? { ...this._courseCheckRange } : null,
+                courses: completedCourses,
+                completedAt: new Date().toISOString()
+            };
+            const completedRecord = this._courseCheckRunId && document.getElementById(this._courseCheckRunId);
+            if (completedRecord) {
+                completedRecord.classList.remove('is-running');
+                const state = completedRecord.querySelector('.course-check-record-title span');
+                if (state) state.textContent = `完成 · ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+            this._courseCheckNetworkCourses = null;
+            this._courseCheckRunId = null;
+            return;
+        }
+        if (event.type === 'check-result') {
+            this._courseCheckRunning = false;
+            this._courseSyncRunning = false;
+            document.getElementById('courseCheckRunBtn').disabled = false;
+            this.renderCourseCheckResults(event.courses || [], true);
+            return;
+        }
         if (event.type === 'login') {
             this._courseLoggedIn = true;
             document.getElementById('courseCredentialsPanel').style.display = 'none';
@@ -516,17 +1103,33 @@ class TimetableApp {
             submit.textContent = '登录';
             message.textContent = '';
             this.checkCourseAutoSync();
+            if (this._openCourseCheckAfterLogin) {
+                this._openCourseCheckAfterLogin = false;
+                this.closeCourseLoginModal();
+                setTimeout(() => this.openCourseCheckModal(), 0);
+            }
             return;
         }
         if (event.type === 'basic') {
             const result = { textContent: '' };
+            if (this._courseSyncReplaceRange) {
+                const replaceRange = this._courseSyncReplaceRange;
+                this._courseSyncReplaceRange = null;
+                window.CourseDataImportService.clearCoursesInRange(
+                    this,
+                    this.parseDateInputValue(replaceRange.startDate),
+                    this.parseDateInputValue(replaceRange.endDate)
+                );
+                this.saveData();
+            }
             if (!Array.isArray(event.courses) || event.courses.length === 0) {
                 message.textContent = '登录成功，但所选日期范围内没有课程。';
                 return;
             }
             await this.importCourseDataText(event.courses, result, true, {
                 updateExisting: true,
-                preserveManual: this._courseSyncPreserveManual !== false
+                preserveManual: this._courseSyncPreserveManual !== false,
+                singleOccurrence: true
             });
             message.textContent = `${result.textContent}，正在逐节检查考勤…`;
             return;
@@ -539,7 +1142,9 @@ class TimetableApp {
             const result = { textContent: '' };
             await this.importCourseDataText([event.course], result, true, {
                 updateExisting: true,
-                preserveManual: this._courseSyncPreserveManual !== false
+                preserveManual: this._courseSyncPreserveManual !== false,
+                onlyExisting: this._courseSyncAttendanceOnly,
+                singleOccurrence: true
             });
             message.textContent = `已更新第 ${event.current}/${event.total} 节课的考勤和实际时长`;
             return;
@@ -550,17 +1155,34 @@ class TimetableApp {
             message.textContent = `同步完成，共检查 ${event.total} 节课。`;
             this._courseSyncRunning = false;
             document.getElementById('courseSyncStartBtn').disabled = false;
+            document.getElementById('courseSyncTodayBtn').disabled = false;
             document.getElementById('courseSyncStopBtn').disabled = true;
         } else if (event.type === 'stopped') {
             message.textContent = `同步已停止，已检查 ${event.current || 0}/${event.total || 0} 节课。`;
             this._courseSyncRunning = false;
             document.getElementById('courseSyncStartBtn').disabled = false;
+            document.getElementById('courseSyncTodayBtn').disabled = false;
             document.getElementById('courseSyncStopBtn').disabled = true;
         } else if (event.type === 'stopping') {
             message.textContent = '正在停止同步…';
         } else if (event.type === 'error') {
+            if (this._courseCheckRunning) {
+                this._courseCheckRunning = false;
+                this._courseSyncRunning = false;
+                document.getElementById('courseCheckRunBtn').disabled = false;
+                const failedRecord = this._courseCheckRunId && document.getElementById(this._courseCheckRunId);
+                if (failedRecord) {
+                    failedRecord.classList.remove('is-running');
+                    const state = failedRecord.querySelector('.course-check-record-title span');
+                    if (state) state.textContent = '检查失败';
+                }
+                this._courseCheckRunId = null;
+                document.getElementById('courseCheckStatus').textContent = `检查失败：${event.message || '未知错误'}`;
+                return;
+            }
             message.textContent = `同步失败：${event.message || '未知错误'}`;
             document.getElementById('courseSyncStartBtn').disabled = false;
+            document.getElementById('courseSyncTodayBtn').disabled = false;
             document.getElementById('courseSyncStopBtn').disabled = true;
         }
     }
@@ -571,21 +1193,11 @@ class TimetableApp {
         try { settings = JSON.parse(localStorage.getItem('courseAutoSyncSettings') || '{}'); } catch (_) { return; }
         if (!settings.enabled) return;
         const now = new Date();
-        const dateKey = this.formatLocalDate(now);
-        if (settings.mode === 'async') {
-            if (now.getHours() < 6) return;
-            if (localStorage.getItem('courseAutoAsyncLastRun') === dateKey) return;
-            const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayKey = this.formatLocalDate(yesterday);
-            localStorage.setItem('courseAutoAsyncLastRun', dateKey);
-            this.startCourseSync({ startDate: yesterdayKey, endDate: yesterdayKey, automatic: true });
-            return;
-        }
-        if (settings.mode !== 'timed' || !settings.time) return;
-        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        if (currentTime !== settings.time || this._lastTimedCourseSyncDate === dateKey) return;
-        this._lastTimedCourseSyncDate = dateKey;
-        this.startCourseSync({ startDate: dateKey, endDate: dateKey, automatic: true });
+        const lastRun = Number(localStorage.getItem('courseAutoSyncLastRunAt')) || 0;
+        const intervalMs = 2 * 60 * 60 * 1000;
+        if (now.getTime() - lastRun < intervalMs) return;
+        localStorage.setItem('courseAutoSyncLastRunAt', String(now.getTime()));
+        this.syncTodayCourses(true);
     }
 
     async logoutCourseAccount() {
@@ -594,6 +1206,7 @@ class TimetableApp {
         localStorage.setItem('courseAutoLogin', 'false');
         localStorage.setItem('courseSavePassword', 'false');
         this._courseLoggedIn = false;
+        this._openCourseCheckAfterLogin = false;
         this._courseSyncRunning = false;
         document.getElementById('courseLoggedInPanel').style.display = 'none';
         document.getElementById('courseCredentialsPanel').style.display = 'block';
@@ -1571,7 +2184,18 @@ class TimetableApp {
         const periodInfo = this.getPeriod(parsedKey.periodIndex);
         if (!periodInfo || !periodInfo.time) return true; // 无课时信息，默认认为已结束
 
-        const endTimeStr = periodInfo.time.split('-')[1]; // e.g., "08:40"
+        const classReferenceDate = new Date(date);
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(classReferenceDate).start);
+        const version = this.getCellVersion(key, weekStartStr);
+        const instance = version && version.courseInstanceId && this.erpData
+            ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
+            : null;
+        const actualEndTime = instance
+            && instance.isNonStandardTime
+            && /^\d{1,2}:\d{2}$/.test(String(instance.actualEndTime || ''))
+            ? instance.actualEndTime
+            : null;
+        const endTimeStr = actualEndTime || periodInfo.time.split('-')[1]; // e.g., "08:40"
         const [endH, endM] = endTimeStr.split(':').map(Number);
 
         const now = new Date();
@@ -1590,7 +2214,7 @@ class TimetableApp {
         // 同一天，比较具体时间
         const classEndTime = new Date(date);
         classEndTime.setHours(endH, endM, 0, 0);
-        return now > classEndTime;
+        return now >= classEndTime;
     }
 
     getWeekRange(date) {

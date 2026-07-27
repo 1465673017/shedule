@@ -1,6 +1,6 @@
 {
   "name": "kebiao-app",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Timetable app",
   "author": "A大橙子",
   "main": "main.js",
@@ -13,7 +13,7 @@
     "test:electron": "node tests/electron-smoke.test.js",
     "build:bridge:win": "python -m PyInstaller --noconfirm --clean --onefile --name course-sync-bridge --distpath build/python-dist --workpath build/python-work --specpath build/python-spec main.py",
     "build:bridge:mac": "bash build/build-mac-bridge.sh",
-    "build": "npm run build:bridge:win && electron-builder --win portable --x64",
+    "build": "npm run build:bridge:win && electron-builder --win --x64",
     "build:mac": "npm run build:bridge:mac && electron-builder --mac --publish never && bash build/build-mac-portable.sh",
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
@@ -22,6 +22,7 @@
     "productName": "A大橙子课时统计定制版",
     "artifactName": "A大橙子课时统计（定制版-${version}）.${ext}",
     "electronVersion": "43.1.1",
+    "electronDist": "node_modules/electron/dist",
     "asar": true,
     "asarUnpack": [
       "build/python-dist/**"
@@ -82,9 +83,8 @@
     "dmg": {
       "artifactName": "A大橙子课时统计（定制版-${version}）-${arch}.${ext}"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+    "portable": {
+      "artifactName": "A大橙子课时统计（定制版-${version}）-便携版.${ext}"
     }
   },
   "devDependencies": {

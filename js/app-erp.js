@@ -906,6 +906,15 @@
                     manualStudentActualMinutesByDate: existing && existing.manualStudentActualMinutesByDate
                         ? JSON.parse(JSON.stringify(existing.manualStudentActualMinutesByDate))
                         : undefined,
+                    actualStartTime: existing && existing.actualStartTime,
+                    actualEndTime: existing && existing.actualEndTime,
+                    standardStartTime: existing && existing.standardStartTime,
+                    standardEndTime: existing && existing.standardEndTime,
+                    isNonStandardTime: existing && !!existing.isNonStandardTime,
+                    timeSource: existing && existing.timeSource,
+                    timeManuallyAdjusted: existing && !!existing.timeManuallyAdjusted,
+                    importSourceTime: existing && existing.importSourceTime,
+                    importTotalMinutes: existing && existing.importTotalMinutes,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
@@ -939,10 +948,13 @@
             buildTimetableProjection(app);
         },
 
-        setSingleCellOccurrence(app, key, weekStartStr, subjectId, studentIds) {
+        setSingleCellOccurrence(app, key, weekStartStr, subjectId, studentIds, options = {}) {
             const currentVersion = this.getCellVersion(app, key, weekStartStr);
             const nextWeekStart = addWeeks(weekStartStr, 1);
-            const nextVersion = this.getCellVersion(app, key, nextWeekStart);
+            const explicitNextVersion = getExplicitVersionAtWeek(app, key, nextWeekStart);
+            const nextVersion = options.restoreInheritedNext === false
+                ? explicitNextVersion
+                : this.getCellVersion(app, key, nextWeekStart);
             const nextSnapshot = nextVersion ? {
                 ...nextVersion,
                 student: normalizeIds(nextVersion.student),

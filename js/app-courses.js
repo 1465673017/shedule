@@ -174,6 +174,8 @@ TimetableApp.prototype.openCourseEditModal = function(course) {
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
+        const timeSection = document.getElementById('lessonTimeSection');
+        if (timeSection) timeSection.style.display = 'none';
 
         title.textContent = '编辑课程';
 
@@ -214,6 +216,8 @@ TimetableApp.prototype.openManualCourseModal = function() {
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
+        const timeSection = document.getElementById('lessonTimeSection');
+        if (timeSection) timeSection.style.display = 'none';
 
         title.textContent = '添加课程';
 
@@ -297,6 +301,143 @@ TimetableApp.prototype.closeAddLessonModal = function() {
 
         this.updateTemporarySwapButton(false, false);
 
+    }
+
+TimetableApp.prototype.getLessonInstance = function(version) {
+        if (!version || !version.courseInstanceId || !this.erpData) return null;
+        return (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId) || null;
+    }
+
+TimetableApp.prototype.getPeriodTimeParts = function(periodIndex) {
+        const period = this.periods && this.periods[Number(periodIndex)];
+        const parts = String(period && period.time || '').split('-').map(value => value.trim().slice(0, 5));
+        return parts.length === 2 ? { start: parts[0], end: parts[1] } : { start: '', end: '' };
+    }
+
+TimetableApp.prototype.timeValueToMinutes = function(value) {
+        const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+        return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
+    }
+
+TimetableApp.prototype.prepareLessonTimeEditor = function(cell, version, weekStartStr) {
+        const section = document.getElementById('lessonTimeSection');
+        const startInput = document.getElementById('lessonActualStartTime');
+        const endInput = document.getElementById('lessonActualEndTime');
+        if (!section || !startInput || !endInput || !cell) return;
+        const standard = this.getPeriodTimeParts(cell.dataset.period);
+        const instance = this.getLessonInstance(version);
+        startInput.value = instance && instance.actualStartTime || standard.start;
+        endInput.value = instance && instance.actualEndTime || standard.end;
+        const pickerConfig = [
+            {
+                input: startInput,
+                hour: document.getElementById('lessonStartHour'),
+                minute: document.getElementById('lessonStartMinute')
+            },
+            {
+                input: endInput,
+                hour: document.getElementById('lessonEndHour'),
+                minute: document.getElementById('lessonEndMinute')
+            }
+        ];
+        pickerConfig.forEach(picker => {
+            if (!picker.hour || !picker.minute) return;
+            const parts = String(picker.input.value || '00:00').split(':');
+            const selectedHour = String(parts[0] || '00').padStart(2, '0');
+            const selectedMinute = String(parts[1] || '00').padStart(2, '0');
+            picker.hour.innerHTML = Array.from({ length: 24 }, (_, hour) => {
+                const value = String(hour).padStart(2, '0');
+                return `<option value="${value}">${value}</option>`;
+            }).join('');
+            const minuteValues = new Set(Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, '0')));
+            minuteValues.add(selectedMinute);
+            picker.minute.innerHTML = [...minuteValues].sort().map(value =>
+                `<option value="${value}">${value}</option>`
+            ).join('');
+            picker.hour.value = selectedHour;
+            picker.minute.value = selectedMinute;
+        });
+        section.dataset.period = cell.dataset.period;
+        section.dataset.day = cell.dataset.day;
+        section.dataset.weekStart = weekStartStr;
+        const hint = document.getElementById('lessonStandardTimeHint');
+        if (hint) hint.textContent = `标准时间：${standard.start}–${standard.end}。开始时间必须位于该标准课时内。`;
+        const refresh = () => {
+            pickerConfig.forEach(picker => {
+                if (picker.hour && picker.minute) picker.input.value = `${picker.hour.value}:${picker.minute.value}`;
+            });
+            const status = document.getElementById('lessonTimeStatus');
+            if (!status) return;
+            const nonStandard = startInput.value !== standard.start || endInput.value !== standard.end;
+            status.textContent = nonStandard ? '非标准时间' : '标准时间';
+            status.classList.toggle('is-non-standard', nonStandard);
+        };
+        startInput.oninput = refresh;
+        endInput.oninput = refresh;
+        pickerConfig.forEach(picker => {
+            if (picker.hour) picker.hour.onchange = refresh;
+            if (picker.minute) picker.minute.onchange = refresh;
+        });
+        refresh();
+        section.style.display = '';
+    }
+
+TimetableApp.prototype.validateLessonTimeEditor = function(currentInstanceId) {
+        const section = document.getElementById('lessonTimeSection');
+        const startInput = document.getElementById('lessonActualStartTime');
+        const endInput = document.getElementById('lessonActualEndTime');
+        if (!section || section.style.display === 'none') return null;
+        const start = startInput.value;
+        const end = endInput.value;
+        const startMinutes = this.timeValueToMinutes(start);
+        const endMinutes = this.timeValueToMinutes(end);
+        const standard = this.getPeriodTimeParts(section.dataset.period);
+        const standardStart = this.timeValueToMinutes(standard.start);
+        const standardEnd = this.timeValueToMinutes(standard.end);
+        if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || endMinutes <= startMinutes) {
+            alert('课程结束时间必须晚于开始时间。');
+            return false;
+        }
+        if (startMinutes < standardStart || startMinutes >= standardEnd) {
+            alert(`开始时间必须位于本节标准时间 ${standard.start}–${standard.end} 内。`);
+            return false;
+        }
+        const day = String(section.dataset.day);
+        const weekStart = section.dataset.weekStart;
+        const conflicts = (this.erpData && this.erpData.courseInstances || []).filter(instance => {
+            if (!instance || instance.isDeleted || instance.id === currentInstanceId || instance.weekStart !== weekStart) return false;
+            const keyDay = String(instance.cellKey || '').split('-')[0];
+            if (keyDay !== day) return false;
+            const keyPeriod = String(instance.cellKey || '').split('-')[1];
+            const fallback = this.getPeriodTimeParts(keyPeriod);
+            const otherStart = this.timeValueToMinutes(instance.actualStartTime || fallback.start);
+            const otherEnd = this.timeValueToMinutes(instance.actualEndTime || fallback.end);
+            return Number.isFinite(otherStart) && Number.isFinite(otherEnd)
+                && startMinutes < otherEnd && endMinutes > otherStart;
+        });
+        if (conflicts.length) {
+            const conflict = conflicts[0];
+            const fallback = this.getPeriodTimeParts(String(conflict.cellKey || '').split('-')[1]);
+            alert(`课程时间与 ${conflict.actualStartTime || fallback.start}–${conflict.actualEndTime || fallback.end} 的课程重叠。`);
+            return false;
+        }
+        return { start, end, standard };
+    }
+
+TimetableApp.prototype.saveLessonTimeToInstance = function(instance, timeData, dateKey) {
+        if (!instance || !timeData) return;
+        instance.actualStartTime = timeData.start;
+        instance.actualEndTime = timeData.end;
+        instance.standardStartTime = timeData.standard.start;
+        instance.standardEndTime = timeData.standard.end;
+        instance.isNonStandardTime = timeData.start !== timeData.standard.start || timeData.end !== timeData.standard.end;
+        instance.timeSource = 'manual';
+        instance.timeManuallyAdjusted = true;
+        instance.importSourceTime = `${timeData.start}-${timeData.end}`;
+        const duration = this.timeValueToMinutes(timeData.end) - this.timeValueToMinutes(timeData.start);
+        instance.importTotalMinutes = duration;
+        instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [dateKey]: duration };
+        instance.updatedAt = new Date().toISOString();
     }
 
 TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], excludeKeys = []) {
@@ -744,7 +885,6 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
         }
 
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
-
         this.setCellVersion(key, weekStartStr, subjectId,
 
             selectedStudentIds.length > 0 ? selectedStudentIds.map(id => id.toString()) : []);

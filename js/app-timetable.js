@@ -318,10 +318,55 @@ TimetableApp.prototype.moveSubject = async function(sourceKey, targetKey) {
             this.setCellVersion(targetKey, nextWeekStr, null, [], { cutoff: true });
         }
         window.ScheduleErpService.transferMovedCourseData(this, sourceVersion, targetKey, movedTargetVersion, weekStartStr);
+        this.resetMovedCourseToStandardTime(targetKey, movedTargetVersion, weekStartStr);
 
         this.ensureAuditionStudentsTemporary(targetKey, mergedStudents);
 
         this.syncRealtime();
+    }
+
+TimetableApp.prototype.resetMovedCourseToStandardTime = function(targetKey, targetVersion, weekStartStr) {
+        if (!targetVersion) return;
+        const instance = window.ScheduleErpService.getCourseInstanceForVersion(this, targetVersion);
+        const parsed = this.parseCellKey(targetKey);
+        const period = parsed ? this.getPeriod(parsed.periodIndex) : null;
+        const parts = String(period && period.time || '').split('-').map(value => value.trim().slice(0, 5));
+        if (!instance || parts.length !== 2) return;
+        const startMinutes = this.timeToMinutes(parts[0]);
+        const endMinutes = this.timeToMinutes(parts[1]);
+        const duration = Math.max(0, endMinutes - startMinutes);
+        const weekStart = this.parseDateInputValue(weekStartStr);
+        const weekEnd = this.addDays(weekStart, 6);
+        const inMovedWeek = dateKey => {
+            const date = this.parseDateInputValue(dateKey);
+            return date && date >= weekStart && date <= weekEnd;
+        };
+        const occurrenceDate = this.addDays(weekStart, Number(parsed.day) - 1);
+        const occurrenceDateKey = this.formatLocalDate(occurrenceDate);
+        const withoutMovedWeek = values => Object.fromEntries(
+            Object.entries(values || {}).filter(([dateKey]) => !inMovedWeek(dateKey))
+        );
+
+        instance.actualStartTime = parts[0];
+        instance.actualEndTime = parts[1];
+        instance.standardStartTime = parts[0];
+        instance.standardEndTime = parts[1];
+        instance.isNonStandardTime = false;
+        instance.timeSource = 'schedule';
+        instance.timeManuallyAdjusted = false;
+        instance.importSourceTime = `${parts[0]}-${parts[1]}`;
+        instance.importTotalMinutes = duration;
+        instance.actualMinutesByDate = {
+            ...withoutMovedWeek(instance.actualMinutesByDate),
+            [occurrenceDateKey]: duration
+        };
+        instance.manualActualMinutesByDate = withoutMovedWeek(instance.manualActualMinutesByDate);
+        instance.studentActualMinutesByDate = withoutMovedWeek(instance.studentActualMinutesByDate);
+        instance.manualStudentActualMinutesByDate = withoutMovedWeek(instance.manualStudentActualMinutesByDate);
+        instance.studentActualMinutesByDate[occurrenceDateKey] = Object.fromEntries(
+            (targetVersion.student || []).map(studentId => [String(studentId), duration])
+        );
+        instance.updatedAt = new Date().toISOString();
     }
 
 TimetableApp.prototype.copyCourseFromCell = function(cell) {
@@ -660,6 +705,9 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             const weekStart = this.getWeekRange(this.currentDate).start;
             const weekStartStr = this.formatLocalDate(weekStart);
             const version = this.getCellVersion(key, weekStartStr);
+            const courseInstance = version && version.courseInstanceId && this.erpData
+                ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
+                : null;
 
             if (version) {
                 const students = (version.student || [])
@@ -698,7 +746,66 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                     
                     const subjectBg = document.createElement('div');
                     subjectBg.className = 'subject-bg subject-bg-light';
-                    subjectBg.style.setProperty('--subject-color', subject.color || '#666666');
+                    subjectBg.style.setProperty(
+                        '--subject-color',
+                        courseInstance && courseInstance.isNonStandardTime ? '#ef4444' : (subject.color || '#666666')
+                    );
+                    if (courseInstance && courseInstance.isNonStandardTime) {
+                        const actualStart = courseInstance.actualStartTime || courseInstance.standardStartTime || '';
+                        const actualEnd = courseInstance.actualEndTime || courseInstance.standardEndTime || '';
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'non-standard-time-tooltip';
+                        tooltip.setAttribute('role', 'tooltip');
+                        tooltip.innerHTML = `
+                            <strong>本节课为非标准课时</strong>
+                            <span>实际上课时间为 ${this.escapeHtml(actualStart)}–${this.escapeHtml(actualEnd)}</span>
+                        `;
+                        let hideTimer = null;
+                        const hideTooltip = () => {
+                            if (hideTimer) {
+                                clearTimeout(hideTimer);
+                                hideTimer = null;
+                            }
+                            tooltip.classList.remove('is-visible');
+                            tooltip.remove();
+                        };
+                        cell.addEventListener('mouseenter', () => {
+                            if (document.querySelector('.dragging')) {
+                                hideTooltip();
+                                return;
+                            }
+                            if (hideTimer) {
+                                clearTimeout(hideTimer);
+                                hideTimer = null;
+                            }
+                            document.body.appendChild(tooltip);
+                            const cellRect = cell.getBoundingClientRect();
+                            const tooltipRect = tooltip.getBoundingClientRect();
+                            const viewportPadding = 10;
+                            const preferredLeft = cellRect.left + 8;
+                            let left = preferredLeft;
+                            left = Math.max(
+                                viewportPadding,
+                                Math.min(left, window.innerWidth - tooltipRect.width - viewportPadding)
+                            );
+                            const hasRoomAbove = cellRect.top >= tooltipRect.height + 12;
+                            const top = hasRoomAbove
+                                ? cellRect.top - tooltipRect.height - 8
+                                : cellRect.bottom + 8;
+                            tooltip.classList.toggle('is-below', !hasRoomAbove);
+                            tooltip.classList.toggle('arrow-right', left < preferredLeft - 1);
+                            tooltip.style.left = `${left}px`;
+                            tooltip.style.top = `${Math.max(viewportPadding, top)}px`;
+                            requestAnimationFrame(() => tooltip.classList.add('is-visible'));
+                        });
+                        cell.addEventListener('mouseleave', () => {
+                            tooltip.classList.remove('is-visible');
+                            hideTimer = setTimeout(() => tooltip.remove(), 160);
+                        });
+                        cell.addEventListener('dragstart', hideTooltip);
+                        cell.addEventListener('dragend', hideTooltip);
+                        cell.addEventListener('drop', hideTooltip);
+                    }
                     const leadStudent = students.length > 0 ? students[0] : null;
                     const gradeAccentColor = leadStudent
                         ? this.getStudentGradeColor(leadStudent)

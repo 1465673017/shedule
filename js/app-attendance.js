@@ -42,10 +42,40 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
         
         const lessonInfo = document.getElementById('attendanceLessonInfo');
         const scheduledMinutes = periodInfo ? this.timeToMinutes(periodInfo.time.split('-')[1]) - this.timeToMinutes(periodInfo.time.split('-')[0]) : 120;
+        const courseInstance = version && version.courseInstanceId && this.erpData
+            ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
+            : null;
+        const hasNonStandardTime = !!(
+            courseInstance
+            && courseInstance.isNonStandardTime
+            && courseInstance.actualStartTime
+            && courseInstance.actualEndTime
+        );
+        const actualCourseMinutes = hasNonStandardTime
+            ? Math.max(0, this.timeToMinutes(courseInstance.actualEndTime) - this.timeToMinutes(courseInstance.actualStartTime))
+            : scheduledMinutes;
+        const hasManualActual = !!(
+            courseInstance
+            && courseInstance.manualActualMinutesByDate
+            && courseInstance.manualActualMinutesByDate[dateKey]
+        );
         const erpActualMin = window.ScheduleErpService.getActualMinutes(this, key, dateKey);
-        const actualMin = erpActualMin !== undefined
+        let actualMin = hasNonStandardTime && !hasManualActual
+            ? actualCourseMinutes
+            : erpActualMin !== undefined
             ? erpActualMin
             : scheduledMinutes;
+        const studentActualValues = students.map(student =>
+            window.ScheduleErpService.getStudentActualMinutes(this, key, student.id, dateKey)
+        );
+        if (studentActualValues.some(value => value !== undefined)) {
+            actualMin = Math.max(...studentActualValues.map(value =>
+                value !== undefined ? Math.max(0, Number(value) || 0) : actualMin
+            ));
+        }
+        const attendanceTime = hasNonStandardTime
+            ? `${courseInstance.actualStartTime}-${courseInstance.actualEndTime}`
+            : (periodInfo ? periodInfo.time : '');
         const actualDisplay = this.formatDuration(Math.floor(actualMin / 60), actualMin % 60);
 
         lessonInfo.innerHTML = `
@@ -53,7 +83,7 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
                 <div class="attendance-lesson-main">
                     <strong class="attendance-lesson-period">${dayName} ${periodLabel}</strong>
                     <span class="attendance-lesson-subject">${this.escapeHtml(subject ? subject.name : '无科目')}</span>
-                    <span class="attendance-lesson-time">${periodInfo ? periodInfo.time : ''}</span>
+                    <button type="button" class="attendance-lesson-time attendance-lesson-time-button" title="点击调整上课时间"><span class="attendance-lesson-time-value">${attendanceTime}</span></button>
                 </div>
                 <div class="actual-duration-display" title="点击设置每个学生的实际上课时长">
                     <span class="actual-duration-label">实上</span>
@@ -67,11 +97,18 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
         lessonInfo.querySelector('.actual-duration-display')?.addEventListener('click', event => {
             this.showDurationEditor(event, key);
         });
+        lessonInfo.querySelector('.attendance-lesson-time-button')?.addEventListener('click', event => {
+            this.showLessonTimeEditor(event, key);
+        });
         
         this._attModalClassFinished = this.isClassFinished(key, classDate);
         this._attModalDateKey = dateKey;
         this._attModalClassDate = classDate;
         this._attModalCourseInstanceId = version ? version.courseInstanceId : null;
+        this._attModalDefaultMinutes = actualMin;
+        this._attModalScheduledMinutes = scheduledMinutes;
+        this._attModalHasNonStandardTime = hasNonStandardTime;
+        this._attModalCourseInstance = courseInstance;
 
         this._attModalKey = key;
         this._attModalStudents = students;
@@ -112,9 +149,179 @@ TimetableApp.prototype.closeAttendanceModal = function() {
         this._attModalDateKey = null;
         this._attModalCellKey = null;
         this._attModalCourseInstanceId = null;
+        this._attModalDefaultMinutes = null;
+        this._attModalScheduledMinutes = null;
+        this._attModalHasNonStandardTime = null;
+        this._attModalCourseInstance = null;
         this._attModalRecurrence = null;
+        this.hideLessonTimeEditor();
         this.hideDurationEditor();
     }
+
+TimetableApp.prototype.formatSliderTime = function(minutes) {
+    const normalized = Math.max(0, Math.min(1439, Number(minutes) || 0));
+    return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`;
+}
+
+TimetableApp.prototype.hideLessonTimeEditor = function() {
+    const editor = document.getElementById('lessonTimeEditorDropdown');
+    if (editor) editor.remove();
+    if (this._lessonTimeDocClickHandler) {
+        document.removeEventListener('click', this._lessonTimeDocClickHandler);
+        this._lessonTimeDocClickHandler = null;
+    }
+}
+
+TimetableApp.prototype.showLessonTimeEditor = function(event, key) {
+    event.stopPropagation();
+    const displayEl = event.currentTarget;
+    const existing = document.getElementById('lessonTimeEditorDropdown');
+    if (existing && existing.parentElement === displayEl) {
+        this.hideLessonTimeEditor();
+        return;
+    }
+    this.hideDurationEditor();
+    this.hideLessonTimeEditor();
+
+    const parsed = this.parseCellKey(key);
+    const periodInfo = parsed ? this.getPeriod(parsed.periodIndex) : null;
+    const parts = String(periodInfo && periodInfo.time || '').split('-');
+    if (parts.length !== 2) return;
+    const standardStart = this.timeToMinutes(parts[0]);
+    const standardEnd = this.timeToMinutes(parts[1]);
+    const instance = this._attModalCourseInstance;
+    const savedStart = instance && instance.actualStartTime ? this.timeToMinutes(instance.actualStartTime) : standardStart;
+    const savedEnd = instance && instance.actualEndTime ? this.timeToMinutes(instance.actualEndTime) : standardEnd;
+    const startValue = Math.max(standardStart, Math.min(standardEnd, savedStart));
+    const endLimit = Math.min(1439, standardEnd + 120);
+    const endValue = Math.max(standardEnd, Math.min(endLimit, savedEnd));
+
+    const editor = document.createElement('div');
+    editor.id = 'lessonTimeEditorDropdown';
+    editor.className = 'duration-editor-dropdown lesson-time-editor-dropdown';
+    editor.innerHTML = `
+        <div class="duration-editor-header">调整实际上课时间</div>
+        <div class="duration-editor-body lesson-time-slider-body">
+            <div class="lesson-time-slider-row">
+                <div class="lesson-time-slider-heading"><span>开始时间</span><strong id="lessonStartTimeValue">${this.formatSliderTime(startValue)}</strong></div>
+                <input type="range" id="lessonStartTimeRange" class="duration-range" min="${standardStart}" max="${standardEnd}" step="5" value="${startValue}">
+                <small>可选范围 ${this.formatSliderTime(standardStart)}–${this.formatSliderTime(standardEnd)}</small>
+            </div>
+            <div class="lesson-time-slider-row">
+                <div class="lesson-time-slider-heading"><span>结束时间</span><strong id="lessonEndTimeValue">${this.formatSliderTime(endValue)}</strong></div>
+                <input type="range" id="lessonEndTimeRange" class="duration-range" min="${standardEnd}" max="${endLimit}" step="5" value="${endValue}">
+                <small>可选范围 ${this.formatSliderTime(standardEnd)}–${this.formatSliderTime(endLimit)}</small>
+            </div>
+        </div>
+    `;
+    displayEl.appendChild(editor);
+    ['click', 'mousedown', 'pointerdown'].forEach(eventName => {
+        editor.addEventListener(eventName, editorEvent => editorEvent.stopPropagation());
+    });
+    const startRange = editor.querySelector('#lessonStartTimeRange');
+    const endRange = editor.querySelector('#lessonEndTimeRange');
+    const startLabel = editor.querySelector('#lessonStartTimeValue');
+    const endLabel = editor.querySelector('#lessonEndTimeValue');
+    let acceptedStart = Number(startRange.value);
+    let acceptedEnd = Number(endRange.value);
+    const refresh = () => {
+        startLabel.textContent = this.formatSliderTime(startRange.value);
+        endLabel.textContent = this.formatSliderTime(endRange.value);
+    };
+    const commit = () => {
+        let start = Number(startRange.value);
+        let end = Number(endRange.value);
+        if (end <= start) {
+            end = Math.min(endLimit, start + 5);
+            endRange.value = String(end);
+        }
+        if (!this.saveAttendanceLessonTime(key, start, end)) {
+            startRange.value = String(acceptedStart);
+            endRange.value = String(acceptedEnd);
+        } else {
+            acceptedStart = start;
+            acceptedEnd = end;
+        }
+        refresh();
+    };
+    [startRange, endRange].forEach(range => {
+        range.addEventListener('input', refresh);
+        range.addEventListener('change', commit);
+        range.addEventListener('wheel', wheelEvent => {
+            wheelEvent.preventDefault();
+            wheelEvent.stopPropagation();
+            const direction = wheelEvent.deltaY > 0 ? 1 : -1;
+            range.value = String(Math.max(Number(range.min), Math.min(Number(range.max), Number(range.value) + direction * 5)));
+            commit();
+        }, { passive: false });
+    });
+    setTimeout(() => {
+        this._lessonTimeDocClickHandler = clickEvent => {
+            if (!editor.contains(clickEvent.target) && clickEvent.target !== displayEl) {
+                this.hideLessonTimeEditor();
+            }
+        };
+        document.addEventListener('click', this._lessonTimeDocClickHandler);
+    }, 0);
+}
+
+TimetableApp.prototype.saveAttendanceLessonTime = function(key, startMinutes, endMinutes) {
+    const instance = this._attModalCourseInstance;
+    if (!instance || endMinutes <= startMinutes) return false;
+    const parsed = this.parseCellKey(key);
+    const day = parsed ? String(parsed.day) : String(key).split('-')[0];
+    const conflicts = (this.erpData && this.erpData.courseInstances || []).filter(other => {
+        if (!other || other.isDeleted || other.id === instance.id || other.weekStart !== instance.weekStart) return false;
+        if (String(other.cellKey || '').split('-')[0] !== day) return false;
+        const otherPeriod = this.getPeriod(String(other.cellKey || '').split('-')[1]);
+        const otherParts = String(otherPeriod && otherPeriod.time || '').split('-');
+        const otherStart = this.timeToMinutes(other.actualStartTime || otherParts[0]);
+        const otherEnd = this.timeToMinutes(other.actualEndTime || otherParts[1]);
+        return startMinutes < otherEnd && endMinutes > otherStart;
+    });
+    if (conflicts.length) {
+        const conflict = conflicts[0];
+        const otherPeriod = this.getPeriod(String(conflict.cellKey || '').split('-')[1]);
+        const otherParts = String(otherPeriod && otherPeriod.time || '').split('-');
+        alert(`调整后的时间与 ${conflict.actualStartTime || otherParts[0]}-${conflict.actualEndTime || otherParts[1]} 的课程重叠。`);
+        return false;
+    }
+
+    const periodInfo = parsed ? this.getPeriod(parsed.periodIndex) : null;
+    const standardParts = String(periodInfo && periodInfo.time || '').split('-');
+    const start = this.formatSliderTime(startMinutes);
+    const end = this.formatSliderTime(endMinutes);
+    const duration = endMinutes - startMinutes;
+    instance.actualStartTime = start;
+    instance.actualEndTime = end;
+    instance.standardStartTime = standardParts[0];
+    instance.standardEndTime = standardParts[1];
+    instance.isNonStandardTime = start !== standardParts[0] || end !== standardParts[1];
+    instance.timeSource = 'manual';
+    instance.timeManuallyAdjusted = true;
+    instance.importSourceTime = `${start}-${end}`;
+    instance.importTotalMinutes = duration;
+    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [this._attModalDateKey]: duration };
+    instance.manualActualMinutesByDate = { ...(instance.manualActualMinutesByDate || {}), [this._attModalDateKey]: true };
+    instance.studentActualMinutesByDate = { ...(instance.studentActualMinutesByDate || {}) };
+    instance.studentActualMinutesByDate[this._attModalDateKey] = { ...(instance.studentActualMinutesByDate[this._attModalDateKey] || {}) };
+    (this._attModalStudents || []).forEach(student => {
+        const manual = instance.manualStudentActualMinutesByDate
+            && instance.manualStudentActualMinutesByDate[this._attModalDateKey]
+            && instance.manualStudentActualMinutesByDate[this._attModalDateKey][String(student.id)];
+        if (!manual) instance.studentActualMinutesByDate[this._attModalDateKey][String(student.id)] = duration;
+    });
+    instance.updatedAt = new Date().toISOString();
+    this._attModalDefaultMinutes = duration;
+    this._attModalHasNonStandardTime = instance.isNonStandardTime;
+    const timeValue = document.querySelector('.attendance-lesson-time-value');
+    if (timeValue) timeValue.textContent = `${start}-${end}`;
+    const durationValue = document.querySelector('.actual-duration-value');
+    if (durationValue) durationValue.textContent = this.formatDuration(Math.floor(duration / 60), duration % 60);
+    this.saveData();
+    this.renderTimetable();
+    return true;
+}
 
 TimetableApp.prototype.showDurationEditor = function(event, key) {
     event.stopPropagation();
@@ -125,19 +332,34 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
         return;
     }
     // Close an editor opened from another duration control.
+    this.hideLessonTimeEditor();
     this.hideDurationEditor();
 
-        const scheduledMinutes = this.getScheduledMinutes(key);
+        const scheduledMinutes = this._attModalScheduledMinutes !== undefined
+            ? this._attModalScheduledMinutes
+            : this.getScheduledMinutes(key);
         const erpActualMin = window.ScheduleErpService.getActualMinutes(this, key, this._attModalDateKey);
-        const currentMin = erpActualMin !== undefined
+        const currentMin = this._attModalDefaultMinutes !== undefined
+            ? this._attModalDefaultMinutes
+            : erpActualMin !== undefined
             ? erpActualMin
             : scheduledMinutes;
         const students = this._attModalStudents || [];
         const studentDurations = students.map(student => {
             const saved = window.ScheduleErpService.getStudentActualMinutes(this, key, student.id, this._attModalDateKey);
-            return Math.min(240, saved !== undefined ? saved : currentMin);
+            const instance = this._attModalCourseInstance;
+            const isManual = !!(
+                instance
+                && instance.manualStudentActualMinutesByDate
+                && instance.manualStudentActualMinutesByDate[this._attModalDateKey]
+                && instance.manualStudentActualMinutesByDate[this._attModalDateKey][String(student.id)]
+            );
+            const shouldUseCourseDuration = this._attModalHasNonStandardTime
+                && !isManual;
+            return Math.max(0, shouldUseCourseDuration ? currentMin : (saved !== undefined ? saved : currentMin));
         });
-        const masterMinutes = studentDurations.length ? Math.max(...studentDurations) : Math.min(240, currentMin);
+        const masterMinutes = studentDurations.length ? Math.max(...studentDurations) : Math.max(0, currentMin);
+        const rangeMax = Math.max(240, masterMinutes, currentMin);
 
         const editor = document.createElement('div');
         editor.className = 'duration-editor-dropdown';
@@ -147,13 +369,13 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
             <div class="duration-editor-header">设置学生实际上课时长</div>
             <div class="duration-editor-body student-duration-editor-body">
                 ${students.length ? `<div class="student-duration-master-row">
-                    <input type="range" class="duration-range student-duration-master-range" min="0" max="240" step="5" value="${masterMinutes}">
+                    <input type="range" class="duration-range student-duration-master-range" min="0" max="${rangeMax}" step="5" value="${masterMinutes}">
                 </div>` : ''}
                 ${students.map((student, index) => {
                     const minutes = studentDurations[index];
                     return `<div class="student-duration-row">
                         <span class="student-duration-name">${this.escapeHtml(student.name)}</span>
-                        <input type="range" class="duration-range student-duration-range" data-student-id="${this.escapeHtml(student.id)}" min="0" max="240" step="5" value="${minutes}">
+                        <input type="range" class="duration-range student-duration-range" data-student-id="${this.escapeHtml(student.id)}" min="0" max="${rangeMax}" step="5" value="${minutes}">
                         <span class="duration-slider-val" id="studentDurationVal-${this.escapeHtml(student.id)}">${this.formatDuration(Math.floor(minutes / 60), minutes % 60)}</span>
                     </div>`;
                 }).join('') || '<div class="text-muted">暂无学生</div>'}
@@ -167,8 +389,8 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
             range.addEventListener('input', () => this.syncStudentActualDuration(key, range.dataset.studentId, range.value));
             range.addEventListener('wheel', (wheelEvent) => {
                 wheelEvent.preventDefault();
-                const direction = wheelEvent.deltaY > 0 ? -1 : 1;
-                range.value = String(Math.max(0, Math.min(240, Number(range.value) + direction * 5)));
+                const direction = wheelEvent.deltaY > 0 ? 1 : -1;
+                range.value = String(Math.max(0, Math.min(rangeMax, Number(range.value) + direction * 5)));
                 this.syncStudentActualDuration(key, range.dataset.studentId, range.value);
             }, { passive: false });
         });
@@ -176,8 +398,8 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
         if (masterRange) {
             masterRange.addEventListener('wheel', (wheelEvent) => {
                 wheelEvent.preventDefault();
-                const direction = wheelEvent.deltaY > 0 ? -1 : 1;
-                masterRange.value = String(Math.max(0, Math.min(240, Number(masterRange.value) + direction * 5)));
+                const direction = wheelEvent.deltaY > 0 ? 1 : -1;
+                masterRange.value = String(Math.max(0, Math.min(rangeMax, Number(masterRange.value) + direction * 5)));
                 this.syncAllStudentActualDurations(key, masterRange.value);
             }, { passive: false });
         }
@@ -255,16 +477,16 @@ TimetableApp.prototype.syncAllStudentActualDurations = function(key, value) {
 
 TimetableApp.prototype.getStudentActualDurationDisplay = function(key, studentId) {
         const status = this.getAttendanceStatusForModal(key, studentId);
-        if (status === 'leave' || status === 'absent') return '0min';
+        if (status === 'leave' || status === 'absent') return '0h';
         const saved = window.ScheduleErpService.getStudentActualMinutes(this, key, studentId, this._attModalDateKey);
         const total = saved !== undefined
             ? saved
             : (window.ScheduleErpService.getActualMinutes(this, key, this._attModalDateKey) ?? this.getScheduledMinutes(key));
-        return this.formatDuration(Math.floor(total / 60), total % 60);
+        return Number(total) === 0 ? '0h' : this.formatDuration(Math.floor(total / 60), total % 60);
     }
 
 TimetableApp.prototype.formatDuration = function(hours, mins) {
-        if (hours === 0 && mins === 0) return '0min';
+        if (hours === 0 && mins === 0) return '0h';
         if (hours === 0) return `${mins}min`;
         if (mins === 0) return `${hours}h`;
         return `${hours}h${mins}min`;

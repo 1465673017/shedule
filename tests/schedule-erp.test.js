@@ -912,14 +912,14 @@ const expandedStudentRows = lessonSheetApp.getLessonSheetExpandedRows([{
     ]
 }]);
 assert.deepStrictEqual(
-    expandedStudentRows.map(row => [row.actualDuration, row.isUnderTwoHours, row.isOverTwoHours]),
+    expandedStudentRows.map(row => [row.actualDuration, row.isZeroDuration, row.isUnderTwoHours, row.isOverTwoHours]),
     [
-        ['2h', false, false],
-        ['1h30min', true, false],
-        ['0h', true, false],
-        ['2h30min', false, true]
+        ['2h', false, false, false],
+        ['1h30min', false, true, false],
+        ['0h', true, false, false],
+        ['2h30min', false, false, true]
     ],
-    'lesson-sheet detail rows should flag durations below and above two hours separately'
+    'lesson-sheet detail rows should distinguish zero, short, and overlong durations'
 );
 
 const perCourseCompletionApp = makeApp();

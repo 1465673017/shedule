@@ -1183,7 +1183,10 @@ def bridge_main() -> None:
             client.begin_attendance_sync()
             raw_data = client.get_courses(start, end)
             basic_courses = CourseApp._simplify_courses(raw_data, {})
-            _emit_bridge_event({"type": "basic", "courses": basic_courses})
+            if request.get("checkOnly"):
+                _emit_bridge_event({"type": "check-basic", "courses": basic_courses})
+            elif not request.get("attendanceOnly"):
+                _emit_bridge_event({"type": "basic", "courses": basic_courses})
             supported = []
             for course in CourseApp._find_courses_for_attendance(raw_data):
                 course_type = str(course.get("type") or course.get("courseType") or course.get("classType") or "")
@@ -1195,12 +1198,24 @@ def bridge_main() -> None:
                 if stop_event.is_set():
                     _emit_bridge_event({"type": "stopped", "current": index - 1, "total": total})
                     return
-                _emit_bridge_event({"type": "progress", "current": index, "total": total})
+                _emit_bridge_event({
+                    "type": "check-progress" if request.get("checkOnly") else "progress",
+                    "current": index,
+                    "total": total,
+                })
                 attendance = client.get_course_attendance(course_type, ref_id)
                 cleaned = CourseApp._simplify_courses([course], {ref_id: attendance})
                 if cleaned:
-                    _emit_bridge_event({"type": "attendance", "course": cleaned[0], "current": index, "total": total})
-            _emit_bridge_event({"type": "done", "total": total})
+                    _emit_bridge_event({
+                        "type": "check-attendance" if request.get("checkOnly") else "attendance",
+                        "course": cleaned[0],
+                        "current": index,
+                        "total": total,
+                    })
+            _emit_bridge_event({
+                "type": "check-done" if request.get("checkOnly") else "done",
+                "total": total,
+            })
         except Exception as exc:
             _emit_bridge_event({"type": "error", "message": str(exc)})
 

@@ -134,11 +134,11 @@
             const actualStart = appTimeToMinutes(match[1]);
             const actualEnd = appTimeToMinutes(match[2]);
             if (Number.isFinite(actualStart) && Number.isFinite(actualEnd) && actualEnd > actualStart) {
-                return Math.max(0, Math.min(actualEnd, slot.endMinutes) - Math.max(actualStart, slot.startMinutes));
+                return actualEnd - actualStart;
             }
         }
         if (explicitMinutes === 0 || range.durationMinutes <= 0) return 0;
-        return Math.max(0, Math.round(explicitMinutes * slot.overlapMinutes / range.durationMinutes));
+        return Math.max(0, Math.round(explicitMinutes));
     }
 
     function courseTimeRange(course) {
@@ -166,11 +166,14 @@
         const slots = ordered.map(x => {
             const parts = String(x.period.time || '').split('-').map(v => appTimeToMinutes(v.trim().slice(0, 5)));
             if (parts.length !== 2 || parts.some(value => !Number.isFinite(value))) return null;
-            const overlapMinutes = Math.max(0, Math.min(range.endMinutes, parts[1]) - Math.max(range.startMinutes, parts[0]));
-            return overlapMinutes > 0 ? { ...x, startMinutes: parts[0], endMinutes: parts[1], overlapMinutes } : null;
+            return { ...x, startMinutes: parts[0], endMinutes: parts[1] };
         }).filter(Boolean);
-        if (!slots.length) throw new Error(`未找到与 ${range.start}-${range.end} 重叠的课时，请先配置对应时间段`);
-        return { range, slots };
+        let slot = slots.find(item =>
+            range.startMinutes >= item.startMinutes && range.startMinutes < item.endMinutes
+        );
+        if (!slot) slot = slots.find(item => range.startMinutes < item.startMinutes);
+        if (!slot) throw new Error(`未找到 ${range.start}-${range.end} 对应的起始课时，请先配置对应时间段`);
+        return { range, slots: [slot] };
     }
 
     function periodIndex(app, course) {
@@ -339,6 +342,104 @@
         app.saveData();
     }
 
+    function replaceCoursesInRange(app, input, startDate, endDate) {
+        const rangeStart = app.parseDateInputValue(startDate);
+        const rangeEnd = app.parseDateInputValue(endDate);
+        if (!rangeStart || !rangeEnd || rangeStart > rangeEnd) {
+            throw new Error('同步日期范围无效');
+        }
+
+        const courses = extractCourses(input);
+        const plan = courses.length
+            ? buildImportPlan(app, courses, {
+                preserveManual: false,
+                singleOccurrence: true
+            })
+            : null;
+        const outsideRange = plan && plan.importItems.find(({ date }) =>
+            date < rangeStart || date > rangeEnd
+        );
+        if (outsideRange) {
+            throw new Error('网络课程快照包含所选日期范围之外的数据');
+        }
+
+        const snapshot = createImportSnapshot(app);
+        try {
+            clearCoursesInRange(app, rangeStart, rangeEnd);
+            const result = plan
+                ? importCourses(app, courses, {
+                    plan,
+                    preserveManual: false,
+                    singleOccurrence: true
+                })
+                : { courseCount: 0, skippedCourseCount: 0, studentCount: 0 };
+            app.saveData();
+            return result;
+        } catch (error) {
+            restoreImportSnapshot(app, snapshot);
+            throw error;
+        }
+    }
+
+    function applyCourseCheckSelections(app, input, selections) {
+        const courses = extractCourses(input);
+        const courseByKey = new Map();
+        courses.forEach(course => {
+            const date = app.parseDateInputValue(String(course.courseDate || '').slice(0, 10));
+            if (!date) throw new Error(`课程 ${course.courseName || course.id || ''} 缺少有效的课程日期`);
+            const slot = periodSlots(app, course).slots[0];
+            courseByKey.set(`${app.formatLocalDate(date)}|${slot.index}`, course);
+        });
+
+        const networkKeys = [...selections.entries()]
+            .filter(([, choice]) => choice === 'network')
+            .map(([key]) => key);
+        const snapshot = createImportSnapshot(app);
+        try {
+            const erp = window.ScheduleErpService.ensureErpData(app);
+            networkKeys.forEach(key => {
+                const [dateKey, periodText] = String(key).split('|');
+                const date = app.parseDateInputValue(dateKey);
+                const periodIndex = Number(periodText);
+                if (!date || !Number.isInteger(periodIndex)) throw new Error('检查结果包含无效课位');
+                const day = date.getDay() || 7;
+                const cellKey = app.buildCellKey(day, periodIndex);
+                const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
+                const currentVersion = app.getCellVersion(cellKey, weekStart);
+                const currentInstanceId = currentVersion && currentVersion.courseInstanceId;
+
+                erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
+                    !(record.dateKey === dateKey
+                        && (record.cellKey === cellKey
+                            || (currentInstanceId && record.courseInstanceId === currentInstanceId)))
+                );
+                const remoteCourse = courseByKey.get(key);
+                if (!remoteCourse) {
+                    window.ScheduleErpService.deleteSingleCellOccurrence(app, cellKey, weekStart);
+                }
+            });
+
+            const selectedCourses = networkKeys.map(key => courseByKey.get(key)).filter(Boolean);
+            const result = selectedCourses.length
+                ? importCourses(app, selectedCourses, {
+                    preserveManual: false,
+                    singleOccurrence: true
+                })
+                : { courseCount: 0, skippedCourseCount: 0, studentCount: 0 };
+            // Refresh the projected timetable immediately, including deletion-only
+            // selections where importCourses is not called.
+            app.syncRealtime({ weekRange: true });
+            return {
+                ...result,
+                networkCount: networkKeys.length,
+                localCount: [...selections.values()].filter(choice => choice === 'local').length
+            };
+        } catch (error) {
+            restoreImportSnapshot(app, snapshot);
+            throw error;
+        }
+    }
+
     function importCourses(app, input, options = {}) {
         const plan = options.plan || buildImportPlan(app, input, options);
         const courses = plan.courses;
@@ -351,6 +452,10 @@
             const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
             const { range, slots } = periodSlots(app, course);
             const occupied = slots.some(slot => versionHasCourse(app.getCellVersion(app.buildCellKey(day, slot.index), weekStart)));
+            if (options.onlyExisting && !occupied) {
+                skippedCourseCount++;
+                return;
+            }
             if (options.skipOccupied && occupied) {
                 skippedCourseCount++;
                 return;
@@ -359,7 +464,6 @@
             const sourceStudents = Array.isArray(course.students) ? course.students : [];
             const students = sourceStudents.map(s => ensureStudent(app, s, course, oneToOne));
             const subject = ensureSubject(app, course);
-            const importGroupId = `course_import_${course.id || app.formatLocalDate(date)}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
             slots.forEach((slot, slotIndex) => {
                 const cellKey = app.buildCellKey(day, slot.index);
                 const previousVersion = app.getCellVersion(cellKey, weekStart);
@@ -372,18 +476,45 @@
                 const importedStudentIds = preserveManualRoster
                     ? (previousVersion.student || []).map(String)
                     : students.map(s => String(s.id));
-                window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, importedStudentIds, {
-                    source: preserveManualRoster ? previousInstance.source : 'course-import',
-                    recalculateStage: true
-                });
+                if (options.singleOccurrence && !preserveManualRoster) {
+                    window.ScheduleErpService.setSingleCellOccurrence(
+                        app,
+                        cellKey,
+                        weekStart,
+                        subject.id,
+                        importedStudentIds,
+                        { restoreInheritedNext: false }
+                    );
+                } else {
+                    window.ScheduleErpService.setCellVersion(app, cellKey, weekStart, subject.id, importedStudentIds, {
+                        source: preserveManualRoster ? previousInstance.source : 'course-import',
+                        recalculateStage: true
+                    });
+                }
                 const erp = window.ScheduleErpService.ensureErpData(app);
                 const instance = erp.courseInstances.find(item => item.cellKey === cellKey && item.weekStart === weekStart);
                 if (instance) {
+                    if (options.singleOccurrence && !preserveManualRoster) {
+                        instance.source = 'course-import';
+                        instance.status = 'temporary';
+                        erp.repeatRules = (erp.repeatRules || []).filter(rule => rule.courseInstanceId !== instance.id);
+                        (erp.studentCourseRelations || [])
+                            .filter(relation => relation.courseInstanceId === instance.id)
+                            .forEach(relation => {
+                                relation.relationStatus = 'temporary';
+                                relation.status = 'temporary';
+                            });
+                    }
                     const dateKey = app.formatLocalDate(date);
-                    instance.importGroupId = importGroupId;
-                    instance.importPartIndex = slotIndex;
-                    instance.importPartCount = slots.length;
                     instance.importSourceTime = `${range.start}-${range.end}`;
+                    instance.actualStartTime = range.start;
+                    instance.actualEndTime = range.end;
+                    instance.standardStartTime = String(slot.period.time || '').split('-')[0].trim().slice(0, 5);
+                    instance.standardEndTime = String(slot.period.time || '').split('-')[1].trim().slice(0, 5);
+                    instance.isNonStandardTime = instance.actualStartTime !== instance.standardStartTime
+                        || instance.actualEndTime !== instance.standardEndTime;
+                    instance.timeSource = 'import';
+                    instance.timeManuallyAdjusted = false;
                     instance.importTotalMinutes = range.durationMinutes;
                     const preserveLocalActual = !!options.preserveManual
                         && instance.manualActualMinutesByDate
@@ -391,7 +522,7 @@
                     if (!preserveLocalActual) {
                         instance.actualMinutesByDate = {
                             ...(instance.actualMinutesByDate || {}),
-                            [dateKey]: slot.overlapMinutes
+                            [dateKey]: range.durationMinutes
                         };
                         if (instance.manualActualMinutesByDate) {
                             delete instance.manualActualMinutesByDate[dateKey];
@@ -466,7 +597,9 @@
         shiftCoursesToStageStarts,
         buildImportPlan,
         hasCoursesInRange,
-        clearCoursesInRange
+        clearCoursesInRange,
+        replaceCoursesInRange,
+        applyCourseCheckSelections
     };
     TimetableApp.prototype.syncCourseImportStageStartToggle = function () {
         const button = document.getElementById('courseImportStageStartToggle');
@@ -537,7 +670,9 @@
             const markerStageImport = !trusted && segmentedScheduling;
             const options = {
                 fromCurrentStage: markerStageImport,
-                preserveManual: trusted && importOptions.preserveManual !== false
+                preserveManual: trusted && importOptions.preserveManual !== false,
+                onlyExisting: trusted && !!importOptions.onlyExisting,
+                singleOccurrence: trusted && !!importOptions.singleOccurrence
             };
             const plan = buildImportPlan(this, markedInput.text, options);
             const hasOldCourses = hasCoursesInRange(this, plan.rangeStart, plan.rangeEnd);

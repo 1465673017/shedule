@@ -552,7 +552,10 @@ TimetableApp.prototype.buildLessonStats = function (cellData, { key, period, dat
     return {
         subject: subject ? subject.name : '未分类',
         color: subject ? subject.color : '#888',
-        time: periodInfo ? periodInfo.time : '',
+        time: courseInstance && courseInstance.actualStartTime && courseInstance.actualEndTime
+            ? `${courseInstance.actualStartTime}-${courseInstance.actualEndTime}`
+            : (periodInfo ? periodInfo.time : ''),
+        isNonStandardTime: !!(courseInstance && courseInstance.isNonStandardTime),
         studentCount,
         leaveCount,
         absentCount,
@@ -708,6 +711,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     subject: lesson.subject,
                     color: lesson.color,
                     time: lesson.time,
+                    isNonStandardTime: !!lesson.isNonStandardTime,
                     studentCount: 0,
                     leaveCount: 0,
                     absentCount: 0,
@@ -723,6 +727,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                     students: [...(lesson.students || [])],
                     typeStats: {},
                     sessionTypeCounts: {},
+                    actualDurationMinutes: 0,
                     lessonCount: 0,
                     dates: []
                 };
@@ -733,6 +738,7 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
             aggregated[aggKey].presentNonAuditionCount += lesson.presentNonAuditionCount || 0;
             aggregated[aggKey].auditionStudentCount += lesson.auditionStudentCount || 0;
             aggregated[aggKey].completedStudentCount += lesson.completedStudentCount || 0;
+            aggregated[aggKey].isNonStandardTime = aggregated[aggKey].isNonStandardTime || !!lesson.isNonStandardTime;
             if (lesson.students) {
                 lesson.students.forEach(s => {
                     if (!aggregated[aggKey].students.find(existing => existing.id === s.id)) {
@@ -741,6 +747,19 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
                 });
             }
             const segmented = this.getLessonSegmentTypeStats(lesson);
+            const attendingStudents = (lesson.students || []).filter(student =>
+                student && student.status !== 'leave' && student.status !== 'absent'
+            );
+            const studentActualDurations = attendingStudents
+                .map(student => Number(student.actualMinutes))
+                .filter(Number.isFinite)
+                .map(minutes => Math.max(0, minutes));
+            const sessionActualMinutes = studentActualDurations.length > 0
+                ? Math.max(...studentActualDurations)
+                : (attendingStudents.length === 0 && (lesson.leaveCount > 0 || lesson.absentCount > 0)
+                    ? 0
+                    : this.getLessonDurationMinutesForStats(lesson));
+            aggregated[aggKey].actualDurationMinutes += Math.max(0, Number(sessionActualMinutes) || 0);
             Object.entries(segmented.typeStats).forEach(([segmentType, minutes]) => {
                 aggregated[aggKey].sessionTypeCounts[segmentType] = (aggregated[aggKey].sessionTypeCounts[segmentType] || 0) + 1;
                 aggregated[aggKey].typeStats[segmentType] = (aggregated[aggKey].typeStats[segmentType] || 0) + minutes;
@@ -821,7 +840,7 @@ TimetableApp.prototype.getStatsRowNameHtml = function (lesson, expanded = false)
 
     return `
             <span class="grade-expand-icon" style="display:inline-block;width:16px;text-align:center;margin-right:4px;font-size:10px;transition:transform 0.2s;">${expanded ? '▼' : '▶'}</span>
-            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${lesson.color};margin-right:8px"></span>
+            <span class="stats-subject-dot${lesson.isNonStandardTime ? ' is-non-standard' : ''}" style="background:${lesson.isNonStandardTime ? '#ef4444' : lesson.color}" title="${lesson.isNonStandardTime ? '非标准上课时间' : ''}"></span>
             ${this.escapeHtml(lesson.subject)} ${studentLabel}${auditionBadge}${suffix}
         `;
 }
@@ -872,15 +891,20 @@ TimetableApp.prototype.renderStatsByGrade = function (lessons, options) {
         const lessonCount = lesson.lessonCount || 1;
         const scheduledDuration = this.getLessonDuration(lesson.time);
         const actualMin = this.getLessonActualMinutesForStats(lesson);
-        const totalActualMin = actualMin !== undefined ? actualMin * lessonCount : null;
+        const totalActualMin = Number.isFinite(Number(lesson.actualDurationMinutes))
+            ? Math.max(0, Number(lesson.actualDurationMinutes))
+            : (actualMin !== undefined ? actualMin * lessonCount : null);
         const totalScheduled = parseFloat(scheduledDuration) * 60 * lessonCount;
         const durationDisplay = totalActualMin !== null
             ? this.formatDuration(Math.floor(totalActualMin / 60), totalActualMin % 60)
             : (totalScheduled >= 60 ? `${(totalScheduled / 60).toFixed(1).replace('.0', '')}h` : `${totalScheduled}min`);
-        const perDisplay = actualMin !== undefined
-            ? this.formatDuration(Math.floor(actualMin / 60), actualMin % 60)
+        const perActualMinutes = totalActualMin !== null
+            ? Math.round(totalActualMin / lessonCount)
+            : null;
+        const perDisplay = perActualMinutes !== null
+            ? this.formatDuration(Math.floor(perActualMinutes / 60), perActualMinutes % 60)
             : `${scheduledDuration}h`;
-        const durationTitle = actualMin !== undefined
+        const durationTitle = totalActualMin !== null
             ? `实上${perDisplay}/次 × ${lessonCount}次 = ${durationDisplay}（原定${scheduledDuration}h/次）`
             : `按${scheduledDuration}h/次 × ${lessonCount}次 = ${durationDisplay}`;
 
@@ -984,7 +1008,10 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
             : (detailStudent && detailStudent.actualMinutes !== undefined
                 ? detailStudent.actualMinutes
                 : this.getLessonDurationMinutesForStats(lesson));
-        const durationBadge = `<small class="student-actual-duration">实上 ${this.formatDuration(Math.floor(detailMinutes / 60), detailMinutes % 60)}</small>`;
+        const detailDuration = Number(detailMinutes) === 0
+            ? '0h'
+            : this.formatDuration(Math.floor(detailMinutes / 60), detailMinutes % 60);
+        const durationBadge = `<small class="student-actual-duration">实上 ${detailDuration}</small>`;
         html += `
                 <div class="att-inline-row" style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:13px;">
                     <span style="display:inline-flex;align-items:center;">${this.escapeHtml(name)}${oneV1Badge}${auditionBadge}${durationBadge}</span>
