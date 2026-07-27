@@ -174,7 +174,6 @@ TimetableApp.prototype.openCourseEditModal = function(course) {
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
-
         title.textContent = '编辑课程';
 
         this.renderSubjectPicker(course.subjectId);
@@ -214,7 +213,6 @@ TimetableApp.prototype.openManualCourseModal = function() {
         const modal = document.getElementById('addLessonModal');
 
         const title = document.getElementById('addLessonTitle');
-
         title.textContent = '添加课程';
 
         this.renderSubjectPicker('');
@@ -744,7 +742,6 @@ TimetableApp.prototype.saveLessonToCell = function(e) {
         }
 
         const weekStartStr = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
-
         this.setCellVersion(key, weekStartStr, subjectId,
 
             selectedStudentIds.length > 0 ? selectedStudentIds.map(id => id.toString()) : []);

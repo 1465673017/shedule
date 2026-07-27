@@ -894,6 +894,15 @@
                     stageId: !recalculateStage && existing && existing.stageId || (configuredStage && (configuredStage.stage.id || configuredStage.stage.name)) || null,
                     stageStartDate: !recalculateStage && existing && existing.stageStartDate || (configuredStage ? formatLocalDate(configuredStage.start) : null),
                     stageEndDate: !recalculateStage && existing && existing.stageEndDate || (configuredStage ? formatLocalDate(configuredStage.end) : null),
+                    actualStartTime: existing && existing.actualStartTime,
+                    actualEndTime: existing && existing.actualEndTime,
+                    standardStartTime: existing && existing.standardStartTime,
+                    standardEndTime: existing && existing.standardEndTime,
+                    isNonStandardTime: existing && !!existing.isNonStandardTime,
+                    timeSource: existing && existing.timeSource,
+                    timeManuallyAdjusted: existing && !!existing.timeManuallyAdjusted,
+                    importSourceTime: existing && existing.importSourceTime,
+                    importTotalMinutes: existing && existing.importTotalMinutes,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };

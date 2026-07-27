@@ -13329,3 +13329,202 @@ body.mint-theme-active.reference-main-ui .stats-modal-content .stats-card .st-la
         grid-template-columns: 1fr;
     }
 }
+
+/* Non-standard lesson time and attendance editing */
+.stats-subject-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 8px;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+
+.stats-subject-dot.is-non-standard {
+    background: #ef4444 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.12);
+}
+
+.non-standard-time-tooltip {
+    position: fixed;
+    z-index: 10020;
+    display: grid;
+    gap: 3px;
+    min-width: 190px;
+    padding: 10px 12px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.98);
+    color: #475569;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-3px);
+    transition:
+        opacity 0.12s ease 0.06s,
+        transform 0.12s ease 0.06s,
+        visibility 0s linear 0.18s;
+}
+
+.non-standard-time-tooltip::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    bottom: -5px;
+    width: 8px;
+    height: 8px;
+    border-right: 1px solid rgba(239, 68, 68, 0.2);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    background: inherit;
+    transform: rotate(45deg);
+}
+
+.non-standard-time-tooltip strong {
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.non-standard-time-tooltip.is-below::before {
+    top: -5px;
+    bottom: auto;
+    border: 0;
+    border-top: 1px solid rgba(239, 68, 68, 0.2);
+    border-left: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.non-standard-time-tooltip.arrow-right::before {
+    left: auto;
+    right: 16px;
+}
+
+.non-standard-time-tooltip.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition-delay: 0.06s;
+}
+
+body.reference-main-ui.dark-theme-active .non-standard-time-tooltip {
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(30, 41, 59, 0.98);
+    color: #cbd5e1;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.38);
+}
+
+body.reference-main-ui.dark-theme-active .non-standard-time-tooltip::before {
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+body.reference-main-ui.dark-theme-active .non-standard-time-tooltip strong {
+    color: #fca5a5;
+}
+
+.attendance-lesson-time-button {
+    position: relative;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    overflow: visible;
+    transition: color .16s ease;
+}
+
+.attendance-lesson-main:has(.lesson-time-editor-dropdown) {
+    overflow: visible;
+}
+
+.attendance-lesson-summary:has(.lesson-time-editor-dropdown),
+#attendanceLessonInfo:has(.lesson-time-editor-dropdown) {
+    overflow: visible;
+}
+
+.attendance-modal-content:has(.lesson-time-editor-dropdown),
+.attendance-modal-content .modal-body:has(.lesson-time-editor-dropdown) {
+    overflow: visible;
+}
+
+.attendance-lesson-time-button:hover,
+.attendance-lesson-time-button:focus-visible {
+    color: var(--primary-color, #4a90d9);
+    outline: none;
+}
+
+.lesson-time-editor-dropdown {
+    right: auto;
+    left: 0;
+    top: calc(100% + 8px);
+    z-index: 1100;
+    width: min(330px, calc(100vw - 32px));
+    text-align: left;
+    cursor: default;
+}
+
+.lesson-time-editor-dropdown .duration-editor-header {
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.12);
+}
+
+.lesson-time-slider-body {
+    display: grid;
+    gap: 18px;
+}
+
+.lesson-time-slider-row {
+    display: grid;
+    gap: 10px;
+}
+
+.lesson-time-slider-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--text-2, #475569);
+    font-size: 12px;
+}
+
+.lesson-time-slider-heading strong {
+    color: var(--primary-color, #2563eb);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+.lesson-time-slider-row small {
+    color: var(--text-3, #94a3b8);
+    font-size: 11px;
+}
+
+.lesson-time-slider-row .duration-range {
+    width: 100%;
+}
+
+body.dark-theme-active .attendance-lesson-time-button {
+    color: #94a3b8;
+}
+
+body.dark-theme-active .attendance-lesson-time-button:hover,
+body.dark-theme-active .attendance-lesson-time-button:focus-visible {
+    color: #93c5fd;
+}
+
+body.dark-theme-active .lesson-time-editor-dropdown .duration-editor-header {
+    border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+@media (max-width: 640px) {
+    .lesson-time-editor-dropdown {
+        position: fixed;
+        top: 50%;
+        right: 16px;
+        left: 16px;
+        width: auto;
+        max-width: none;
+        transform: translateY(-50%);
+    }
+}

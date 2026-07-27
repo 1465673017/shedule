@@ -103,7 +103,22 @@
             || /一对一|1\s*对\s*1/.test(text);
     }
 
-    function attendanceStatus(course, source) {
+    function isCourseInFuture(course, courseDate, now = new Date()) {
+        if (!(courseDate instanceof Date) || Number.isNaN(courseDate.getTime())) return false;
+        const boundary = new Date(courseDate);
+        const rawTime = String(course && (course.courseEndTime || course.courseTime) || '').slice(0, 5);
+        const boundaryMinutes = appTimeToMinutes(rawTime);
+        if (Number.isFinite(boundaryMinutes)) {
+            boundary.setHours(Math.floor(boundaryMinutes / 60), boundaryMinutes % 60, 0, 0);
+        } else {
+            boundary.setHours(23, 59, 59, 999);
+        }
+        const referenceNow = now instanceof Date ? now : new Date(now);
+        return !Number.isNaN(referenceNow.getTime()) && boundary > referenceNow;
+    }
+
+    function attendanceStatus(course, source, courseDate = null, now = new Date()) {
+        if (courseDate && isCourseInFuture(course, courseDate, now)) return null;
         const details = Array.isArray(course.attendentDetail) ? course.attendentDetail : [];
         const detail = details.find(d => String(d.studentId || d.id || '') === String(source.id));
         const raw = (detail && (detail.status || detail.attendentStatus || detail.attendanceStatus)) || source.attendentStatus || source.attendanceStatus;
@@ -390,7 +405,7 @@
                     }
                 }
                 sourceStudents.forEach((source, i) => {
-                    const status = attendanceStatus(course, source);
+                    const status = attendanceStatus(course, source, date, options.now);
                     if (status) window.ScheduleErpService.upsertAttendance(app, cellKey, students[i].id, status, app.formatLocalDate(date));
                 });
             });
@@ -405,6 +420,7 @@
         normalizeMarkedInput,
         isOneToOne,
         attendanceStatus,
+        isCourseInFuture,
         sourceActualMinutes,
         studentActualMinutesForSlot,
         periodSlots,

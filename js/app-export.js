@@ -29,6 +29,7 @@ TimetableApp.prototype._saveFile = async function (data, encoding, defaultName, 
 
 TimetableApp.prototype.sanitizeSpreadsheetText = function (value) {
     const text = String(value ?? '');
+    if (text.trim() === '-') return '-';
     return /^[=+\-@]/.test(text.trimStart()) ? `'${text}` : text;
 }
 
@@ -161,20 +162,14 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                 .filter(Boolean)
                 .join('、');
             const actualMinutes = this.getLessonActualMinutesForStats(lesson);
-            const durationMinutes = importInstance && importInstance.importPartCount > 1
+            let durationMinutes = importInstance && importInstance.importPartCount > 1
                 ? importInstance.importTotalMinutes
                 : (actualMinutes !== undefined ? actualMinutes : this.getLessonDurationMinutesForStats(lesson));
-            const durationDisplay = this.formatDuration(
-                Math.floor(durationMinutes / 60),
-                durationMinutes % 60
-            );
             const studentDetails = (lesson.students || []).map(student => {
                 const status = student && student.status ? student.status : null;
                 const studentMinutes = status === 'leave' || status === 'absent'
                     ? 0
-                    : Math.max(0, Number(importInstance && importInstance.importPartCount > 1
-                        ? durationMinutes
-                        : student && student.actualMinutes !== undefined
+                    : Math.max(0, Number(student && student.actualMinutes !== undefined
                         ? student.actualMinutes
                         : durationMinutes) || 0);
                 return {
@@ -186,6 +181,23 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                     actualMinutes: studentMinutes
                 };
             }).filter(student => student.name);
+            const allStudentsOnLeave = studentDetails.length > 0
+                && studentDetails.every(student => student.status === 'leave');
+            const allStudentsAbsent = studentDetails.length > 0
+                && studentDetails.every(student => student.status === 'absent');
+            const attendingStudentMinutes = studentDetails
+                .filter(student => student.status !== 'leave' && student.status !== 'absent')
+                .map(student => Number(student.actualMinutes))
+                .filter(Number.isFinite);
+            if (allStudentsOnLeave || allStudentsAbsent) {
+                durationMinutes = 0;
+            } else if (attendingStudentMinutes.length > 0) {
+                durationMinutes = Math.max(0, ...attendingStudentMinutes);
+            }
+            const durationDisplay = this.formatDuration(
+                Math.floor(durationMinutes / 60),
+                durationMinutes % 60
+            );
             const studentDurationDisplays = studentDetails.map(student => this.formatDuration(
                 Math.floor(student.actualMinutes / 60),
                 student.actualMinutes % 60
@@ -216,6 +228,8 @@ TimetableApp.prototype.getLessonSheetRowsByRange = function (startDate, endDate)
                 leaveCount: lesson.leaveCount || 0,
                 absentCount: lesson.absentCount || 0,
                 auditionCount: lesson.auditionStudentCount || 0,
+                allStudentsOnLeave,
+                allStudentsAbsent,
                 typeLabel: this.getLessonTypeKeyForStats(lesson) || '-',
                 actualDuration: durationDisplay
             });
@@ -254,7 +268,8 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
                 attendanceStatus: '-',
                 typeLabel: mapTypeLabel(row.typeLabel),
                 actualDuration: row.actualDuration,
-                isUnderTwoHours: Number(row.durationMinutes || 0) < 120,
+                isZeroDuration: Number(row.durationMinutes || 0) === 0,
+                isUnderTwoHours: Number(row.durationMinutes || 0) > 0 && Number(row.durationMinutes || 0) < 120,
                 isOverTwoHours: Number(row.durationMinutes || 0) > 120
             }];
         }
@@ -272,9 +287,10 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
                 time: row.time,
                 studentName: student.name,
                 attendanceStatus: mapStatusLabel(student.status),
-                typeLabel: mapTypeLabel(row.typeLabel),
+                typeLabel: student.status === 'leave' ? '-' : mapTypeLabel(row.typeLabel),
                 actualDuration: this.formatDuration(Math.floor(minutes / 60), minutes % 60),
-                isUnderTwoHours: minutes < 120,
+                isZeroDuration: minutes === 0,
+                isUnderTwoHours: minutes > 0 && minutes < 120,
                 isOverTwoHours: minutes > 120
             };
         });
@@ -335,11 +351,12 @@ TimetableApp.prototype.getLessonSheetSummaryMatrix = function (rows) {
         const referenceStudent = presentStudents[0]
             || details[0];
         const group = detectGroup(referenceStudent && referenceStudent.grade);
-        const presentDurations = presentStudents.map(student => Math.max(0, Number(
-            student.actualMinutes !== undefined ? student.actualMinutes : row.durationMinutes
-        ) || 0));
-        const shouldSegment = new Set(presentDurations).size > 1;
-        const allocations = shouldSegment
+        // Always derive summary hours from each attending student's actual
+        // duration. Segmenting assigns simultaneous minutes to the matching
+        // class size (1-to-1, 1-to-2, etc.) without applying any coefficient.
+        const hasStudentActualMinutes = presentStudents.length > 0
+            && presentStudents.every(student => Number.isFinite(Number(student.actualMinutes)));
+        const allocations = hasStudentActualMinutes
             ? this.getLessonSegmentTypeStats({ students: presentStudents }).typeStats
             : { [row.typeLabel]: Number(row.durationMinutes || 0) };
 
@@ -686,15 +703,16 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
             row.scheduledStudents,
             row.presentCount,
             row.leaveCount + row.absentCount,
-            row.typeLabel,
+            row.allStudentsOnLeave ? '-' : row.typeLabel,
             row.actualDuration,
             ...extraDurations
         ];
-        const isOverTwoHours = Number(row.durationMinutes || 0) > 120;
-        const highlightRow = row.hasVariableStudentDurations || Number(row.durationMinutes || 0) < 120;
-        const styles = isOverTwoHours
+        const durationMinutes = Number(row.durationMinutes || 0);
+        const useRedFill = durationMinutes === 0 || durationMinutes > 120;
+        const useYellowFill = durationMinutes > 0 && durationMinutes < 120;
+        const styles = useRedFill
             ? values.map((_value, index) => index === 4 ? 'CellLeftRed' : 'CellRed')
-            : (highlightRow
+            : (useYellowFill
                 ? values.map((_value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')
                 : ['Cell', 'Cell', 'Cell', 'Cell', 'CellLeft', 'Cell', 'Cell', 'Cell', 'Cell', 'Cell']);
         return makeRow(values, styles);
@@ -726,7 +744,7 @@ TimetableApp.prototype.exportLessonSheetToExcel = async function () {
             row.typeLabel,
             row.actualDuration
         ];
-        const styles = row.isOverTwoHours
+        const styles = row.isZeroDuration || row.isOverTwoHours
             ? values.map((_value, index) => index === 4 ? 'CellLeftRed' : 'CellRed')
             : (row.isUnderTwoHours
                 ? values.map((_value, index) => index === 4 ? 'CellLeftYellow' : 'CellYellow')

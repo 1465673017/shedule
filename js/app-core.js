@@ -1299,7 +1299,14 @@ class TimetableApp {
         const periodInfo = this.getPeriod(parsedKey.periodIndex);
         if (!periodInfo || !periodInfo.time) return true; // 无课时信息，默认认为已结束
 
-        const endTimeStr = periodInfo.time.split('-')[1]; // e.g., "08:40"
+        const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
+        const version = this.getCellVersion(key, weekStartStr);
+        const instance = version && version.courseInstanceId && this.erpData
+            ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
+            : null;
+        const endTimeStr = instance && instance.actualEndTime
+            ? instance.actualEndTime
+            : periodInfo.time.split('-')[1]; // e.g., "08:40"
         const [endH, endM] = endTimeStr.split(':').map(Number);
 
         const now = new Date();

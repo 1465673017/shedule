@@ -1,6 +1,6 @@
 {
   "name": "kebiao-app",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Timetable app",
   "author": "A大橙子",
   "main": "main.js",
@@ -18,7 +18,7 @@
   "build": {
     "appId": "com.adachengzi.kebiao",
     "productName": "A大橙子课时统计",
-    "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}",
+    "artifactName": "A大橙子课时统计（便携版-${version}）-${arch}.${ext}",
     "electronVersion": "43.1.1",
     "asar": true,
     "directories": {
@@ -74,10 +74,6 @@
     },
     "dmg": {
       "artifactName": "A大橙子课时统计（正式版-${version}）-${arch}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     }
   },
   "devDependencies": {

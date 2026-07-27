@@ -54,6 +54,26 @@ assert.throws(
 assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStatus: '上课' }), 'present');
 assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStatus: '未上课' }), 'absent');
 assert.strictEqual(CourseDataImportService.attendanceStatus({}, { isLeave: true, attendanceStatus: '未上课' }), 'leave');
+assert.strictEqual(
+    CourseDataImportService.attendanceStatus(
+        { courseTime: '10:00', courseEndTime: '12:00' },
+        { attendanceStatus: '未上课' },
+        new Date(2026, 6, 28),
+        new Date(2026, 6, 27, 12, 0)
+    ),
+    null,
+    'a future imported lesson should not preselect an attendance status'
+);
+assert.strictEqual(
+    CourseDataImportService.attendanceStatus(
+        { courseTime: '10:00', courseEndTime: '12:00' },
+        { attendanceStatus: '上课' },
+        new Date(2026, 6, 27),
+        new Date(2026, 6, 27, 12, 1)
+    ),
+    'present',
+    'an ended imported lesson should retain its source attendance status'
+);
 assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualMinutes: 75 }), 75);
 assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualHours: 1.5 }), 90);
 assert.strictEqual(
@@ -75,5 +95,10 @@ assert.doesNotMatch(coreSource, /JSON\.parse\(previous\)/);
 vm.runInThisContext(read('js/app-export.js'), { filename: 'app-export.js' });
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('=1+1'), "'=1+1");
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('正常姓名'), '正常姓名');
+assert.strictEqual(
+    TimetableApp.prototype.sanitizeSpreadsheetText('-'),
+    '-',
+    'a standalone dash should remain plain spreadsheet text'
+);
 
 console.log('Security regression tests passed');
