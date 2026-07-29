@@ -64,6 +64,33 @@ assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStat
 assert.strictEqual(CourseDataImportService.attendanceStatus({}, { isLeave: true, attendanceStatus: '未上课' }), 'leave');
 assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualMinutes: 75 }), 75);
 assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualHours: 1.5 }), 90);
+assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStatus: '上课', actualMinutes: 0 }), 'absent');
+assert.strictEqual(CourseDataImportService.attendanceStatus({}, { attendanceStatus: '请假', actualMinutes: 0 }), 'leave');
+assert.strictEqual(CourseDataImportService.attendanceStatus({}, { actualHours: 0 }), 'absent');
+assert.strictEqual(
+    CourseDataImportService.shouldSyncAttendance(
+        new Date(2026, 6, 29),
+        { endMinutes: 12 * 60 },
+        new Date(2026, 6, 29, 12, 1)
+    ),
+    true
+);
+assert.strictEqual(
+    CourseDataImportService.shouldSyncAttendance(
+        new Date(2026, 6, 30),
+        { endMinutes: 12 * 60 },
+        new Date(2026, 6, 29, 12, 1)
+    ),
+    false
+);
+assert.strictEqual(
+    CourseDataImportService.shouldSyncAttendance(
+        new Date(2026, 6, 29),
+        { endMinutes: 14 * 60 },
+        new Date(2026, 6, 29, 12, 1)
+    ),
+    false
+);
 assert.strictEqual(
     CourseDataImportService.studentActualMinutesForSlot(
         { actualMinutes: 60, actualCourseTime: '10:30-11:30' },
@@ -91,6 +118,7 @@ assert.match(coreSource, /TIMETABLE_BACKUP_INTERVAL_MS = 10 \* 60 \* 1000/);
 assert.doesNotMatch(coreSource, /JSON\.parse\(previous\)/);
 
 vm.runInThisContext(read('js/app-export.js'), { filename: 'app-export.js' });
+vm.runInThisContext(read('js/app-subjects.js'), { filename: 'app-subjects.js' });
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('=1+1'), "'=1+1");
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('正常姓名'), '正常姓名');
 assert.strictEqual(TimetableApp.prototype.sanitizeSpreadsheetText('-'), '-');
@@ -111,6 +139,46 @@ assert.strictEqual(leaveDetail.actualDuration, '0h');
 assert.strictEqual(leaveDetail.isZeroDuration, true);
 assert.strictEqual(leaveDetail.isUnderTwoHours, false);
 assert.strictEqual(leaveDetail.isOverTwoHours, false);
+const zeroDurationDetail = expandedApp.getLessonSheetExpandedRows([{
+    dateKey: '2026-07-23',
+    subject: '物理',
+    time: '08:00-10:00',
+    typeLabel: '1v2',
+    durationMinutes: 120,
+    studentDetails: [{ name: '成皓', grade: '九年级', status: 'present', actualMinutes: 0 }]
+}])[0];
+assert.strictEqual(zeroDurationDetail.typeLabel, '-');
+const originalScheduleErpService = global.ScheduleErpService;
+let studentPoolProjectionBuilds = 0;
+let studentPoolVersionReads = 0;
+global.ScheduleErpService = {
+    buildTimetableProjection() {
+        studentPoolProjectionBuilds++;
+    },
+    getCellVersionFromProjection(_app, key) {
+        studentPoolVersionReads++;
+        return { student: key === 'cell-a' ? ['student-a'] : ['student-b'] };
+    }
+};
+const studentPoolApp = new TimetableApp();
+studentPoolApp.currentDate = new Date(2026, 6, 29);
+studentPoolApp.erpData = {
+    courseInstances: [
+        { id: 'instance-a', cellKey: 'cell-a', weekStart: '2026-07-27', studentIds: ['student-a'] },
+        { id: 'instance-b', cellKey: 'cell-b', weekStart: '2026-07-27', studentIds: ['student-b'] }
+    ],
+    studentCourseRelations: [
+        { courseInstanceId: 'instance-a', studentId: 'student-a', relationStatus: 'recurring' },
+        { courseInstanceId: 'instance-b', studentId: 'student-b', relationStatus: 'temporary' }
+    ]
+};
+studentPoolApp.getWeekRange = date => ({ start: date });
+studentPoolApp.formatLocalDate = () => '2026-07-27';
+const studentPoolSets = studentPoolApp.getStudentPoolStatusSets();
+assert.strictEqual(studentPoolProjectionBuilds, 1);
+assert.strictEqual(studentPoolVersionReads, 2);
+assert.deepStrictEqual([...studentPoolSets.ongoingStudentIds].sort(), ['student-a', 'student-b']);
+global.ScheduleErpService = originalScheduleErpService;
 const shortDetail = expandedApp.getLessonSheetExpandedRows([{
     dateKey: '2026-07-23',
     subject: '物理',

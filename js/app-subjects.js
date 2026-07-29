@@ -282,28 +282,63 @@ TimetableApp.prototype.selectColorByValue = function (color) {
     });
 }
 
+TimetableApp.prototype.getStudentPoolStatusSets = function () {
+    const scheduledStudentIds = new Set();
+    const ongoingStudentIds = new Set();
+    const erp = this.erpData || {};
+    const instances = Array.isArray(erp.courseInstances) ? erp.courseInstances : [];
+    const relations = Array.isArray(erp.studentCourseRelations) ? erp.studentCourseRelations : [];
+    const service = window.ScheduleErpService;
+
+    relations.forEach(relation => {
+        if (relation && relation.studentId !== undefined) {
+            scheduledStudentIds.add(String(relation.studentId));
+        }
+    });
+
+    service.buildTimetableProjection(this);
+    instances.forEach(instance => {
+        if (!instance) return;
+        (instance.studentIds || []).forEach(id => scheduledStudentIds.add(String(id)));
+        if (!instance.cellKey || !instance.weekStart || instance.isDeleted) return;
+        const version = service.getCellVersionFromProjection(this, instance.cellKey, instance.weekStart);
+        (version && version.student || []).forEach(id => {
+            const studentId = String(id);
+            scheduledStudentIds.add(studentId);
+            ongoingStudentIds.add(studentId);
+        });
+    });
+
+    const currentWeekStart = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+    const instanceById = new Map(instances.map(instance => [String(instance.id), instance]));
+    relations.forEach(relation => {
+        if (!relation || (relation.relationStatus && relation.relationStatus !== 'recurring' && relation.relationStatus !== 'temporary')) return;
+        const instance = instanceById.get(String(relation.courseInstanceId));
+        if (instance && !instance.isDeleted && instance.weekStart >= currentWeekStart) {
+            ongoingStudentIds.add(String(relation.studentId));
+        }
+    });
+
+    return { scheduledStudentIds, ongoingStudentIds };
+}
+
 TimetableApp.prototype.renderSubjects = function () {
     const pool = document.getElementById('subjectPool');
     pool.innerHTML = '';
 
     let items = this.currentPool === 'subject' ? this.subjects : this.students;
 
-    const scheduledStudentIds = new Set();
-    if (this.currentPool === 'student') {
-        this.students.forEach(student => {
-            if (this.hasStudentEverScheduled(student.id)) {
-                scheduledStudentIds.add(String(student.id));
-            }
-        });
-    }
+    const studentPoolStatus = this.currentPool === 'student'
+        ? this.getStudentPoolStatusSets()
+        : { scheduledStudentIds: new Set(), ongoingStudentIds: new Set() };
+    const { scheduledStudentIds, ongoingStudentIds } = studentPoolStatus;
 
     if (this.currentPool === 'student' && this.currentStudentFilter !== 'all') {
         items = items.filter(student => {
             if (this.currentStudentFilter === 'ongoing') {
                 return !student.isAudition
                     && !student.completed
-                    && typeof this.isStudentOngoing === 'function'
-                    && this.isStudentOngoing(student.id);
+                    && ongoingStudentIds.has(String(student.id));
             } else if (this.currentStudentFilter === 'completed') {
                 return !!student.completed && !student.isAudition;
             } else if (this.currentStudentFilter === 'audition') {

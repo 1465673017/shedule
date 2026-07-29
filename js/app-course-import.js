@@ -108,14 +108,21 @@
         const detail = details.find(d => String(d.studentId || d.id || '') === String(source.id));
         const raw = (detail && (detail.status || detail.attendentStatus || detail.attendanceStatus)) || source.attendentStatus || source.attendanceStatus;
         if (source.isLeave || (detail && detail.isLeave)) return 'leave';
-        if (!raw) return null;
-        const normalized = String(raw).trim();
+        const normalized = String(raw || '').trim();
         const chineseStatuses = {
             '上课': 'present', '已上课': 'present', '出勤': 'present', '正常': 'present',
             '请假': 'leave', '病假': 'leave', '事假': 'leave',
             '未上课': 'absent', '缺勤': 'absent', '旷课': 'absent'
         };
-        return chineseStatuses[normalized] || STATUS[normalized.toUpperCase()] || null;
+        const normalizedStatus = chineseStatuses[normalized] || STATUS[normalized.toUpperCase()] || null;
+        if (normalizedStatus === 'leave') return 'leave';
+
+        const detailActualMinutes = detail ? sourceActualMinutes(detail) : undefined;
+        const actualMinutes = detailActualMinutes !== undefined
+            ? detailActualMinutes
+            : sourceActualMinutes(source);
+        if (actualMinutes === 0) return 'absent';
+        return normalizedStatus;
     }
 
     function sourceActualMinutes(source) {
@@ -139,6 +146,17 @@
         }
         if (explicitMinutes === 0 || range.durationMinutes <= 0) return 0;
         return Math.max(0, Math.round(explicitMinutes));
+    }
+
+    function shouldSyncAttendance(date, range, now = new Date()) {
+        const courseEnd = new Date(date);
+        const endMinutes = Number(range && range.endMinutes);
+        if (Number.isFinite(endMinutes)) {
+            courseEnd.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+        } else {
+            courseEnd.setHours(23, 59, 59, 999);
+        }
+        return courseEnd.getTime() <= now.getTime();
     }
 
     function courseTimeRange(course) {
@@ -451,6 +469,7 @@
             const day = date.getDay() || 7;
             const weekStart = app.formatLocalDate(app.getWeekRange(date).start);
             const { range, slots } = periodSlots(app, course);
+            const syncAttendance = shouldSyncAttendance(date, range);
             const occupied = slots.some(slot => versionHasCourse(app.getCellVersion(app.buildCellKey(day, slot.index), weekStart)));
             if (options.onlyExisting && !occupied) {
                 skippedCourseCount++;
@@ -560,24 +579,26 @@
                         };
                     }
                 }
-                if (!options.preserveManual) {
+                if (syncAttendance && !options.preserveManual) {
                     const dateKey = app.formatLocalDate(date);
                     const erp = window.ScheduleErpService.ensureErpData(app);
                     erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
                         !(record.cellKey === cellKey && record.dateKey === dateKey)
                     );
                 }
-                sourceStudents.forEach((source, i) => {
-                    const status = attendanceStatus(course, source);
-                    if (status) window.ScheduleErpService.upsertAttendance(
-                        app,
-                        cellKey,
-                        students[i].id,
-                        status,
-                        app.formatLocalDate(date),
-                        { source: 'course-sync', preserveManual: !!options.preserveManual }
-                    );
-                });
+                if (syncAttendance) {
+                    sourceStudents.forEach((source, i) => {
+                        const status = attendanceStatus(course, source);
+                        if (status) window.ScheduleErpService.upsertAttendance(
+                            app,
+                            cellKey,
+                            students[i].id,
+                            status,
+                            app.formatLocalDate(date),
+                            { source: 'course-sync', preserveManual: !!options.preserveManual }
+                        );
+                    });
+                }
             });
             studentCount += students.length;
         });
@@ -592,6 +613,7 @@
         attendanceStatus,
         sourceActualMinutes,
         studentActualMinutesForSlot,
+        shouldSyncAttendance,
         periodSlots,
         importCourses,
         shiftCoursesToStageStarts,

@@ -287,7 +287,7 @@ TimetableApp.prototype.getLessonSheetExpandedRows = function (rows) {
                 time: row.time,
                 studentName: student.name,
                 attendanceStatus: mapStatusLabel(student.status),
-                typeLabel: student.status === 'leave' ? '-' : mapTypeLabel(row.typeLabel),
+                typeLabel: minutes === 0 ? '-' : mapTypeLabel(row.typeLabel),
                 actualDuration: this.formatDuration(Math.floor(minutes / 60), minutes % 60),
                 isZeroDuration: minutes === 0,
                 isUnderTwoHours: minutes > 0 && minutes < 120,
