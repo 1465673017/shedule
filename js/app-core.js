@@ -164,6 +164,31 @@ class TimetableApp {
         bind('importStudentsBtn', 'click', () => this.openStudentBatchModal());
         bind('cancelBtn', 'click', () => this.closeSubjectModal());
         bind('clearStudentBatchBtn', 'click', () => this.clearStudentBatchInput());
+        const courseFileDropTarget = document.getElementById('studentBatchNames');
+        if (courseFileDropTarget) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                courseFileDropTarget.addEventListener(eventName, event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    courseFileDropTarget.classList.add('is-file-dragover');
+                    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+                });
+            });
+            courseFileDropTarget.addEventListener('dragleave', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                courseFileDropTarget.classList.remove('is-file-dragover');
+            });
+            courseFileDropTarget.addEventListener('drop', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                courseFileDropTarget.classList.remove('is-file-dragover');
+                const file = event.dataTransfer && event.dataTransfer.files
+                    ? event.dataTransfer.files[0]
+                    : null;
+                this.loadCourseJsonFile(file);
+            });
+        }
         bind('deleteSubjectBtn', 'click', () => this.deleteSubject());
         
         // 添加课程弹窗相关

@@ -26,6 +26,10 @@ assert.match(mainSource, /path\.join\(portableRoot, 'data'\)/);
 assert.match(mainSource, /isolatedTestDataPath \|\| portableUserDataPath/);
 const indexSource = read('index.html');
 const macScreenshotSource = read('tests/macos-screenshots.js');
+assert.doesNotMatch(indexSource, /selectCourseJsonFileBtn|courseJsonFileInput/);
+assert.match(indexSource, /年级用 1–12 表示一年级至高三/);
+assert.match(read('js/app-core.js'), /addEventListener\('drop'/);
+assert.match(read('js/app-course-import.js'), /请在内容末尾输入口令后再导入/);
 assert.match(macScreenshotSource, /name: 'salary-settings'/);
 assert.match(macScreenshotSource, /app\.openSalarySettings\(\)/);
 assert.match(macScreenshotSource, /name: 'salary-rule'/);
@@ -77,12 +81,47 @@ assert.strictEqual(
 assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualMinutes: 75 }), 75);
 assert.strictEqual(CourseDataImportService.sourceActualMinutes({ actualHours: 1.5 }), 90);
 assert.strictEqual(
+    CourseDataImportService.extractCourses('```json\n[{"courseDate":"2026-07-31","students":[]}]\n```').length,
+    1,
+    'course JSON copied from a fenced code block should be accepted'
+);
+assert.match(
+    CourseDataImportService.describeJsonInputError('{"name":"涔濆勾绾?}', new SyntaxError('Unexpected end')),
+    /默认代码页/,
+    'mojibake-damaged JSON should report an encoding problem'
+);
+assert.strictEqual(
     CourseDataImportService.studentActualMinutesForSlot(
         { actualMinutes: 60, actualCourseTime: '10:30-11:30' },
         { startMinutes: 600, endMinutes: 660, overlapMinutes: 60 },
         { durationMinutes: 120 }
     ),
     30
+);
+const correctedImportSlot = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [
+            { index: 0, period: { time: '08:00-10:00' } },
+            { index: 1, period: { time: '10:10-12:10' } }
+        ];
+    }
+}, {
+    courseTime: '10:09',
+    courseEndTime: '12:09'
+});
+assert.deepStrictEqual(
+    correctedImportSlot.slots.map(slot => [slot.index, slot.overlapMinutes]),
+    [[1, 120]],
+    'a course within five minutes of a standard slot should snap to that slot'
+);
+assert.strictEqual(
+    CourseDataImportService.studentActualMinutesForSlot(
+        { actualMinutes: 120, actualCourseTime: '10:09-12:09' },
+        correctedImportSlot.slots[0],
+        correctedImportSlot.range
+    ),
+    120,
+    'student actual time near both slot boundaries should retain the explicit 120 minutes'
 );
 
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);

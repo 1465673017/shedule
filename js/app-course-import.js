@@ -2,9 +2,17 @@
 (function () {
     const STATUS = { PRESENT: 'present', ATTENDANCE: 'present', ATTENDED: 'present', LEAVE: 'leave', ASK_FOR_LEAVE: 'leave', ABSENT: 'absent', ABSENCE: 'absent' };
     const STAGE_IMPORT_MARKER = '大橙子yyds';
+    const IMPORT_TIME_TOLERANCE_MINUTES = 5;
+
+    function normalizeJsonText(input) {
+        let text = String(input || '').trim();
+        const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+        if (fenced) text = fenced[1].trim();
+        return text.replace(/^\uFEFF/, '');
+    }
 
     function normalizeMarkedInput(input) {
-        const text = String(input || '').trim();
+        const text = normalizeJsonText(input);
         const hasStageMarker = text.endsWith(STAGE_IMPORT_MARKER);
         return {
             text: hasStageMarker ? text.slice(0, -STAGE_IMPORT_MARKER.length).trimEnd() : text,
@@ -12,8 +20,21 @@
         };
     }
 
+    function describeJsonInputError(input, error) {
+        const text = String(input || '');
+        const looksMojibake = /(?:鍖|瀛|绾|鐗|涓|璇|鏃|璁|�)/.test(text)
+            || /[?\uFFFD]\s*[,}\]]/.test(text);
+        if (looksMojibake) {
+            return '文本中的中文已被 Windows 默认代码页错误解码，且部分引号可能已损坏。请重新拖入原始数据文件，或用支持 Unicode 的编辑器重新复制。';
+        }
+        const detail = String(error && error.message ? error.message : '');
+        return /[\u3400-\u9fff]/.test(detail)
+            ? detail
+            : '数据格式不正确或内容无法读取，请检查后重试。';
+    }
+
     function extractCourses(input) {
-        const value = typeof input === 'string' ? JSON.parse(input) : input;
+        const value = typeof input === 'string' ? JSON.parse(normalizeJsonText(input)) : input;
         return walkCourses(value);
     }
 
@@ -149,7 +170,13 @@
             const actualStart = appTimeToMinutes(match[1]);
             const actualEnd = appTimeToMinutes(match[2]);
             if (Number.isFinite(actualStart) && Number.isFinite(actualEnd) && actualEnd > actualStart) {
-                return Math.max(0, Math.min(actualEnd, slot.endMinutes) - Math.max(actualStart, slot.startMinutes));
+                const correctedStart = Math.abs(actualStart - slot.startMinutes) <= IMPORT_TIME_TOLERANCE_MINUTES
+                    ? slot.startMinutes
+                    : actualStart;
+                const correctedEnd = Math.abs(actualEnd - slot.endMinutes) <= IMPORT_TIME_TOLERANCE_MINUTES
+                    ? slot.endMinutes
+                    : actualEnd;
+                return Math.max(0, Math.min(correctedEnd, slot.endMinutes) - Math.max(correctedStart, slot.startMinutes));
             }
         }
         if (explicitMinutes === 0 || range.durationMinutes <= 0) return 0;
@@ -176,13 +203,29 @@
     }
 
     function periodSlots(app, course) {
-        const range = courseTimeRange(course);
         const ordered = app.getOrderedPeriods();
-        const slots = ordered.map(x => {
+        const configuredSlots = ordered.map(x => {
             const parts = String(x.period.time || '').split('-').map(v => appTimeToMinutes(v.trim().slice(0, 5)));
             if (parts.length !== 2 || parts.some(value => !Number.isFinite(value))) return null;
-            const overlapMinutes = Math.max(0, Math.min(range.endMinutes, parts[1]) - Math.max(range.startMinutes, parts[0]));
-            return overlapMinutes > 0 ? { ...x, startMinutes: parts[0], endMinutes: parts[1], overlapMinutes } : null;
+            return { ...x, startMinutes: parts[0], endMinutes: parts[1] };
+        }).filter(Boolean);
+        let range = courseTimeRange(course);
+        const correctedSlot = configuredSlots.find(slot =>
+            Math.abs(range.startMinutes - slot.startMinutes) <= IMPORT_TIME_TOLERANCE_MINUTES
+            && Math.abs(range.endMinutes - slot.endMinutes) <= IMPORT_TIME_TOLERANCE_MINUTES
+        );
+        if (correctedSlot) {
+            range = {
+                start: String(correctedSlot.period.time).split('-')[0].trim().slice(0, 5),
+                end: String(correctedSlot.period.time).split('-')[1].trim().slice(0, 5),
+                startMinutes: correctedSlot.startMinutes,
+                endMinutes: correctedSlot.endMinutes,
+                durationMinutes: correctedSlot.endMinutes - correctedSlot.startMinutes
+            };
+        }
+        const slots = configuredSlots.map(x => {
+            const overlapMinutes = Math.max(0, Math.min(range.endMinutes, x.endMinutes) - Math.max(range.startMinutes, x.startMinutes));
+            return overlapMinutes > 0 ? { ...x, overlapMinutes } : null;
         }).filter(Boolean);
         if (!slots.length) throw new Error(`未找到与 ${range.start}-${range.end} 重叠的课时，请先配置对应时间段`);
         return { range, slots };
@@ -428,7 +471,9 @@
         shiftCoursesToStageStarts,
         buildImportPlan,
         hasCoursesInRange,
-        clearCoursesInRange
+        clearCoursesInRange,
+        normalizeJsonText,
+        describeJsonInputError
     };
     TimetableApp.prototype.syncCourseImportStageStartToggle = function () {
         const button = document.getElementById('courseImportStageStartToggle');
@@ -503,6 +548,27 @@
             if (message) message.textContent = '粘贴失败：无法读取剪贴板，请检查剪贴板权限后重试。';
         }
     };
+    TimetableApp.prototype.loadCourseJsonFile = async function (file) {
+        const input = document.getElementById('studentBatchNames');
+        const message = document.getElementById('studentBatchImportMessage');
+        if (!file || !input) return;
+        let text = '';
+        try {
+            const extension = String(file.name || '').toLowerCase().match(/(\.[^.]+)$/);
+            if (extension && !['.txt', '.json'].includes(extension[1])) {
+                throw new Error('不支持该文件类型');
+            }
+            text = await file.text();
+            if (!extractCourses(text).length) throw new Error('文件中没有可识别的课程数据');
+            input.value = text;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+            if (message) message.textContent = `已读取 ${file.name}，请在内容末尾输入口令后再导入`;
+        } catch (error) {
+            if (message) message.textContent = `文件读取失败：${describeJsonInputError(text, error)}`;
+        }
+    };
     TimetableApp.prototype.importCourseDataText = async function (input, message) {
         message = message || { textContent: '' };
         try {
@@ -543,7 +609,7 @@
                 message.textContent = '导入失败';
                 return;
             }
-            const chineseDetail = /[\u3400-\u9fff]/.test(detail) ? detail : '数据格式不正确或内容无法读取，请检查后重试。';
+            const chineseDetail = describeJsonInputError(markedInput.text, error);
             message.textContent = `导入失败：${chineseDetail}`;
         }
     };
@@ -580,7 +646,7 @@
             message.textContent = `导入成功：${result.courseCount} 节课程，处理 ${result.studentCount} 名学生${skippedText}`;
         } catch (error) {
             const detail = String(error && error.message ? error.message : '');
-            const chineseDetail = /[\u3400-\u9fff]/.test(detail) ? detail : '数据格式不正确或内容无法读取，请检查后重试。';
+            const chineseDetail = describeJsonInputError(input, error);
             message.textContent = `导入失败：${chineseDetail}`;
         }
     };

@@ -497,6 +497,23 @@ TimetableApp.prototype.getStudentActualDurationDisplay = function(key, studentId
         return Number(total) === 0 ? '0h' : this.formatDuration(Math.floor(total / 60), total % 60);
     }
 
+TimetableApp.prototype.resolveFinishedAttendanceStatus = function(key, studentId, status) {
+        if (status === 'present' || status === 'leave') return status;
+
+        const savedMinutes = window.ScheduleErpService.getStudentActualMinutes(
+            this,
+            key,
+            studentId,
+            this._attModalDateKey
+        );
+        const actualMinutes = savedMinutes !== undefined
+            ? Math.max(0, Number(savedMinutes) || 0)
+            : Math.max(0, Number(this._attModalDefaultMinutes) || 0);
+
+        if (actualMinutes === 0) return 'absent';
+        return status || 'present';
+    }
+
 TimetableApp.prototype.formatDuration = function(hours, mins) {
         if (hours === 0 && mins === 0) return '0h';
         if (hours === 0) return `${mins}min`;
@@ -602,13 +619,14 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
             return;
         }
 
-        // Finished classes auto-fill unmarked students as present.
+        // Finished classes use each student's actual duration when filling attendance.
         if (this._attModalClassFinished) {
             let autoSaved = false;
             students.forEach(student => {
-                if (!att[student.id]) {
-                    this.setAttendanceStatus(key, student.id, 'present');
-                    att[student.id] = 'present';
+                const resolvedStatus = this.resolveFinishedAttendanceStatus(key, student.id, att[student.id]);
+                if (resolvedStatus !== att[student.id]) {
+                    this.setAttendanceStatus(key, student.id, resolvedStatus);
+                    att[student.id] = resolvedStatus;
                     autoSaved = true;
                 }
             });

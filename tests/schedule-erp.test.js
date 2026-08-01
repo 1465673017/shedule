@@ -938,4 +938,33 @@ assert.strictEqual(
     'partial manual course completion must not prevent automatic completion when the stage ends'
 );
 
+const durationAttendanceApp = makeApp();
+Object.setPrototypeOf(durationAttendanceApp, TimetableApp.prototype);
+durationAttendanceApp.currentDate = new Date(2026, 6, 6);
+durationAttendanceApp._attModalDateKey = '2026-07-07';
+durationAttendanceApp._attModalDefaultMinutes = 0;
+ScheduleErpService.setCellVersion(durationAttendanceApp, '2-afternoon-0', '2026-07-06', 'math', ['s1', 's2']);
+ScheduleErpService.setStudentActualMinutes(durationAttendanceApp, '2-afternoon-0', 's1', 0, '2026-07-07');
+ScheduleErpService.setStudentActualMinutes(durationAttendanceApp, '2-afternoon-0', 's2', 60, '2026-07-07');
+assert.strictEqual(
+    durationAttendanceApp.resolveFinishedAttendanceStatus('2-afternoon-0', 's1', null),
+    'absent',
+    'an unmarked student with 0h actual duration should be absent'
+);
+assert.strictEqual(
+    durationAttendanceApp.resolveFinishedAttendanceStatus('2-afternoon-0', 's2', null),
+    'present',
+    'an unmarked student with non-zero actual duration should remain present by default'
+);
+assert.strictEqual(
+    durationAttendanceApp.resolveFinishedAttendanceStatus('2-afternoon-0', 's1', 'leave'),
+    'leave',
+    'explicit leave should not be overridden by a 0h actual duration'
+);
+assert.strictEqual(
+    durationAttendanceApp.resolveFinishedAttendanceStatus('2-afternoon-0', 's1', 'present'),
+    'present',
+    'explicit attendance should not be overridden by a 0h actual duration'
+);
+
 console.log('Schedule ERP tests passed');

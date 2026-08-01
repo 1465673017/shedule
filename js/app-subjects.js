@@ -294,7 +294,11 @@ TimetableApp.prototype.isStudentBatchJson = function () {
     if (normalized.hasStageMarker) return true;
     if (!text) return false;
     try {
-        const value = JSON.parse(text);
+        const normalizedText = window.CourseDataImportService
+            && typeof window.CourseDataImportService.normalizeJsonText === 'function'
+            ? window.CourseDataImportService.normalizeJsonText(text)
+            : text;
+        const value = JSON.parse(normalizedText);
         return value !== null && typeof value === 'object';
     } catch (_) {
         return false;
