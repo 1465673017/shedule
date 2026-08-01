@@ -1028,6 +1028,18 @@ class TimetableApp {
         });
     }
 
+    getCourseAutoSyncRange(now, lastRunAt) {
+        const today = this.formatLocalDate(now);
+        const lastRun = lastRunAt > 0 ? new Date(lastRunAt) : null;
+        const alreadyRanToday = lastRun && this.formatLocalDate(lastRun) === today;
+        return {
+            startDate: alreadyRanToday ? today : this.formatLocalDate(this.addDays(now, -2)),
+            endDate: today,
+            automatic: true,
+            attendanceOnly: true
+        };
+    }
+
     async handleCourseSyncEvent(event) {
         const message = document.getElementById('courseLoginMessage');
         const submit = document.getElementById('courseLoginSubmitBtn');
@@ -1197,7 +1209,7 @@ class TimetableApp {
         const intervalMs = 2 * 60 * 60 * 1000;
         if (now.getTime() - lastRun < intervalMs) return;
         localStorage.setItem('courseAutoSyncLastRunAt', String(now.getTime()));
-        this.syncTodayCourses(true);
+        this.startCourseSync(this.getCourseAutoSyncRange(now, lastRun));
     }
 
     async logoutCourseAccount() {
