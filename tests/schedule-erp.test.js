@@ -830,14 +830,14 @@ const expandedStudentRows = lessonSheetApp.getLessonSheetExpandedRows([{
     ]
 }]);
 assert.deepStrictEqual(
-    expandedStudentRows.map(row => [row.actualDuration, row.isZeroDuration, row.isUnderTwoHours, row.isOverTwoHours]),
+    expandedStudentRows.map(row => [row.typeLabel, row.actualDuration, row.isZeroDuration, row.isUnderTwoHours, row.isOverTwoHours]),
     [
-        ['2h', false, false, false],
-        ['1h30min', false, true, false],
-        ['0h', true, false, false],
-        ['2h30min', false, false, true]
+        ['1vN', '2h', false, false, false],
+        ['1vN', '1h30min', false, true, false],
+        ['-', '0h', true, false, false],
+        ['1vN', '2h30min', false, false, true]
     ],
-    'lesson-sheet detail rows should distinguish zero, short, and overlong durations'
+    'lesson-sheet detail rows should use a dash type for zero duration and distinguish short and overlong durations'
 );
 
 const leaveAndShortDurationRows = lessonSheetApp.getLessonSheetExpandedRows([{
@@ -849,16 +849,18 @@ const leaveAndShortDurationRows = lessonSheetApp.getLessonSheetExpandedRows([{
     actualDuration: '2h',
     studentDetails: [
         { name: 'Present student', status: 'present', actualMinutes: 80 },
-        { name: 'Leave student', status: 'leave', actualMinutes: 0 }
+        { name: 'Leave student', status: 'leave', actualMinutes: 0 },
+        { name: 'Zero-duration present student', status: 'present', actualMinutes: 0 }
     ]
 }]);
 assert.deepStrictEqual(
     leaveAndShortDurationRows.map(row => [row.typeLabel, row.actualDuration, row.isZeroDuration, row.isUnderTwoHours]),
     [
         ['1vN', '1h20min', false, true],
+        ['-', '0h', true, false],
         ['-', '0h', true, false]
     ],
-    'sheet 3 should preserve an 80-minute duration and export leave as dash with zero hours'
+    'sheet 3 should preserve an 80-minute duration and export every zero-duration type as a dash'
 );
 
 const perCourseCompletionApp = makeApp();
