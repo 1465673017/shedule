@@ -110,6 +110,29 @@ const startMapped = CourseDataImportService.periodSlots({
 assert.strictEqual(startMapped.slots.length, 1);
 assert.strictEqual(startMapped.slots[0].index, 0);
 
+const calibratedTime = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [
+            { index: 0, period: { time: '08:00-10:00' } },
+            { index: 1, period: { time: '10:10-12:10' } }
+        ];
+    }
+}, { courseTime: '10:09', courseEndTime: '12:09' });
+assert.strictEqual(calibratedTime.slots[0].index, 1);
+assert.strictEqual(calibratedTime.range.start, '10:10');
+assert.strictEqual(calibratedTime.range.end, '12:10');
+assert.strictEqual(calibratedTime.range.durationMinutes, 120);
+assert.strictEqual(calibratedTime.range.calibrated, true);
+
+const nonStandardTime = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [{ index: 0, period: { time: '10:10-12:10' } }];
+    }
+}, { courseTime: '10:04', courseEndTime: '12:04' });
+assert.strictEqual(nonStandardTime.range.start, '10:04');
+assert.strictEqual(nonStandardTime.range.end, '12:04');
+assert.strictEqual(nonStandardTime.range.calibrated, undefined);
+
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);
 const coreSource = read('js/app-core.js');
 assert.match(coreSource, /timetableDataBackup/);

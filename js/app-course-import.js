@@ -1,6 +1,7 @@
 // Recognize external course JSON and import it as the highest-priority schedule version.
 (function () {
     const STATUS = { PRESENT: 'present', ATTENDANCE: 'present', ATTENDED: 'present', LEAVE: 'leave', ASK_FOR_LEAVE: 'leave', ABSENT: 'absent', ABSENCE: 'absent' };
+    const COURSE_TIME_CALIBRATION_TOLERANCE_MINUTES = 5;
     const STAGE_IMPORT_MARKER = '大橙子yyds';
 
     function normalizeMarkedInput(input) {
@@ -179,7 +180,7 @@
     }
 
     function periodSlots(app, course) {
-        const range = courseTimeRange(course);
+        let range = courseTimeRange(course);
         const ordered = app.getOrderedPeriods();
         const slots = ordered.map(x => {
             const parts = String(x.period.time || '').split('-').map(v => appTimeToMinutes(v.trim().slice(0, 5)));
@@ -187,6 +188,25 @@
             return { ...x, startMinutes: parts[0], endMinutes: parts[1] };
         }).filter(Boolean);
         let slot = slots.find(item =>
+            Math.abs(range.startMinutes - item.startMinutes) <= COURSE_TIME_CALIBRATION_TOLERANCE_MINUTES
+            && Math.abs(range.endMinutes - item.endMinutes) <= COURSE_TIME_CALIBRATION_TOLERANCE_MINUTES
+        );
+        if (slot) {
+            const sourceStart = range.start;
+            const sourceEnd = range.end;
+            const [start, end] = String(slot.period.time || '').split('-').map(value => value.trim().slice(0, 5));
+            range = {
+                start,
+                end,
+                startMinutes: slot.startMinutes,
+                endMinutes: slot.endMinutes,
+                durationMinutes: slot.endMinutes - slot.startMinutes,
+                calibrated: sourceStart !== start || sourceEnd !== end,
+                sourceStart,
+                sourceEnd
+            };
+        }
+        if (!slot) slot = slots.find(item =>
             range.startMinutes >= item.startMinutes && range.startMinutes < item.endMinutes
         );
         if (!slot) slot = slots.find(item => range.startMinutes < item.startMinutes);
