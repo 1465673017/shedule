@@ -11,8 +11,8 @@
     "start": "electron .",
     "test": "node tests/schedule-erp.test.js && node tests/time-settings.test.js && node tests/salary-stats.test.js && node tests/week-stats.test.js && node tests/security-regressions.test.js && node --check main.js && node --check preload.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
     "test:electron": "node tests/electron-smoke.test.js",
-    "build": "electron-builder --win portable --x64",
-    "build:mac": "electron-builder --mac --publish never && bash build/build-mac-portable.sh",
+    "build": "electron-builder --win portable --x64 --config.electronVersion=43.1.1",
+    "build:mac": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --mac --publish never --config.electronVersion=26.6.10 && bash build/build-mac-portable.sh",
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
   "build": {
@@ -77,7 +77,7 @@
     }
   },
   "devDependencies": {
-    "electron": "^43.1.1",
+    "electron": "43.1.1",
     "electron-builder": "^26.15.3",
     "playwright": "^1.61.1"
   },
