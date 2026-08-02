@@ -2,85 +2,98 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>A大橙子课时统计 · Windows / macOS 使用教程</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>A大橙子课时统计 - 使用教程</title>
   <style>
-    :root{--bg:#f4f7fb;--paper:#fff;--ink:#253044;--muted:#687386;--line:#e4e9f1;--brand:#ea6b43;--brand2:#fff2ec;--nav:#172033;--ok:#eaf8f1}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-    aside{position:fixed;inset:0 auto 0 0;width:270px;padding:30px 22px;background:var(--nav);color:#fff;overflow:auto}aside h1{margin:0 0 5px;font-size:20px}aside p{margin:0 0 22px;color:#aeb8ca;font-size:13px}nav a{display:block;padding:7px 10px;border-radius:8px;color:#ccd4e3;text-decoration:none}nav a:hover{background:#263148;color:#fff}
-    main{max-width:1120px;margin-left:270px;padding:42px 5vw 80px}.hero,.chapter{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(33,45,70,.06)}.hero{padding:42px;margin-bottom:24px;background:linear-gradient(135deg,#fff 40%,var(--brand2))}.hero h1{margin:0;font-size:34px}.hero p{margin:8px 0 0;color:var(--muted)}.chapter{padding:34px 40px;margin:22px 0;scroll-margin-top:20px}h2{margin:0 0 20px;font-size:25px}h3{margin:27px 0 10px;font-size:18px}h2:before{content:attr(data-no);display:inline-grid;place-items:center;width:36px;height:36px;margin-right:12px;border-radius:11px;background:var(--brand);color:#fff;font-size:16px;vertical-align:3px}ol{padding-left:24px}li{margin:7px 0}code{padding:2px 6px;border-radius:5px;background:#f1f3f7}pre{padding:15px;border-radius:10px;background:#172033;color:#e8edf7;overflow:auto}.tip,.warn{margin:16px 0;padding:12px 16px;border-radius:10px}.tip{background:var(--ok)}.warn{background:#fff4e5;border-left:4px solid #f0a032}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{padding:11px 13px;border:1px solid var(--line);text-align:left}th{background:#f5f7fa}
-    figure{margin:20px 0 28px}figure img{display:block;width:100%;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(35,47,70,.12);cursor:zoom-in}figcaption{margin-top:7px;color:var(--muted);text-align:center;font-size:13px}.shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.shots figure{margin:0}.shots figcaption{margin-bottom:10px}
-    #viewer{display:none;position:fixed;z-index:10;inset:0;padding:30px;background:rgba(7,12,23,.9);align-items:center;justify-content:center;cursor:zoom-out}#viewer.open{display:flex}#viewer img{max-width:96vw;max-height:94vh;border-radius:10px}footer{text-align:center;color:var(--muted);padding:20px}
-    @media(max-width:860px){aside{position:static;width:auto}nav{display:none}main{margin:0;padding:18px}.chapter,.hero{padding:24px}.shots{grid-template-columns:1fr}.hero h1{font-size:27px}}
-    @media print{aside{display:none}main{margin:0;padding:0}.chapter,.hero{box-shadow:none;break-inside:avoid}figure img{box-shadow:none}#viewer{display:none!important}}
+    :root{--bg:#f5f6f8;--paper:#fff;--ink:#20242b;--muted:#667085;--line:#e4e7ec;--brand:#e65f35;--brand-dark:#b83d1f;--soft:#fff3ed;--nav:#20242b;--ok:#edf8f2;--warn:#fff7e8}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+    a{color:inherit}.sidebar{position:fixed;inset:0 auto 0 0;width:264px;padding:30px 20px;background:var(--nav);color:#fff;overflow:auto}.brand{padding:0 10px 22px;border-bottom:1px solid #3b4049}.brand strong{display:block;font-size:19px}.brand span{display:block;margin-top:4px;color:#aeb4bf;font-size:12px}.sidebar nav{padding-top:18px}.sidebar nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:#cbd0d8;text-decoration:none;font-size:14px}.sidebar nav a:hover,.sidebar nav a:focus{background:#343942;color:#fff;outline:none}.sidebar nav b{width:22px;color:#f28a68;font-size:12px}
+    main{max-width:1160px;margin-left:264px;padding:38px 5vw 72px}.hero{position:relative;min-height:250px;padding:48px 44px;background:var(--paper);border:1px solid var(--line);border-top:5px solid var(--brand);overflow:hidden}.hero:after{content:"";position:absolute;right:-65px;bottom:-100px;width:250px;height:250px;border:42px solid var(--soft);border-radius:50%}.eyebrow{margin:0 0 8px;color:var(--brand-dark);font-weight:700}.hero h1{position:relative;z-index:1;max-width:680px;margin:0;font-size:36px;line-height:1.25}.hero>p{position:relative;z-index:1;max-width:680px;margin:14px 0 0;color:var(--muted);font-size:16px}.quick{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}.quick span{padding:5px 10px;background:var(--soft);color:#8e351d;font-size:13px}
+    .chapter{margin:22px 0;padding:36px 40px;background:var(--paper);border:1px solid var(--line);scroll-margin-top:20px}.chapter-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:22px}.number{display:grid;flex:0 0 36px;height:36px;place-items:center;background:var(--brand);color:#fff;font-weight:700}.chapter h2{margin:0;font-size:24px;line-height:1.4}.chapter h3{margin:28px 0 10px;font-size:17px}.chapter p{margin:10px 0}.chapter ol,.chapter ul{padding-left:23px}.chapter li{margin:7px 0}.lead{margin:3px 0 0!important;color:var(--muted)}
+    .steps{counter-reset:step;display:grid;gap:10px;margin:16px 0}.step{position:relative;padding:13px 15px 13px 48px;background:#f8f9fa;border-left:3px solid #d0d5dd}.step:before{counter-increment:step;content:counter(step);position:absolute;left:14px;top:13px;display:grid;width:22px;height:22px;place-items:center;background:#fff;border:1px solid #cfd4dc;border-radius:50%;font-size:12px;font-weight:700}
+    .note{margin:18px 0;padding:13px 16px;background:var(--ok);border-left:4px solid #3c9b6d}.warning{margin:18px 0;padding:13px 16px;background:var(--warn);border-left:4px solid #e39a29}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.grid figure{margin:0}.grid figure.wide{grid-column:1/-1}figure{margin:20px 0 6px}figure img{display:block;width:100%;border:1px solid var(--line);background:#f2f4f7;cursor:zoom-in}figcaption{padding:8px 2px;color:var(--muted);font-size:13px}table{width:100%;margin:14px 0;border-collapse:collapse}th,td{padding:11px 12px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f7f8fa}code{padding:2px 5px;background:#f1f2f4;border-radius:3px;font-family:Consolas,monospace}.formula{padding:14px 16px;background:#272b32;color:#fff;font-family:Consolas,"Microsoft YaHei",monospace}
+    footer{padding:20px 0;text-align:center;color:var(--muted);font-size:13px}#viewer{display:none;position:fixed;z-index:20;inset:0;padding:28px;background:rgba(12,15,20,.92);align-items:center;justify-content:center;cursor:zoom-out}#viewer.open{display:flex}#viewer img{max-width:96vw;max-height:94vh;background:#fff}
+    @media(max-width:860px){.sidebar{position:static;width:auto;padding:18px}.brand{padding:0 0 14px}.sidebar nav{display:flex;gap:5px;padding-top:12px;overflow:auto}.sidebar nav a{flex:0 0 auto}.sidebar nav b{display:none}main{margin:0;padding:16px}.hero,.chapter{padding:26px 22px}.hero{min-height:0}.hero:after{display:none}.hero h1{font-size:29px}.grid{grid-template-columns:1fr}.grid figure.wide{grid-column:auto}}
+    @media print{.sidebar{display:none}main{max-width:none;margin:0;padding:0}.hero,.chapter{break-inside:avoid;border-color:#bbb}.chapter{padding:24px}figure img{cursor:default}#viewer{display:none!important}}
   </style>
 </head>
 <body>
-  <aside><h1>A大橙子课时统计</h1><p>1.2.x · Windows / macOS 图文教程</p><nav>
-    <a href="#start">1. 首次启动</a><a href="#layout">2. 主界面</a><a href="#settings">3. 基础配置</a><a href="#subjects">4. 科目管理</a><a href="#students">5. 学生管理</a><a href="#schedule">6. 排课</a><a href="#attendance">7. 点名出勤</a><a href="#import">8. 批量导入</a><a href="#stats">9. 课时统计</a><a href="#salary">10. 工资统计</a><a href="#export">11. 导出</a><a href="#reset">12. 重置备份</a><a href="#faq">13. 常见问题</a>
-  </nav></aside>
+  <aside class="sidebar">
+    <div class="brand"><strong>A大橙子课时统计</strong><span>Windows / macOS 使用教程</span></div>
+    <nav aria-label="教程目录">
+      <a href="#start"><b>01</b>首次启动</a><a href="#layout"><b>02</b>认识界面</a><a href="#settings"><b>03</b>基础配置</a><a href="#people"><b>04</b>科目与学生</a><a href="#schedule"><b>05</b>排课与点名</a><a href="#stats"><b>06</b>课时统计</a><a href="#salary"><b>07</b>工资设置</a><a href="#export"><b>08</b>导出数据</a><a href="#backup"><b>09</b>重置与备份</a><a href="#faq"><b>10</b>常见问题</a>
+    </nav>
+  </aside>
   <main>
-    <header class="hero"><h1>A大橙子课时统计使用教程</h1><p>Windows 与 macOS 通用：从首次配置、学生管理和排课，到点名、统计、工资与数据导出的完整操作说明。</p><div class="tip">除特别标注的系统差异外，两套系统的界面、按钮名称和操作流程一致。页面截图来自 macOS。</div></header>
+    <header class="hero">
+      <p class="eyebrow">1.2.x 图文指南</p><h1>从第一次设置，到排课、点名和课时统计</h1>
+      <p>教程按实际使用顺序整理。Windows 与 macOS 的主要界面和操作一致，系统差异会单独标注。</p>
+      <div class="quick"><span>先配置时间</span><span>再录入学生</span><span>然后开始排课</span></div>
+    </header>
 
-    <section class="chapter" id="start"><h2 data-no="1">版本选择与首次启动</h2>
-      <p>启动后先打开“快速开始”，了解基础设置、教师类型、阶段、时间、学生和排课的推荐顺序。</p>
-      <figure><img src="default/01.png" alt="快速开始"><figcaption>快速开始向导</figcaption></figure>
-      <h3>Windows</h3><p>Windows 仅提供便携版：</p><table><thead><tr><th>版本</th><th>使用方式</th></tr></thead><tbody><tr><td><code>A大橙子课时统计（便携版-1.2.3）-x64.exe</code></td><td>无需安装，双击单文件程序即可运行。</td></tr></tbody></table><p>若系统出现安全提示，请先核对文件来源，再选择“更多信息”并允许运行。</p>
-      <h3>macOS</h3><p>macOS 提供以下两个版本：</p><table><thead><tr><th>版本</th><th>使用方式</th></tr></thead><tbody><tr><td><code>A大橙子课时统计（正式版-1.2.3）-x64</code></td><td>打开正式版安装包，按系统提示完成安装后运行。</td></tr><tr><td><code>macos-green-zip</code></td><td>完整解压 ZIP 后，在解压得到的文件夹中运行应用。</td></tr></tbody></table><p>若系统阻止打开，请在“系统设置 → 隐私与安全性”中确认允许；只运行来源可信的应用。</p>
+    <section class="chapter" id="start"><div class="chapter-head"><span class="number">1</span><div><h2>首次启动</h2><p class="lead">第一次使用时，建议先按“快速开始”完成必要设置。</p></div></div>
+      <figure><img src="default/01.png" alt="快速开始向导"><figcaption>快速开始向导会提示推荐的配置顺序</figcaption></figure>
+      <h3>Windows</h3><p>便携版无需安装，双击程序即可运行。若出现安全提示，请先核对文件来源，再选择“更多信息”并允许运行。</p>
+      <h3>macOS</h3><p>安装版按系统提示完成安装；绿色压缩包版需完整解压后再运行。若系统阻止打开，可前往“系统设置 → 隐私与安全性”允许打开来源可信的应用。</p>
     </section>
 
-    <section class="chapter" id="layout"><h2 data-no="2">认识主界面</h2><figure><img src="default/02.png" alt="主界面"><figcaption>主界面布局</figcaption></figure>
-      <ol><li><b>操作区：</b>导出数据、重置课表、快速开始、基础设置和批量导入学生。</li><li><b>科目池/学生池：</b>管理并拖拽科目或学生。</li><li><b>周次导航：</b>左右箭头切换周次，“今天”返回本周。</li><li><b>课表：</b>横向为星期、纵向为课时；点击或拖入内容完成排课。</li><li><b>日期范围：</b>点击顶部周日期可打开统计。</li></ol>
+    <section class="chapter" id="layout"><div class="chapter-head"><span class="number">2</span><div><h2>认识主界面</h2><p class="lead">中央是周课表，左侧用于管理资料，顶部日期可进入统计。</p></div></div>
+      <figure><img src="default/02.png" alt="主界面布局"><figcaption>主界面与常用功能位置</figcaption></figure>
+      <ul><li><strong>周次导航：</strong>使用左右箭头切换周次，“今天”可快速回到本周。</li><li><strong>科目池与学生池：</strong>管理资料，也可将卡片拖入课表。</li><li><strong>周课表：</strong>横向为星期，纵向为课时；点击空白位置或拖入科目即可排课。</li><li><strong>统计入口：</strong>点击顶部日期范围查看日、周、月、年统计。</li></ul>
     </section>
 
-    <section class="chapter" id="settings"><h2 data-no="3">首次基础配置</h2>
-      <h3>3.1 基础设置与主题</h3><ol><li>点击左侧“基础设置”。</li><li>按需开启历史课表保护，避免误改过去课程。</li><li>选择教师类型；没有学科背景的课程会归到该科目。</li><li>选择默认、暗色或浅绿色主题并保存。</li></ol><figure><img src="default/03.png" alt="主题设置"><figcaption>基础设置与主题</figcaption></figure>
-      <h3>3.2 年级设置</h3><ol><li>切换“年级设置”。</li><li>点击“添加年级”，填写名称并选择颜色。</li><li>保存后可编辑、拖拽排序或随机配色。</li></ol><div class="shots"><figure><img src="default/04.png" alt="年级设置"><figcaption>年级列表</figcaption></figure><figure><img src="default/05.png" alt="添加年级"><figcaption>添加年级</figcaption></figure></div>
-      <h3>3.3 阶段设置</h3><ol><li>需要按学期、季度或寒暑期独立排课时，开启分段排课。</li><li>填写阶段名称、起止日期；可增加至 12 个阶段。</li><li>保证日期不重叠，然后保存。</li></ol><figure><img src="default/06.png" alt="阶段设置"><figcaption>阶段与分段排课</figcaption></figure>
-      <h3>3.4 时间设置</h3><ol><li>设置每日节数、首节开始时间、单节和课间时长。</li><li>按需插入午休或晚间休息。</li><li>点击“应用快速设置”，再在高级设置中逐节微调并保存。</li></ol><div class="shots"><figure><img src="default/07.png" alt="时间设置"><figcaption>时间设置</figcaption></figure><figure><img src="default/08.png" alt="编辑课时"><figcaption>编辑单节时间</figcaption></figure></div>
+    <section class="chapter" id="settings"><div class="chapter-head"><span class="number">3</span><div><h2>完成基础配置</h2><p class="lead">设置年级、阶段和上课时间后，课表才能准确展示与统计。</p></div></div>
+      <h3>基础设置与主题</h3><div class="steps"><div class="step">打开“基础设置”，选择教师主要教授的科目。</div><div class="step">按需开启历史课表保护，避免误改过去课程。</div><div class="step">选择界面主题，保存设置。</div></div><figure><img src="default/03.png" alt="基础设置与主题"><figcaption>基础设置与主题选择</figcaption></figure>
+      <h3>年级设置</h3><p>在“年级设置”中新增、编辑或拖动排序年级。新增时填写名称、选择颜色并保存。</p><div class="grid"><figure><img src="default/04.png" alt="年级列表"><figcaption>管理年级与排序</figcaption></figure><figure><img src="default/05.png" alt="添加年级"><figcaption>添加年级</figcaption></figure></div>
+      <h3>阶段设置</h3><p>需要按学期、季度或寒暑期分别管理课表时，可开启分段排课。填写阶段名称和起止日期，并确保阶段日期不重叠。</p><figure><img src="default/06.png" alt="阶段设置"><figcaption>阶段与分段排课设置</figcaption></figure>
+      <h3>时间设置</h3><div class="steps"><div class="step">设置每日节数、第一节开始时间、单节时长和课间时长。</div><div class="step">按需加入午休或晚间休息。</div><div class="step">应用快速设置，再检查每一节的具体时间并保存。</div></div><div class="grid"><figure><img src="default/07.png" alt="时间设置"><figcaption>快速设置每日课时</figcaption></figure><figure><img src="default/08.png" alt="编辑单节时间"><figcaption>微调单节时间</figcaption></figure></div>
     </section>
 
-    <section class="chapter" id="subjects"><h2 data-no="4">科目管理</h2><ol><li>切换到“科目池”，点击“添加科目”。</li><li>填写名称，可选填老师姓名。</li><li>选择预设颜色或输入 HEX 自定义颜色。</li><li>点击保存。以后可通过卡片编辑图标修改或删除。</li></ol><figure><img src="default/09.png" alt="添加科目"><figcaption>添加和编辑科目</figcaption></figure><div class="warn">删除已用于排课的科目前，建议先导出数据或调整相关课程。</div></section>
-
-    <section class="chapter" id="students"><h2 data-no="5">学生管理</h2>
-      <h3>5.1 添加单个学生</h3><ol><li>切换“学生池”，点击“添加学生”。</li><li>输入姓名并选择年级。</li><li>设置普通、1v1 或试听类型；1v1 与试听不能同时启用。</li><li>保存。可按全部、进行中、已结课和试听筛选。</li></ol><figure><img src="default/10.png" alt="添加学生"><figcaption>学生资料设置</figcaption></figure>
-      <h3>5.2 批量添加</h3><ol><li>点击“批量导入学生”。</li><li>粘贴名单，姓名可用顿号、逗号或换行分隔。</li><li>年级用 1–12 表示一年级至高三，例如 <code>1张三、2李四、3王五</code>；不写编号默认一年级。</li><li>点击“识别并导入”，检查结果。</li></ol><figure><img src="default/11.png" alt="批量添加学生"><figcaption>批量导入学生</figcaption></figure>
+    <section class="chapter" id="people"><div class="chapter-head"><span class="number">4</span><div><h2>建立科目与学生资料</h2><p class="lead">资料建好后，可以直接拖动科目或学生完成排课。</p></div></div>
+      <h3>添加科目</h3><p>切换到“科目池”，点击“添加科目”，填写名称和可选的教师姓名，选择颜色后保存。</p><figure><img src="default/09.png" alt="添加科目"><figcaption>添加或编辑科目</figcaption></figure><div class="warning">已用于排课的科目不要直接删除。请先调整相关课程，并导出所需数据。</div>
+      <h3>添加学生</h3><p>切换到“学生池”，点击“添加学生”，填写姓名、年级和类型后保存。学生类型可选普通、1v1 或试听，其中 1v1 与试听不能同时启用。</p><figure><img src="default/10.png" alt="添加学生"><figcaption>学生资料设置</figcaption></figure>
+      <h3>批量添加学生</h3><p>点击“批量导入学生”并粘贴名单，姓名可用顿号、逗号或换行分隔。姓名前可用 1～12 表示一年级至高三，例如 <code>1张三、2李四、3王五</code>；不写编号时默认为一年级。</p><figure><img src="default/11.png" alt="批量添加学生"><figcaption>识别并批量添加学生</figcaption></figure>
     </section>
 
-    <section class="chapter" id="schedule"><h2 data-no="6">排课与调整</h2><ol><li>先切换到目标周。</li><li>把科目卡片拖到目标日期和节次，或直接点击空白课位。</li><li>确认科目，搜索并勾选学生。</li><li>设置循环方式或生效范围并保存。</li><li>也可把学生卡片拖入已有课程。</li></ol><figure><img src="default/12.png" alt="添加课程"><figcaption>添加课程并选择学生</figcaption></figure>
-      <h3>手动课程</h3><ol><li>打开手动添加入口。</li><li>选择日期、时间、科目和学生。</li><li>填写实际上课时长并保存，课程将进入统计与课时表导出。</li></ol><figure><img src="default/13.png" alt="手动课程"><figcaption>补录临时课、补课或历史课程</figcaption></figure>
-      <div class="tip">拖动整节课程可移动课位；拖动单个学生可调整所在课程；拖回左侧回收区域可移除。修改循环课程前请确认生效周次。</div>
+    <section class="chapter" id="schedule"><div class="chapter-head"><span class="number">5</span><div><h2>排课、补录与点名</h2><p class="lead">先排入课程，再记录实际出勤和上课时长。</p></div></div>
+      <h3>常规排课</h3><div class="steps"><div class="step">切换到目标周，将科目卡片拖到日期和节次，或点击空白课位。</div><div class="step">确认科目，搜索并勾选学生。</div><div class="step">设置循环方式或生效范围，保存课程。</div><div class="step">需要时也可把学生卡片拖入已有课程。</div></div><figure><img src="default/12.png" alt="添加课程"><figcaption>添加课程并选择学生</figcaption></figure>
+      <h3>手动补录</h3><p>临时课、补课或历史课程可使用手动添加。选择日期、时间、科目和学生，填写实际上课时长并保存。</p><figure><img src="default/13.png" alt="手动补录课程"><figcaption>补录临时课、补课或历史课程</figcaption></figure>
+      <h3>点名与出勤</h3><p>打开已排课程的点名窗口，逐个记录到课、请假或缺勤。实际时长与计划不同时，修改实际上课时长后保存。</p><figure><img src="default/14.png" alt="学生点名"><figcaption>记录学生出勤和实际上课时长</figcaption></figure><div class="note">出勤状态和实际时长会影响课时统计、工资计算及导出的课时表。</div>
     </section>
 
-    <section class="chapter" id="attendance"><h2 data-no="7">学生点名与出勤</h2><ol><li>找到已排课程并打开点名窗口。</li><li>逐个记录到课、请假或缺勤状态。</li><li>实际时长与计划不同时，填写实际上课时长。</li><li>保存记录。</li></ol><figure><img src="default/14.png" alt="点名"><figcaption>学生点名与出勤记录</figcaption></figure><p>出勤与实际时长会影响文字统计、图表统计、工资和课时表 Excel。</p></section>
-
-    <section class="chapter" id="import"><h2 data-no="8">课程数据批量导入</h2><ol><li>打开“批量导入课程”。</li><li>粘贴符合应用格式的课程 JSON。</li><li>普通排课选择普通导入；已开启分段排课且数据带阶段标记时选择阶段导入。</li><li>执行导入并检查新增、跳过和异常项目。</li><li>回到对应周次核对课表。</li></ol><figure><img src="default/15.png" alt="课程导入"><figcaption>批量导入课程数据</figcaption></figure><div class="warn">导入前建议备份。阶段导入中的课程日期必须属于已配置阶段。</div></section>
-
-    <section class="chapter" id="stats"><h2 data-no="9">课时统计</h2><h3>9.1 图表统计</h3><ol><li>点击主界面顶部日期范围。</li><li>选择日、周、月或年统计。</li><li>用日期选择器切换范围。</li><li>切换课时、人数或课时费统计，查看总览、趋势和班型对比。</li></ol><div class="shots"><figure><img src="default/16.png" alt="日统计"><figcaption>日图表</figcaption></figure><figure><img src="default/17.png" alt="周统计"><figcaption>周图表</figcaption></figure><figure><img src="default/18.png" alt="月统计"><figcaption>月图表</figcaption></figure><figure><img src="default/19.png" alt="年统计"><figcaption>年图表</figcaption></figure></div>
-      <h3>9.2 文字统计</h3><ol><li>打开文字统计。</li><li>选择周期，用上一项、下一项或日期控件切换。</li><li>查看课程数、课时、到课和分类明细。</li></ol><div class="shots"><figure><img src="default/20.png" alt="日文字统计"><figcaption>日文字统计</figcaption></figure><figure><img src="default/21.png" alt="周文字统计"><figcaption>周文字统计</figcaption></figure><figure><img src="default/22.png" alt="月文字统计"><figcaption>月文字统计</figcaption></figure><figure><img src="default/23.png" alt="年文字统计"><figcaption>年文字统计</figcaption></figure></div>
+    <section class="chapter" id="stats"><div class="chapter-head"><span class="number">6</span><div><h2>查看课时统计</h2><p class="lead">点击主界面顶部日期范围，选择日、周、月或年。</p></div></div>
+      <h3>图表统计</h3><p>切换“课时”“人数”或“课时费”，查看总览、趋势与班型对比。</p><div class="grid"><figure><img src="default/16.png" alt="日图表统计"><figcaption>日统计</figcaption></figure><figure><img src="default/17.png" alt="周图表统计"><figcaption>周统计</figcaption></figure><figure><img src="default/18.png" alt="月图表统计"><figcaption>月统计</figcaption></figure><figure><img src="default/19.png" alt="年图表统计"><figcaption>年统计</figcaption></figure></div>
+      <h3>文字统计</h3><p>文字统计可查看课程数、课时、到课情况和分类明细，并可通过日期控件切换范围。</p><div class="grid"><figure><img src="default/20.png" alt="日文字统计"><figcaption>日文字统计</figcaption></figure><figure><img src="default/21.png" alt="周文字统计"><figcaption>周文字统计</figcaption></figure><figure><img src="default/22.png" alt="月文字统计"><figcaption>月文字统计</figcaption></figure><figure><img src="default/23.png" alt="年文字统计"><figcaption>年文字统计</figcaption></figure></div>
     </section>
 
-    <section class="chapter" id="salary"><h2 data-no="10">课时费与工资</h2><ol><li>打开图表统计并切换“课时费统计”。</li><li>打开工资设置，填写月底薪并选择教师星级。</li><li>保存后重新查看所选月份。</li></ol><figure><img src="default/24.png" alt="工资设置"><figcaption>月底薪与教师星级设置</figcaption></figure><pre>折算课时 = 实际上课时长 × 班型系数 × 年级系数</pre><p>系统每月先扣除固定 8 小时基本课时，再对剩余工资课时分段累进计价；星级加成叠加到各阶梯单价，不改变折算课时。具体系数和阶梯以应用内规则页为准。</p><figure><img src="default/25.png" alt="课时计算规则"><figcaption>班型、年级、星级与阶梯计价规则</figcaption></figure><div class="tip">工资依赖学生年级、班型、出勤和实际时长。修改这些数据后请重新打开统计。</div></section>
-
-    <section class="chapter" id="export"><h2 data-no="11">导出数据</h2><figure><img src="default/26.png" alt="导出"><figcaption>导出选项</figcaption></figure>
-      <h3>课时表 Excel</h3><ol><li>点击“导出数据”。</li><li>选择开始与结束日期。</li><li>点击“导出课时表 Excel”并选择保存位置。</li></ol><p>内容包括课程、学生、出勤和实际上课时长。</p>
-      <h3>当前课表图片或 Excel</h3><ol><li>先切换到目标周。</li><li>打开导出，选择“导出课表图片”或“导出课表 Excel”。</li><li>选择文件名和保存位置。</li></ol><h3>系统保存差异</h3><ul><li><b>Windows：</b>保存窗口常见“桌面”“文档”“下载”；文件被占用时先关闭 Excel 中的同名文件。</li><li><b>macOS：</b>对应位置为“桌面”“文稿”“下载”；先关闭 Numbers、Excel 或其他正在打开该文件的程序。</li></ul><div class="tip">提示无权限时，改存到当前账户的“下载”或“文档/文稿”，不要直接保存到受保护的应用目录。</div>
+    <section class="chapter" id="salary"><div class="chapter-head"><span class="number">7</span><div><h2>设置课时费与工资</h2><p class="lead">工资计算取决于实际时长、班型、年级和教师星级。</p></div></div>
+      <div class="steps"><div class="step">进入图表统计，切换到“课时费统计”。</div><div class="step">打开工资设置，填写月底薪并选择教师星级。</div><div class="step">保存后重新查看目标月份。</div></div><figure><img src="default/24.png" alt="工资设置"><figcaption>月底薪和教师星级设置</figcaption></figure><p class="formula">折算课时 = 实际上课时长 × 班型系数 × 年级系数</p><p>系统先扣除每月固定 8 小时基本课时，再对剩余工资课时分段累进计价。具体系数和阶梯请以应用内规则页为准。</p><figure><img src="default/25.png" alt="课时计算规则"><figcaption>班型、年级、星级与阶梯计价规则</figcaption></figure>
     </section>
 
-    <section class="chapter" id="reset"><h2 data-no="12">重置与备份</h2><figure><img src="default/27.png" alt="重置"><figcaption>重置范围选择</figcaption></figure>
-      <ul><li><b>按日期重置：</b>依次选择起点和终点，仅清除范围内课程。</li><li><b>重置课表：</b>清空排课、循环和考勤，保留科目、学生、手动课程、年级、时间和设置。</li><li><b>全部重置：</b>清空课表、学生、手动课程、考勤和循环数据。</li></ul>
-      <h3>系统备份差异</h3><ul><li><b>Windows <code>A大橙子课时统计（便携版-1.2.3）-x64.exe</code>：</b>迁移或重装前，建议先使用应用内导出功能备份数据。</li><li><b>macOS <code>macos-green-zip</code>：</b>完全退出应用后再备份，保留完整的解压文件夹，并优先使用应用内导出迁移数据。</li><li><b>macOS <code>A大橙子课时统计（正式版-1.2.3）-x64</code>：</b>迁移前建议优先使用应用内导出功能。</li></ul><div class="warn">全部重置不可轻易恢复，执行前请先导出或备份。</div>
+    <section class="chapter" id="export"><div class="chapter-head"><span class="number">8</span><div><h2>导出数据</h2><p class="lead">可导出指定日期范围的课时表，或导出当前周课表。</p></div></div>
+      <figure><img src="default/26.png" alt="导出选项"><figcaption>导出数据选项</figcaption></figure><ul><li><strong>课时表 Excel：</strong>选择开始与结束日期后导出，内容包含课程、学生、出勤和实际时长。</li><li><strong>当前周课表：</strong>先切换到目标周，再选择导出图片或 Excel。</li></ul>
+      <div class="note">若提示文件被占用，请先关闭 Excel、Numbers 或其他正在打开该文件的程序。若提示无权限，请改存到“下载”或“文档/文稿”。</div>
     </section>
 
-    <section class="chapter" id="faq"><h2 data-no="13">操作提示与常见问题</h2><p>应用在确认、取消或异常操作时会显示消息窗口。先阅读提示内容，再选择“确定”或“取消”。</p><figure><img src="default/28.png" alt="操作提示"><figcaption>通用操作提示窗口</figcaption></figure><h3>课程拖不进去</h3><p>检查目标是否被占用、学生是否冲突、试听学生是否已排课，以及历史保护是否禁止修改过去日期。</p><h3>统计结果不正确</h3><p>依次核对日期、学生、点名状态、实际时长、年级、班型和工资星级。</p><h3>移动绿色压缩包版后数据消失</h3><p>请保留 <code>macos-green-zip</code> 解压后的完整文件夹，并优先通过应用内导出迁移数据。</p><h3>Windows 更换版本或电脑后数据未迁移</h3><p>更换便携版或电脑前，建议先在原应用中导出数据。</p><h3>macOS 阻止打开</h3><p>在“系统设置 → 隐私与安全性”中允许打开来源可信的应用。</p></section>
-    <footer>本页面为独立离线手册 · 截图可点击放大 · 可直接使用浏览器打印为 PDF</footer>
+    <section class="chapter" id="backup"><div class="chapter-head"><span class="number">9</span><div><h2>重置与备份</h2><p class="lead">重置操作会删除数据，执行前请确认范围并完成必要备份。</p></div></div>
+      <figure><img src="default/27.png" alt="重置范围"><figcaption>选择需要重置的数据范围</figcaption></figure><ul><li><strong>按日期重置：</strong>只清除指定日期范围内的课程。</li><li><strong>重置课表：</strong>清除排课、循环和考勤，保留科目、学生、年级、时间及设置。</li><li><strong>全部重置：</strong>清除课表、学生、手动课程、考勤和循环数据。</li></ul><div class="warning">“全部重置”通常无法轻易恢复。操作前请先导出所需数据。</div><p>迁移版本或更换电脑前，优先使用应用内导出功能。macOS 绿色压缩包版还应在完全退出应用后，保留并备份完整的解压文件夹。</p>
+    </section>
+
+    <section class="chapter" id="faq"><div class="chapter-head"><span class="number">10</span><div><h2>常见问题</h2><p class="lead">出现异常时，先检查日期、冲突状态和文件权限。</p></div></div>
+      <figure><img src="default/28.png" alt="操作提示窗口"><figcaption>操作前先阅读确认或异常提示</figcaption></figure>
+      <h3>课程无法拖入课表</h3><p>检查目标课位是否被占用、学生时间是否冲突、试听学生是否已有安排，以及历史保护是否禁止修改过去日期。</p>
+      <h3>统计结果不正确</h3><p>依次核对日期范围、学生、点名状态、实际时长、年级、班型和教师星级。</p>
+      <h3>更换版本或电脑后没有原数据</h3><p>迁移前应先在原应用中导出数据。绿色压缩包版还需保留完整的解压文件夹。</p>
+      <h3>macOS 阻止打开应用</h3><p>前往“系统设置 → 隐私与安全性”，确认允许打开来源可信的应用。</p>
+    </section>
+    <footer>离线图文教程 · 点击截图可放大 · 可使用浏览器直接打印为 PDF</footer>
   </main>
-  <div id="viewer" role="dialog" aria-label="截图预览"><img alt="放大的截图"></div>
+  <div id="viewer" role="dialog" aria-modal="true" aria-label="截图预览"><img alt="放大的教程截图"></div>
   <script>
-    const viewer=document.getElementById('viewer'),preview=viewer.querySelector('img');
-    document.querySelectorAll('figure img').forEach(img=>img.addEventListener('click',()=>{preview.src=img.src;preview.alt=img.alt;viewer.classList.add('open')}));
-    viewer.addEventListener('click',()=>viewer.classList.remove('open'));
-    addEventListener('keydown',e=>{if(e.key==='Escape')viewer.classList.remove('open')});
+    const viewer=document.getElementById('viewer');const preview=viewer.querySelector('img');
+    document.querySelectorAll('figure img').forEach((img)=>img.addEventListener('click',()=>{preview.src=img.src;preview.alt=img.alt;viewer.classList.add('open')}));
+    viewer.addEventListener('click',()=>viewer.classList.remove('open'));addEventListener('keydown',(event)=>{if(event.key==='Escape')viewer.classList.remove('open')});
   </script>
 </body>
 </html>
