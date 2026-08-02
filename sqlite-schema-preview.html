@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>排课系统 SQLite 数据结构预览</title>
+  <style>
+    :root { --ink:#17212b; --muted:#66727f; --line:#d9e0e5; --paper:#fff; --canvas:#f4f6f7; --green:#16745a; --green-soft:#e9f4f0; --blue:#2867a0; --blue-soft:#eaf2f8; --amber:#a45d09; --amber-soft:#fff3df; --red:#b5483d; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--canvas); font:14px/1.55 "Microsoft YaHei UI","Segoe UI",sans-serif; letter-spacing:0; }
+    button { font:inherit; }
+    .topbar { position:sticky; top:0; z-index:20; height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; color:#fff; background:#17212b; box-shadow:0 1px 8px #0003; }
+    .brand { display:flex; align-items:center; gap:12px; min-width:0; }
+    .db-icon { width:28px; height:28px; display:grid; place-items:center; border-radius:6px; background:#2b9473; font-weight:800; }
+    .brand strong { font-size:16px; white-space:nowrap; }
+    .brand span { color:#aeb9c3; font-size:12px; }
+    .top-meta { display:flex; align-items:center; gap:8px; color:#c9d1d8; font-size:12px; }
+    .pill { padding:4px 8px; border:1px solid #ffffff2e; border-radius:4px; }
+    .layout { display:grid; grid-template-columns:230px minmax(0,1fr); max-width:1500px; margin:auto; }
+    aside { position:sticky; top:56px; height:calc(100vh - 56px); padding:24px 16px; border-right:1px solid var(--line); background:#eef1f2; overflow:auto; }
+    .nav-title { margin:0 10px 8px; color:#8a949e; font-size:11px; font-weight:700; text-transform:uppercase; }
+    nav a { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 10px; color:#34404b; text-decoration:none; border-radius:5px; }
+    nav a:hover, nav a.active { color:#0f604b; background:#dceae5; }
+    nav code { font-size:12px; overflow:hidden; text-overflow:ellipsis; }
+    nav small { color:#7e8993; }
+    main { min-width:0; padding:34px clamp(20px,4vw,58px) 80px; }
+    .intro { padding-bottom:28px; border-bottom:1px solid var(--line); }
+    .eyebrow { margin:0 0 7px; color:var(--green); font-size:12px; font-weight:800; }
+    h1 { margin:0; font-size:clamp(25px,3vw,38px); line-height:1.2; }
+    .lead { max-width:780px; margin:12px 0 0; color:var(--muted); font-size:15px; }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; margin-top:25px; overflow:hidden; border:1px solid var(--line); border-radius:7px; background:var(--line); }
+    .stat { padding:16px; background:var(--paper); }
+    .stat strong { display:block; font-size:22px; }
+    .stat span { color:var(--muted); font-size:12px; }
+    .section-title { margin:34px 0 14px; font-size:19px; }
+    .flow { display:grid; grid-template-columns:minmax(110px,1fr) auto minmax(110px,1fr) auto minmax(110px,1fr) auto minmax(110px,1fr) auto minmax(110px,1fr); align-items:center; gap:12px; padding:18px; border:1px solid var(--line); border-radius:7px; background:var(--paper); }
+    .flow-item { min-width:0; text-align:center; }
+    .flow-box { padding:12px 8px; border:1px solid #b9d3ca; border-radius:5px; background:var(--green-soft); }
+    .flow-box strong { display:block; font-size:13px; }
+    .flow-box code { color:var(--green); font-size:11px; }
+    .arrow { color:#7d8994; font-size:18px; }
+    .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; color:var(--muted); font-size:12px; }
+    .dot { display:inline-block; width:9px; height:9px; margin-right:5px; border-radius:2px; }
+    .tables { display:grid; gap:20px; }
+    .table-card { scroll-margin-top:76px; border:1px solid var(--line); border-radius:7px; background:var(--paper); overflow:hidden; box-shadow:0 2px 8px #22303c0a; }
+    .table-head { display:flex; justify-content:space-between; gap:18px; padding:17px 20px; border-bottom:1px solid var(--line); }
+    .table-name { display:flex; align-items:flex-start; gap:11px; min-width:0; }
+    .table-number { flex:0 0 28px; height:28px; display:grid; place-items:center; border-radius:5px; color:#fff; background:var(--green); font-size:12px; font-weight:700; }
+    .table-name h3 { margin:0; font:700 16px/1.25 Consolas,monospace; }
+    .table-name p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+    .kind { align-self:flex-start; padding:3px 7px; border-radius:4px; font-size:11px; font-weight:700; white-space:nowrap; }
+    .master .table-number { background:var(--blue); } .master .kind { color:var(--blue); background:var(--blue-soft); }
+    .course .table-number { background:var(--green); } .course .kind { color:var(--green); background:var(--green-soft); }
+    .record .table-number { background:var(--amber); } .record .kind { color:var(--amber); background:var(--amber-soft); }
+    .table-body { display:grid; grid-template-columns:minmax(340px,1.15fr) minmax(320px,1fr); }
+    .pane { min-width:0; padding:16px 20px 20px; }
+    .pane + .pane { border-left:1px solid var(--line); background:#fafbfb; }
+    .pane-label { margin:0 0 8px; color:#7d8790; font-size:11px; font-weight:800; }
+    .schema { width:100%; border-collapse:collapse; }
+    .schema th { padding:6px 7px; color:#7d8790; border-bottom:1px solid var(--line); text-align:left; font-size:11px; }
+    .schema td { padding:6px 7px; border-bottom:1px solid #edf0f2; vertical-align:top; font-size:12px; }
+    .schema tr:last-child td { border-bottom:0; }
+    code { font-family:Consolas,"Courier New",monospace; }
+    .type { color:#6f42a8; }
+    .key { display:inline-block; min-width:25px; padding:1px 4px; border-radius:3px; color:#8a4d06; background:#fff0d7; font-size:9px; font-weight:800; text-align:center; }
+    .key.fk { color:#1d668c; background:#e4f1f7; }
+    .example { display:grid; grid-template-columns:125px minmax(0,1fr); margin:0; border:1px solid var(--line); border-radius:5px; overflow:hidden; }
+    .example dt,.example dd { margin:0; padding:7px 9px; border-bottom:1px solid #e5e9ec; font-size:12px; overflow-wrap:anywhere; }
+    .example dt { color:#53606c; background:#f0f3f4; font-family:Consolas,monospace; }
+    .example dd { background:#fff; }
+    .example dt:nth-last-of-type(1),.example dd:nth-last-of-type(1) { border-bottom:0; }
+    .note { margin:10px 0 0; padding:9px 10px; color:#6d522d; border-left:3px solid #d39538; background:#fff8eb; font-size:12px; }
+    .scenario { padding:20px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+    .scenario-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .scenario-step { position:relative; padding:13px; border:1px solid var(--line); border-radius:5px; background:#f8faf9; }
+    .scenario-step span { color:var(--green); font:700 11px Consolas,monospace; }
+    .scenario-step strong { display:block; margin:5px 0 3px; }
+    .scenario-step p { margin:0; color:var(--muted); font-size:12px; }
+    footer { margin-top:30px; padding-top:18px; color:var(--muted); border-top:1px solid var(--line); font-size:12px; }
+    @media(max-width:900px){ .layout{grid-template-columns:1fr} aside{display:none}.table-body{grid-template-columns:1fr}.pane+.pane{border-left:0;border-top:1px solid var(--line)}.stats{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}.scenario-grid{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:520px){ .topbar{padding:0 14px}.brand span,.top-meta{display:none}main{padding:24px 12px 50px}.stats{grid-template-columns:1fr 1fr}.stat{padding:12px}.table-head{padding:14px}.pane{padding:14px 12px}.table-body{display:block}.schema th:nth-child(2),.schema td:nth-child(2){display:none}.example{grid-template-columns:104px 1fr}.scenario-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="db-icon">DB</div><div><strong>排课系统数据模型</strong> <span>SQLite Schema Preview</span></div></div>
+    <div class="top-meta"><span class="pill">Schema v1</span><span>本地单机数据库</span></div>
+  </header>
+  <div class="layout">
+    <aside><p class="nav-title">数据表目录</p><nav id="nav"></nav></aside>
+    <main>
+      <section class="intro">
+        <p class="eyebrow">DATABASE BLUEPRINT</p>
+        <h1>排课系统 SQLite 数据结构</h1>
+        <p class="lead">这套结构把学生档案、师资、课程规则和出勤记录分开保存。课程不直接塞进学生表，而是通过关联表组合，因此能支持一名学生多门课、换班、停课和历史追溯。</p>
+        <div class="stats"><div class="stat"><strong>11</strong><span>张业务数据表</span></div><div class="stat"><strong>3</strong><span>类数据：资料 / 课程 / 记录</span></div><div class="stat"><strong>UID</strong><span>学生稳定唯一标识</span></div><div class="stat"><strong>1:N / N:M</strong><span>标准关系模型</span></div></div>
+      </section>
+      <h2 class="section-title">核心关系</h2>
+      <section class="flow">
+        <div class="flow-item"><div class="flow-box"><strong>学生档案</strong><code>students</code></div></div><div class="arrow">→</div>
+        <div class="flow-item"><div class="flow-box"><strong>选课关系</strong><code>student_courses</code></div></div><div class="arrow">→</div>
+        <div class="flow-item"><div class="flow-box"><strong>课程模板</strong><code>course_templates</code></div></div><div class="arrow">→</div>
+        <div class="flow-item"><div class="flow-box"><strong>具体课次</strong><code>course_instances</code></div></div><div class="arrow">→</div>
+        <div class="flow-item"><div class="flow-box"><strong>出勤记录</strong><code>attendance_records</code></div></div>
+      </section>
+      <div class="legend"><span><i class="dot" style="background:#2867a0"></i>基础资料</span><span><i class="dot" style="background:#16745a"></i>课程结构</span><span><i class="dot" style="background:#a45d09"></i>业务记录</span><span><b class="key">PK</b> 主键</span><span><b class="key fk">FK</b> 外键</span></div>
+      <h2 class="section-title">数据表与示例记录</h2>
+      <div class="tables" id="tables"></div>
+      <h2 class="section-title">一条课程是怎样生成的</h2>
+      <section class="scenario"><div class="scenario-grid">
+        <div class="scenario-step"><span>01 / STUDENT</span><strong>读取学生</strong><p>学生 S20260001，七年级，一对三班型。</p></div>
+        <div class="scenario-step"><span>02 / RELATION</span><strong>找到选课</strong><p>该学生关联数学课程模板 CT001。</p></div>
+        <div class="scenario-step"><span>03 / TEMPLATE</span><strong>读取规则</strong><p>每周二，第 3 时间段，张老师授课。</p></div>
+        <div class="scenario-step"><span>04 / INSTANCE</span><strong>生成课次</strong><p>生成 2026-09-08 18:00 的具体课程。</p></div>
+      </div><p class="note">调整课程时，只修改新日期之后的模板或选课关系；已经发生的课次和出勤历史保持不变。</p></section>
+      <footer>此页面用于确认数据库设计方向。正式实现时还应增加外键约束、唯一索引、事务、数据迁移版本和自动备份机制。</footer>
+    </main>
+  </div>
+  <script>
+    const tables = [
+      {n:'grades',cn:'年级表',kind:'master',label:'基础资料',desc:'统一管理年级，避免在学生记录中重复填写。',fields:[['id','INTEGER','PK','年级主键'],['name','TEXT','','年级名称'],['sort_order','INTEGER','','显示顺序']],row:{id:'7',name:'七年级',sort_order:'7'}},
+      {n:'head_teachers',cn:'班主任表',kind:'master',label:'基础资料',desc:'保存班主任档案；也可在未来合并到统一员工表。',fields:[['id','INTEGER','PK','班主任主键'],['name','TEXT','','姓名'],['phone','TEXT','','联系电话'],['status','TEXT','','在职状态']],row:{id:'12',name:'李敏',phone:'138****6021',status:'active'}},
+      {n:'teachers',cn:'任课教师表',kind:'master',label:'基础资料',desc:'保存实际授课教师及其状态。',fields:[['id','INTEGER','PK','教师主键'],['name','TEXT','','教师姓名'],['phone','TEXT','','联系电话'],['status','TEXT','','在职状态']],row:{id:'21',name:'张伟',phone:'139****1180',status:'active'}},
+      {n:'subjects',cn:'学科表',kind:'master',label:'基础资料',desc:'课程所对应的学科及课表展示颜色。',fields:[['id','INTEGER','PK','学科主键'],['name','TEXT','','学科名称'],['color','TEXT','','课表颜色'],['enabled','INTEGER','','是否启用']],row:{id:'3',name:'数学',color:'#2F7D68',enabled:'1'}},
+      {n:'classes',cn:'班级 / 班型表',kind:'master',label:'基础资料',desc:'既可表达行政班，也可表达一对一、一对三等教学班型。',fields:[['id','INTEGER','PK','班型主键'],['name','TEXT','','班型名称'],['capacity','INTEGER','','最大人数'],['grade_id','INTEGER','FK','所属年级']],row:{id:'31',name:'七年级数学一对三 A 班',capacity:'3',grade_id:'7 → 七年级'}},
+      {n:'students',cn:'学生表',kind:'master',label:'基础资料',desc:'保存稳定的学生档案，UID 不因换班或升年级改变。',fields:[['uid','TEXT','PK','学生唯一编号'],['name','TEXT','','姓名'],['grade_id','INTEGER','FK','当前年级'],['class_id','INTEGER','FK','当前班型'],['head_teacher_id','INTEGER','FK','所属班主任'],['status','TEXT','','正常/停课/结课']],row:{uid:'S20260001',name:'王小明',grade_id:'7 → 七年级',class_id:'31 → 一对三 A 班',head_teacher_id:'12 → 李敏',status:'active'}},
+      {n:'time_periods',cn:'上课时间段表',kind:'course',label:'课程结构',desc:'统一定义“第几节”及起止时间，课表只引用时间段。',fields:[['id','INTEGER','PK','时间段主键'],['name','TEXT','','显示名称'],['start_time','TEXT','','开始时间'],['end_time','TEXT','','结束时间'],['sort_order','INTEGER','','显示顺序']],row:{id:'3',name:'晚间第 1 节',start_time:'18:00',end_time:'20:00',sort_order:'3'}},
+      {n:'course_templates',cn:'课程模板表',kind:'course',label:'课程结构',desc:'描述固定排课规则，是自动生成每周具体课次的依据。',fields:[['id','TEXT','PK','模板编号'],['subject_id','INTEGER','FK','学科'],['teacher_id','INTEGER','FK','教师'],['class_id','INTEGER','FK','班型'],['weekday','INTEGER','','星期 1-7'],['period_id','INTEGER','FK','时间段'],['start_date','TEXT','','生效日期'],['end_date','TEXT','','结束日期'],['repeat_type','TEXT','','重复规则'],['enabled','INTEGER','','是否启用']],row:{id:'CT001',subject_id:'3 → 数学',teacher_id:'21 → 张伟',class_id:'31 → 一对三 A 班',weekday:'2 → 周二',period_id:'3 → 18:00-20:00',start_date:'2026-09-01',end_date:'2027-01-20',repeat_type:'weekly',enabled:'1'}},
+      {n:'student_courses',cn:'学生选课关系表',kind:'course',label:'课程结构',desc:'解决学生与课程的多对多关系，并记录加入、退出时间。',fields:[['id','INTEGER','PK','关系主键'],['student_uid','TEXT','FK','学生 UID'],['course_template_id','TEXT','FK','课程模板'],['join_date','TEXT','','加入日期'],['leave_date','TEXT','','退出日期'],['status','TEXT','','进行中/已结束']],row:{id:'8001',student_uid:'S20260001 → 王小明',course_template_id:'CT001 → 数学周二班',join_date:'2026-09-01',leave_date:'NULL',status:'active'}},
+      {n:'course_instances',cn:'具体课程表',kind:'record',label:'业务记录',desc:'每一次实际发生或计划发生的课程，一节课一条记录。',fields:[['id','TEXT','PK','课次编号'],['template_id','TEXT','FK','来源模板'],['class_date','TEXT','','上课日期'],['start_time','TEXT','','实际开始'],['end_time','TEXT','','实际结束'],['status','TEXT','','计划/完成/取消']],row:{id:'CI20260908001',template_id:'CT001',class_date:'2026-09-08',start_time:'18:00',end_time:'20:00',status:'scheduled'}},
+      {n:'attendance_records',cn:'出勤记录表',kind:'record',label:'业务记录',desc:'记录每名学生在每个具体课次中的出勤状态和实上时长。',fields:[['id','INTEGER','PK','出勤记录主键'],['student_uid','TEXT','FK','学生 UID'],['course_instance_id','TEXT','FK','具体课次'],['status','TEXT','','出勤/请假/缺勤'],['actual_minutes','INTEGER','','实际分钟数'],['note','TEXT','','备注']],row:{id:'99001',student_uid:'S20260001 → 王小明',course_instance_id:'CI20260908001',status:'present',actual_minutes:'120',note:'正常出勤'}}
+    ];
+    const nav=document.getElementById('nav'), root=document.getElementById('tables');
+    tables.forEach((t,i)=>{
+      nav.insertAdjacentHTML('beforeend',`<a href="#${t.n}"><code>${t.n}</code><small>${String(i+1).padStart(2,'0')}</small></a>`);
+      const rows=t.fields.map(f=>`<tr><td><code>${f[0]}</code></td><td class="type">${f[1]}</td><td>${f[2]?`<b class="key ${f[2]==='FK'?'fk':''}">${f[2]}</b>`:''}</td><td>${f[3]}</td></tr>`).join('');
+      const example=Object.entries(t.row).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+      root.insertAdjacentHTML('beforeend',`<article class="table-card ${t.kind}" id="${t.n}"><header class="table-head"><div class="table-name"><span class="table-number">${String(i+1).padStart(2,'0')}</span><div><h3>${t.n}</h3><p>${t.cn} · ${t.desc}</p></div></div><span class="kind">${t.label}</span></header><div class="table-body"><section class="pane"><p class="pane-label">字段定义</p><table class="schema"><thead><tr><th>字段</th><th>类型</th><th>键</th><th>说明</th></tr></thead><tbody>${rows}</tbody></table></section><section class="pane"><p class="pane-label">示例记录</p><dl class="example">${example}</dl></section></div></article>`);
+    });
+    const links=[...nav.querySelectorAll('a')];
+    const observer=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('active',a.hash==='#'+e.target.id));}}),{rootMargin:'-70px 0px -70% 0px'});
+    document.querySelectorAll('.table-card').forEach(el=>observer.observe(el));
+  </script>
+</body>
+</html>
