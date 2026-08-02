@@ -2624,6 +2624,7 @@ TimetableApp.prototype.saveSalarySettings = function () {
         starLevel: Math.max(0, Math.min(5, Math.round(numberValue('salaryStarLevel', 0))))
     };
     localStorage.setItem('timetableSalarySettings', JSON.stringify(settings));
+    this.scheduleSqliteSync();
     this.closeSalarySettings();
     if (this._statsBaseCardLessons) {
         this.renderStatsCards(this._statsBaseCardLessons, { startDate: this._statsBaseCardStart, endDate: this._statsBaseCardEnd });

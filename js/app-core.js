@@ -516,14 +516,14 @@ class TimetableApp {
 
     saveData() {
         if (typeof this.invalidateStatsCache === 'function') this.invalidateStatsCache();
-        const data = {
+        const data = window.TimetableDataSchema.stampTimetableData({
             subjects: this.subjects,
             students: this.students,
             manualCourses: this.manualCourses,
             periods: this.periods,
             erpData: this.erpData,
             quickSettingsState: this.quickSettingsState
-        };
+        });
         let serialized = '';
         let backupWritten = false;
         try {
@@ -546,6 +546,7 @@ class TimetableApp {
                 }
             }
             localStorage.setItem('timetableData', serialized);
+            this.scheduleSqliteSync();
             return true;
         } catch (e) {
             if (backupWritten) {
@@ -565,11 +566,23 @@ class TimetableApp {
         }
     }
 
+    scheduleSqliteSync() {
+        const storage = window.electronAPI && window.electronAPI.storage;
+        if (!storage || typeof storage.saveSnapshot !== 'function') return;
+        try {
+            const backup = window.TimetableDataSchema.createFullBackup(localStorage);
+            const storedData = JSON.parse(localStorage.getItem('timetableData') || '{}');
+            backup.cacheUpdatedAt = storedData.exportedAt || backup.exportedAt;
+            storage.saveSnapshot(backup).catch(error => console.error('SQLite 同步失败，已保留 localStorage 数据:', error));
+        } catch (error) {
+            console.error('创建 SQLite 同步快照失败:', error);
+        }
+    }
+
     restoreRuntimeDataSnapshot(serialized) {
         if (!serialized) return false;
         try {
-            const parsed = JSON.parse(serialized);
-            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false;
+            const parsed = window.TimetableDataSchema.normalizeTimetableData(serialized);
             this.subjects = Array.isArray(parsed.subjects) && parsed.subjects.length ? parsed.subjects : createDefaultSubjects();
             this.students = Array.isArray(parsed.students) ? parsed.students : [];
             this.manualCourses = Array.isArray(parsed.manualCourses) ? parsed.manualCourses : [];
@@ -594,16 +607,14 @@ class TimetableApp {
 
         if (primaryData) {
             try {
-                parsed = JSON.parse(primaryData);
-                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = null;
+                parsed = window.TimetableDataSchema.normalizeTimetableData(primaryData);
             } catch (error) {
                 console.error('主课表数据损坏，尝试恢复备份:', error);
             }
         }
         if (!parsed && backupData) {
             try {
-                parsed = JSON.parse(backupData);
-                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = null;
+                parsed = window.TimetableDataSchema.normalizeTimetableData(backupData);
                 if (parsed) localStorage.setItem('timetableData', backupData);
             } catch (error) {
                 console.error('课表备份数据也无法读取:', error);
@@ -1638,9 +1649,25 @@ function bindStaticDeclarativeHandlers() {
 
 // Initialize app on DOMContentLoaded
 let app;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (navigator.userAgent.includes('Electron')) document.documentElement.classList.add('electron-app');
     if (window.electronAPI && window.electronAPI.platform === 'darwin') document.documentElement.classList.add('macos');
+    const storage = window.electronAPI && window.electronAPI.storage;
+    if (storage && typeof storage.initialize === 'function') {
+        try {
+            const legacyBackup = window.TimetableDataSchema.createFullBackup(localStorage);
+            const storedData = JSON.parse(localStorage.getItem('timetableData') || '{}');
+            legacyBackup.cacheUpdatedAt = storedData.exportedAt || null;
+            const result = await storage.initialize(legacyBackup);
+            if (result && result.snapshot) {
+                window.TimetableDataSchema.restoreFullBackup(localStorage, result.snapshot);
+            }
+            document.documentElement.dataset.storageSource = 'sqlite';
+        } catch (error) {
+            console.error('SQLite 初始化失败，继续使用 localStorage:', error);
+            document.documentElement.dataset.storageSource = 'localStorage';
+        }
+    }
     app = new TimetableApp();
     bindStaticDeclarativeHandlers();
 });

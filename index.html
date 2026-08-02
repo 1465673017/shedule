@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0037)https://2hanzi.com/kebiao/kebiao.html -->
 <html lang="zh-CN">
 
 <head>
@@ -1581,6 +1580,22 @@
                 </section>
                 <section class="export-section">
                     <div class="export-section-heading">
+                        <h4>完整数据备份</h4>
+                        <span>包含课表、设置、年级、课程关系和考勤记录</span>
+                    </div>
+                    <div class="export-options">
+                        <button type="button" class="export-option-card" data-onclick="app.createCompleteBackup()">
+                            <span class="export-option-title">创建完整备份</span>
+                            <span class="export-option-desc">保存一个包含全部应用数据的完整备份文件。</span>
+                        </button>
+                        <button type="button" class="export-option-card" data-onclick="app.restoreCompleteBackup()">
+                            <span class="export-option-title">恢复完整备份</span>
+                            <span class="export-option-desc">从完整备份或 SQLite 数据库文件恢复应用数据。</span>
+                        </button>
+                    </div>
+                </section>
+                <section class="export-section">
+                    <div class="export-section-heading">
                         <h4>导出课表</h4>
                         <span>导出当前显示的课表内容</span>
                     </div>
@@ -1644,6 +1659,7 @@
 
     <script src="./chart.umd.min.js"></script>
     <script src="./html2canvas.min.js"></script>
+    <script src="./js/data-schema.js"></script>
     <script src="./js/app-dialogs.js"></script>
     <script src="./js/app-erp.js"></script>
     <script src="./js/app-core.js"></script>

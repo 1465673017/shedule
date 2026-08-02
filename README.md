@@ -9,6 +9,28 @@ npm ci
 npm start
 ```
 
+## 数据备份与回归
+
+“导出数据”中的“创建完整备份”会生成一个 `.oragshedule-backup` 文件，包含课表、考勤、常规设置、年级和工资设置。恢复入口接受该完整备份以及 SQLite 数据库文件，不提供 JSON 备份导入或导出。
+
+教师端回归门禁：
+
+```bash
+npm run teacher:regression
+```
+
+数据格式和人工回归步骤见 `docs/DATA_FORMAT_V1.md` 与 `docs/TEACHER_REGRESSION_CHECKLIST.md`。
+
+## SQLite 数据层
+
+桌面应用首次启动时会先归档完整 localStorage JSON，再迁移到用户数据目录中的 `schedule.sqlite`。迁移完成后 SQLite 是启动数据源，localStorage 仅作为兼容缓存；转换或校验失败时会继续使用原缓存。
+
+数据库结构以 `sqlite-schema-preview.html` 为基础，正式字段、关系和状态规则见 `docs/SQLITE_SCHEMA_V1.md`。数据层测试：
+
+```bash
+npm run scheduler:data:test
+```
+
 ## macOS 打包
 
 macOS 产物必须在 macOS（本机或 GitHub Actions）上构建：

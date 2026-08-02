@@ -21,7 +21,7 @@ make_portable_zip() {
   rm -rf "$stage_dir"
   mkdir -p "$package_dir/data"
   cp -R "$source_app" "$package_dir/"
-  touch "$package_dir/.kebiao-portable"
+  touch "$package_dir/.oragshedule-portable"
   ditto -c -k --sequesterRsrc --keepParent "$package_dir" "$output"
   rm -rf "$stage_dir"
   echo "已生成：$output"

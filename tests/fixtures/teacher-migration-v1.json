@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "appVersion": "1.2.4",
+  "exportedAt": "2026-08-02T10:00:00.000Z",
+  "type": "class-schedule-full-backup",
+  "data": {
+    "timetableData": {
+      "schemaVersion": 1,
+      "appVersion": "1.2.4",
+      "exportedAt": "2026-08-02T10:00:00.000Z",
+      "subjects": [
+        { "id": "subject-math", "name": "数学", "teacher": "教师甲", "color": "#E3F2FD" }
+      ],
+      "students": [
+        { "id": "student-001", "name": "学员甲", "grade": "七年级", "isAudition": false },
+        { "id": "student-002", "name": "试听学员乙", "grade": "七年级", "isAudition": true },
+        { "id": "student-003", "name": "已结课学员丙", "grade": "八年级", "isCompleted": true }
+      ],
+      "manualCourses": [],
+      "periods": [
+        { "name": "第1节", "time": "08:00-10:00" },
+        { "name": "第2节", "time": "10:10-12:10" }
+      ],
+      "quickSettingsState": { "totalPeriods": 2, "firstStart": "08:00", "periodDuration": 120, "breakDuration": 10 },
+      "erpData": {
+        "courses": [
+          { "id": "course-weekly", "subjectId": "subject-math", "date": "2026-07-27", "period": 0, "students": ["student-001"], "recurrence": "weekly" },
+          { "id": "course-temporary", "subjectId": "subject-math", "date": "2026-07-30", "period": 1, "students": ["student-002"], "recurrence": "temporary" },
+          { "id": "course-cross-week-exception", "subjectId": "subject-math", "date": "2026-08-03", "period": 1, "students": ["student-001"], "sourceCourseId": "course-weekly", "exceptionType": "rescheduled" }
+        ],
+        "attendance": [
+          { "courseId": "course-weekly", "studentId": "student-001", "status": "leave", "actualMinutes": 0 },
+          { "courseId": "course-temporary", "studentId": "student-002", "status": "present", "actualMinutes": 60 }
+        ]
+      }
+    },
+    "timetableSettings": {
+      "theme": "default",
+      "segmentedScheduling": true,
+      "stages": [{ "id": "stage-summer", "name": "暑期阶段", "startDate": "2026-07-01", "endDate": "2026-08-31" }]
+    },
+    "timetableGrades": [
+      { "id": "g7", "name": "七年级", "color": "#FFECB3" },
+      { "id": "g8", "name": "八年级", "color": "#F3E5F5" }
+    ],
+    "timetableDataBackup": null,
+    "timetableDataBackupAt": null
+  }
+}

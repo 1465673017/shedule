@@ -133,13 +133,13 @@ async function prepareView(page, view) {
 }
 
 (async () => {
-    const testUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kebiao-macos-screenshots-'));
+    const testUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'oragshedule-macos-screenshots-'));
     fs.rmSync(outputDir, { recursive: true, force: true });
     fs.mkdirSync(outputDir, { recursive: true });
 
     const launchEnv = {
         ...process.env,
-        KEBIAO_E2E_USER_DATA_DIR: testUserDataDir
+        ORAGSCHEDULE_E2E_USER_DATA_DIR: testUserDataDir
     };
     delete launchEnv.ELECTRON_RUN_AS_NODE;
     const appProcess = await electron.launch({ args: [rootDir], env: launchEnv });

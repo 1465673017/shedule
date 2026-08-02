@@ -21,7 +21,7 @@ assert.match(mainSource, /50 \* 1024 \* 1024/);
 assert.match(mainSource, /LEGACY_APP_NAME = 'A大橙子课时统计（内测版）'/);
 assert.match(mainSource, /fs\.renameSync\(legacyPath, formalPath\)/);
 assert.match(mainSource, /app\.setPath\('userData', legacyPath\)/);
-assert.match(mainSource, /\.kebiao-portable/);
+assert.match(mainSource, /\.oragshedule-portable/);
 assert.match(mainSource, /path\.join\(portableRoot, 'data'\)/);
 assert.match(mainSource, /isolatedTestDataPath \|\| portableUserDataPath/);
 const indexSource = read('index.html');
