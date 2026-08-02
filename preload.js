@@ -18,10 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         listPublishedChanges: (since) => ipcRenderer.invoke('teacher-list-published-changes', since),
         markAttendance: (input) => ipcRenderer.invoke('teacher-mark-attendance', input),
         setActualMinutes: (input) => ipcRenderer.invoke('teacher-set-actual-minutes', input),
-        completeSession: (sessionId) => ipcRenderer.invoke('teacher-complete-session', sessionId),
-        submitChangeRequest: (input) => ipcRenderer.invoke('teacher-submit-change-request', input),
-        cancelChangeRequest: (requestId) => ipcRenderer.invoke('teacher-cancel-change-request', requestId),
-        listChangeRequests: () => ipcRenderer.invoke('teacher-list-change-requests')
+        completeSession: (sessionId) => ipcRenderer.invoke('teacher-complete-session', sessionId)
     }),
     saveFile: (data, encoding, defaultName, mimeType, fileExt) => {
         return ipcRenderer.invoke('save-file', { data, encoding, defaultName, mimeType, fileExt });

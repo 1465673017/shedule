@@ -303,6 +303,12 @@
         };
     }
 
+    function markImportedStudentsTemporary(app, cellKey, weekStart, students, scheduleService = window.ScheduleErpService) {
+        students.forEach(student => {
+            scheduleService.setRecurrenceStatus(app, cellKey, String(student.id), 'temporary', weekStart);
+        });
+    }
+
     function versionHasCourse(version) {
         return !!(version && !version._cutoff && (version.subject || (Array.isArray(version.student) && version.student.length > 0)));
     }
@@ -424,6 +430,7 @@
                     source: 'course-import',
                     recalculateStage: true
                 });
+                markImportedStudentsTemporary(app, cellKey, weekStart, students);
                 const erp = window.ScheduleErpService.ensureErpData(app);
                 const instance = erp.courseInstances.find(item => item.cellKey === cellKey && item.weekStart === weekStart);
                 if (instance) {
@@ -470,6 +477,7 @@
         importCourses,
         shiftCoursesToStageStarts,
         buildImportPlan,
+        markImportedStudentsTemporary,
         hasCoursesInRange,
         clearCoursesInRange,
         normalizeJsonText,

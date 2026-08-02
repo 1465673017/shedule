@@ -5,9 +5,8 @@ const path = require('path');
 const crypto = require('crypto');
 const { DatabaseSync, backup } = require('node:sqlite');
 const { MIGRATIONS } = require('./migrations');
-const { ScheduleChangeRequestRepository, ScheduleVersionRepository, SessionRepository, TeacherRepository } = require('./repositories');
+const { ScheduleVersionRepository, SessionRepository, TeacherRepository } = require('./repositories');
 const { AttendanceService } = require('../domain/attendance-service');
-const { ScheduleChangeService } = require('../domain/schedule-change-service');
 const { TeacherScheduleService } = require('../domain/teacher-schedule-service');
 
 const DEFAULT_IDS = Object.freeze({
@@ -57,10 +56,8 @@ class ScheduleDatabase {
         this.teachers = new TeacherRepository(this.db);
         this.sessions = new SessionRepository(this.db);
         this.scheduleVersions = new ScheduleVersionRepository(this.db);
-        this.changeRequests = new ScheduleChangeRequestRepository(this.db);
         this.teacherSchedule = new TeacherScheduleService(this);
         this.attendance = new AttendanceService(this);
-        this.scheduleChanges = new ScheduleChangeService(this);
     }
 
     close() {
@@ -187,7 +184,7 @@ class ScheduleDatabase {
 
     clearBusinessTables() {
         const tables = [
-            'schedule_change_requests', 'attendance_records', 'session_participants', 'exception_rules', 'recurrence_rules',
+            'attendance_records', 'session_participants', 'exception_rules', 'recurrence_rules',
             'course_instances', 'activity_sessions', 'student_courses', 'course_templates',
             'resources', 'students', 'classes', 'subjects', 'head_teachers', 'grades',
             'time_periods', 'schedule_versions', 'teachers', 'campuses', 'organizations'
@@ -196,14 +193,9 @@ class ScheduleDatabase {
     }
 
     preserveTeacherDomainData() {
-        const tableExists = name => this.db.prepare(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?"
-        ).get(name);
-        if (!tableExists('schedule_change_requests')) return { versions: [], sessions: [], requests: [] };
         return {
             versions: this.db.prepare("SELECT * FROM schedule_versions WHERE status='DRAFT'").all(),
-            sessions: this.db.prepare("SELECT * FROM activity_sessions WHERE status='DRAFT'").all(),
-            requests: this.db.prepare('SELECT * FROM schedule_change_requests').all()
+            sessions: this.db.prepare("SELECT * FROM activity_sessions WHERE status='DRAFT'").all()
         };
     }
 
@@ -216,7 +208,6 @@ class ScheduleDatabase {
         };
         preserved.versions.forEach(row => insertRow('schedule_versions', row));
         preserved.sessions.forEach(row => insertRow('activity_sessions', row));
-        preserved.requests.forEach(row => insertRow('schedule_change_requests', row));
     }
 
     replaceNormalizedData(fullBackup) {

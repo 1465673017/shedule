@@ -124,6 +124,23 @@ assert.strictEqual(
     'student actual time near both slot boundaries should retain the explicit 120 minutes'
 );
 
+const temporaryCalls = [];
+CourseDataImportService.markImportedStudentsTemporary(
+    {},
+    '2-afternoon-0',
+    '2026-07-27',
+    [{ id: 'student-1' }, { id: 'student-2' }],
+    {
+        setRecurrenceStatus(_app, cellKey, studentId, status, weekStart) {
+            temporaryCalls.push({ cellKey, studentId, status, weekStart });
+        }
+    }
+);
+assert.deepStrictEqual(temporaryCalls, [
+    { cellKey: '2-afternoon-0', studentId: 'student-1', status: 'temporary', weekStart: '2026-07-27' },
+    { cellKey: '2-afternoon-0', studentId: 'student-2', status: 'temporary', weekStart: '2026-07-27' }
+], 'every student added by course import must use a temporary relationship');
+
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);
 const coreSource = read('js/app-core.js');
 assert.match(coreSource, /timetableDataBackup/);

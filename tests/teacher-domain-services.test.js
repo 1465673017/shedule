@@ -68,19 +68,8 @@ function backup() {
         ]);
         assert.deepStrictEqual(conflicts[2].conflictingSessionIds, ['existing']);
 
-        const request = database.scheduleChanges.submit(teacherId, {
-            sessionId: 'ci1', targetDate: '2026-07-30', targetStartTime: '10:00',
-            targetEndTime: '12:00', reason: '与教研活动冲突'
-        });
-        assert.strictEqual(request.status, 'PENDING');
-        const approved = database.scheduleChanges.approve(request.id, 'scheduler-admin');
-        assert.strictEqual(approved.request.status, 'APPROVED');
-        assert.strictEqual(database.sessions.getById(approved.draftSessionId).status, 'DRAFT');
-        assert.strictEqual(database.sessions.getById('ci1').status, 'PUBLISHED', 'approval must not overwrite published session');
-
         database.replaceSnapshot({ ...sourceBackup, exportedAt: '2026-08-03T10:00:00.000Z' });
-        assert.strictEqual(database.changeRequests.getById(request.id).status, 'APPROVED', 'compatibility sync must preserve requests');
-        assert.strictEqual(database.sessions.getById(approved.draftSessionId).status, 'DRAFT', 'compatibility sync must preserve drafts');
+        assert.strictEqual(database.sessions.getById('draft-hidden').status, 'DRAFT', 'compatibility sync must preserve drafts');
 
         assert.strictEqual(database.attendance.markAttendance(teacherId, 'ci1', 's1', 'present').status, 'present');
         assert.strictEqual(database.attendance.setActualMinutes(teacherId, 'ci1', 's1', 75).actual_minutes, 75);

@@ -232,29 +232,11 @@ const MIGRATIONS = [{
 }, {
     version: 2,
     name: 'teacher_domain_services',
-    sql: `
-        CREATE TABLE IF NOT EXISTS schedule_change_requests (
-            id TEXT PRIMARY KEY,
-            organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-            session_id TEXT NOT NULL REFERENCES activity_sessions(id),
-            teacher_id TEXT NOT NULL REFERENCES teachers(id),
-            target_date TEXT,
-            target_start_time TEXT,
-            target_end_time TEXT,
-            reason TEXT NOT NULL,
-            status TEXT NOT NULL CHECK (status IN ('PENDING','APPROVED','REJECTED','CANCELLED')),
-            reviewer_id TEXT,
-            review_note TEXT,
-            draft_session_id TEXT REFERENCES activity_sessions(id),
-            reviewed_at TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_change_requests_teacher_status
-            ON schedule_change_requests(teacher_id, status, created_at);
-        CREATE INDEX IF NOT EXISTS idx_change_requests_session
-            ON schedule_change_requests(session_id, created_at);
-    `
+    sql: `SELECT 1;`
+}, {
+    version: 3,
+    name: 'remove_schedule_change_requests',
+    sql: `DROP TABLE IF EXISTS schedule_change_requests;`
 }];
 
 module.exports = { MIGRATIONS };

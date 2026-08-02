@@ -297,21 +297,6 @@ ipcMain.handle('teacher-complete-session', (_event, sessionId) => {
     return database.attendance.completeSession(teacherId, String(sessionId));
 });
 
-ipcMain.handle('teacher-submit-change-request', (_event, input) => {
-    const { database, teacherId } = teacherContext();
-    return database.scheduleChanges.submit(teacherId, input || {});
-});
-
-ipcMain.handle('teacher-cancel-change-request', (_event, requestId) => {
-    const { database, teacherId } = teacherContext();
-    return database.scheduleChanges.cancel(teacherId, String(requestId));
-});
-
-ipcMain.handle('teacher-list-change-requests', () => {
-    const { database, teacherId } = teacherContext();
-    return database.changeRequests.listForTeacher(teacherId);
-});
-
 ipcMain.on('window-control', (event, action) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win || win.isDestroyed()) return;

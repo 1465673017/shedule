@@ -14,27 +14,20 @@
 <header><div class="wrap head"><div><h1>教师端扩展排课端工作台</h1><p class="sub">保留现有教师端，在共享数据底座上新增人工排课、自动求解、发布与同步能力。</p></div><div class="meta">教师端项目<strong>E:\VScdoe\class_shedule</strong>规划日期：2026-08-02</div></div></header>
 <main class="wrap">
 <div class="toolbar"><div class="progressbox"><div class="progresslabel"><span>总体迁移进度</span><strong id="progressText">0%</strong></div><div class="track" role="progressbar" aria-label="总体进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progressBar"></span></div></div><button class="btn" id="printBtn">打印计划</button><button class="btn danger" id="resetBtn">清空进度</button></div>
-<section class="grid"><article class="card decision"><div class="pad"><span class="eyebrow">重新规划后的结论</span><h2>教师端保留，新建排课端工作区</h2><p>现有软件继续承担单个教师的课表、考勤、实际课时和统计。排课端作为新增模块管理全部教师、场地、课程需求和课表发布。两端共用领域模型与 SQLite，但界面和权限保持独立。</p><ul class="reasons"><li><b>01</b><span><strong>教师端规则继续有效</strong> 一个课位一门课应解释为“同一教师不能同时授课”。</span></li><li><b>02</b><span><strong>排课端允许并行课程</strong> 不同教师和场地在同一时间可以存在多门课程。</span></li><li><b>03</b><span><strong>Timefold 只服务排课端</strong> 负责全局草稿与优化，不替代教师端的即时冲突提示。</span></li></ul></div></article><aside class="card warning"><div class="pad"><h2>必须守住的边界</h2><ul><li>不要把排课管理功能继续堆进教师端原型方法。</li><li>教师端只查看自己的已发布课程。</li><li>排课草稿不能直接出现在教师端。</li><li>教师调课应提交申请，不能直接改正式计划。</li><li>Timefold 不直接读写界面和 SQLite。</li></ul></div></aside></section>
+<section class="grid"><article class="card decision"><div class="pad"><span class="eyebrow">重新规划后的结论</span><h2>教师端保留，新建排课端工作区</h2><p>现有软件继续承担教师课表、考勤、实际课时和统计。排课端新增课程需求、教师与学员可用时间、候选方案和自动求解能力。</p><ul class="reasons"><li><b>01</b><span><strong>教师端规则继续有效</strong> 一个课位一门课表示同一教师不能同时授课。</span></li><li><b>02</b><span><strong>排课模型保持精简</strong> 只处理教师、学员、课程、时间和规则。</span></li><li><b>03</b><span><strong>Timefold 只负责候选方案</strong> 不替代教师端的即时冲突提示。</span></li></ul></div></article><aside class="card warning"><div class="pad"><h2>必须守住的边界</h2><ul><li>不要把排课管理功能继续堆进教师端原型方法。</li><li>排课数据通过应用服务和 SQLite 保存。</li><li>候选方案确认前不能覆盖当前课表。</li><li>Timefold 不直接读写界面和 SQLite。</li></ul></div></aside></section>
 <section class="card snapshot"><div class="pad"><h2>产品边界</h2><div class="facts"><div class="fact"><span>现有产品</span><strong>教师端，继续维护</strong></div><div class="fact"><span>新增产品面</span><strong>管理员排课端</strong></div><div class="fact"><span>共享存储</span><strong>单机 SQLite</strong></div><div class="fact"><span>教师端核心</span><strong>课表、考勤、课时</strong></div><div class="fact"><span>排课端核心</span><strong>教师、资源、需求、发布</strong></div><div class="fact"><span>课表状态</span><strong>草稿 / 已发布 / 已完成</strong></div><div class="fact"><span>冲突处理</span><strong>即时校验 + 全局求解</strong></div><div class="fact"><span>求解器</span><strong>Timefold 独立边界</strong></div></div></div></section>
 <section class="roadmap"><h2>分阶段执行</h2><div class="tabs" role="tablist" id="tabs"></div><div id="panels"></div></section>
 <section class="card architecture"><div class="pad"><h2>目标产品结构</h2><div class="flow" aria-label="目标架构"><div class="node"><strong>教师端</strong><span>我的课表与考勤</span></div><div class="node"><strong>排课端</strong><span>组织级排课管理</span></div><div class="node"><strong>共享应用服务</strong><span>发布、调课、冲突</span></div><div class="node"><strong>共享领域模型</strong><span>教师、活动、资源</span></div><div class="node"><strong>SQLite</strong><span>单机事实来源</span></div><div class="node"><strong>Timefold</strong><span>生成排课草稿</span></div></div></div></section>
 <footer>进度保存在当前浏览器中。新版计划明确以教师端为现有产品，以排课端为新增工作区。</footer>
 </main>
 <script>
-const legacyPhases=[
-{name:'冻结基线',time:'2-4 天',goal:'确保任何改造都可以测试、比较和回滚。',tasks:[['创建迁移分支并打基线标签','分支 migration/sqlite-domain；标签 desktop-v1.2.4-baseline。'],['修复 package.json 和 README 中文乱码','统一 UTF-8，避免安装包名称、测试和迁移数据继续污染。'],['保存脱敏真实业务数据样本','覆盖周期课程、调课、请假、0 课时、结课和跨阶段课程。'],['为旧数据定义 schemaVersion','以后禁止无版本地修改持久化字段。'],['补齐一键完整备份和恢复测试','同时包含课表、设置、年级、ERP 数据和考勤。'],['记录 10 个关键用户流程','新建、拖拽、复制周、调课、考勤、结课、统计和导出等。']],accept:['npm test 全部通过','真实样本可完整导出并恢复','核心流程有书面清单','旧安装包仍可正常使用']},
-{name:'SQLite 数据层',time:'1-2 周',goal:'替换 localStorage，暂不改变用户界面。',tasks:[['定义数据库表和迁移版本','覆盖 subject、student、course_instance、enrollment、recurrence、exception、attendance。'],['在 Electron 主进程建立 SQLite Repository','渲染进程只能通过受控 IPC 访问数据。'],['建立 StorageAdapter 接口','同时实现 LocalStorageAdapter 与 SqliteAdapter。'],['实现首次启动迁移向导','先备份，再导入和校验，成功后才切换读取源。'],['实现事务与数据库备份','课程、学员关系和重复规则必须原子保存。'],['执行新旧双读校验','比较课程数量、关系、课时统计和每周课表。']],accept:['断网重启后数据完整','迁移失败自动回滚','旧 JSON 仍可恢复','统计结果与旧版一致']},
-{name:'领域模块拆分',time:'2-4 周',goal:'让业务规则脱离 DOM，并可被求解器复用。',tasks:[['建立通用资源模型','使用 Instructor、Participant、Activity、Resource、Availability。'],['从 app-erp.js 提取 CourseService','迁移课程实例、周期、异常和结课逻辑。'],['提取 AttendanceService 与 StatisticsService','服务接收纯数据并返回纯结果。'],['建立冲突检测服务','先实现教师、学员组、场地、容量和可用时间检查。'],['为领域服务增加单元测试','复用现有 ERP 样本，逐项迁移而非删除旧测试。'],['增加应用服务门面','UI 逐步停止直接修改 this.erpData。']],accept:['领域测试不依赖 Electron 与 DOM','服务不读取 localStorage','UI 不直接修改数据库对象','旧功能行为一致']},
-{name:'Timefold 求解器',time:'3-6 周',goal:'先生成可解释的草稿方案，再考虑自动落表。',tasks:[['创建 Java 21 + Spring Boot 子项目','放在 solver/，使用 Timefold Spring Boot Starter。'],['定义规划模型','ActivitySession 为规划实体；Timeslot、Instructor、Resource 为变量或事实。'],['实现第一批硬约束','人员、场地、设备不冲突；容量、资质和可用时间满足。'],['实现可解释的软约束','减少空档、跨校区、换老师和已发布课表变更。'],['建立本机 HTTP 适配器','提交规划数据、查看进度、取消任务、读取解释。'],['只以草稿方案方式交付','管理员确认后才写入正式课表。']],accept:['硬约束分数为 0','求解可以取消','不覆盖现有正式课表','每个扣分项可以解释']},
-{name:'商业化准备',time:'持续迭代',goal:'稳定交付单机版，并为多校区服务端版本留边界。',tasks:[['引入 Organization 与 Campus','即使单机只有一家机构也保留组织边界。'],['将约束规则参数化','按行业配置容量、资质、间隔、设备和营业时间。'],['增加课表版本、发布和审计','记录修改人、时间、原因并支持回滚。'],['建立授权与许可证机制','覆盖离线授权、设备迁移和续费。'],['定义同步 API','保持 Repository 与 DTO 可序列化，暂不做云端。'],['选择一个细分行业试点','验证真实约束、手工调整率、求解时间和付费意愿。']],accept:['机构数据边界明确','规则可配置且有模板','发布课表可审计回滚','试点客户完成真实排课周期']}
-];
 const phases=[
 {name:'冻结教师端',time:'2-4 天',goal:'确认现有教师工作流并建立不可回退的测试基线。',tasks:[['创建扩展分支与教师端标签','建立 feature/scheduler-workspace 分支，给当前教师端打 desktop-teacher-v1.2.4 标签。'],['修复源码和配置中的中文乱码','统一 package.json、README、源码提示和测试数据为 UTF-8。'],['确认教师端 10 个核心流程','覆盖排课、周期课、临时课、调课、试听、考勤、结课、统计和导出。'],['保存脱敏教师业务样本','样本必须包含跨周课程、异常规则、0 课时和实际时间调整。'],['给现有数据增加 schemaVersion','任何后续迁移都必须从明确版本开始。'],['建立教师端回归门禁','每次排课端提交都必须先通过现有 npm test。']],accept:['现有 5 组测试全部通过','教师端安装包可独立使用','业务样本可备份恢复','乱码不再进入新数据']},
-{name:'共享数据底座',time:'1-2 周',goal:'迁移到 SQLite，并建立教师端与排课端共用的事实来源。',tasks:[['设计组织级 SQLite 表结构','新增 organization、campus、teacher、resource、activity_session、schedule_version。'],['为旧数据创建默认教师','迁移时生成 currentTeacherId，并把现有课程全部归属该教师。'],['区分草稿、已发布和已完成','ActivitySession 增加 DRAFT、PUBLISHED、COMPLETED 状态。'],['建立 Repository 与事务边界','课程、参与者、周期和异常规则必须原子保存。'],['实现 localStorage 到 SQLite 迁移器','先备份、再迁移、校验数量与关联，失败自动回滚。'],['建立数据库备份与恢复','支持按版本备份 SQLite 和导出兼容 JSON。']],accept:['教师端改用 SQLite 后行为不变','旧数据可自动升级','草稿不会进入教师端','迁移失败不损坏原数据']},
-{name:'教师端规范化',time:'1-3 周',goal:'保持界面体验，同时让教师端基于共享领域服务运行。',tasks:[['把教师从科目字符串改为实体','subject.teacher 迁移为 activity_session.teacherId，显示名称通过 Teacher 查询。'],['提取 TeacherScheduleService','教师端只查询 currentTeacherId 的已发布和已完成课程。'],['提取 TeacherConflictService','统一处理教师时间重叠、1v1、人数上限和试听规则。'],['提取 AttendanceService','考勤和实际课时不再直接修改 UI 内存对象。'],['增加调课申请模型','教师提出 ScheduleChangeRequest，由排课端审批。'],['禁止教师端修改组织级草稿','通过应用服务和权限边界阻止直接编辑排课草稿。']],accept:['教师端只看到自己的课程','即时冲突提示保持可用','考勤与课时统计一致','调课不会直接覆盖正式课表']},
-{name:'人工排课端',time:'3-5 周',goal:'先完成不用求解器也可交付的组织级排课工作区。',tasks:[['增加工作区与角色切换','同一 Electron 应用内提供教师端和排课管理两个独立入口。'],['建立教师与可用时间管理','录入技能、资质、校区、最大日课时和不可用时间。'],['建立校区、场地和设备管理','场地具有容量、类型、设备和营业时间。'],['建立课程需求池','需求包含学员组、教师要求、课次、时长、时间窗口和资源要求。'],['实现多视图人工排课板','支持按教师、场地、校区、学员查看并允许并行课程。'],['实现组织级实时冲突检查','检测共享教师、学员、场地和独占设备的时间重叠。']],accept:['不同教师可同时上课','同一资源不可重叠','草稿可手工调整','排课端不破坏教师端流程']},
-{name:'Timefold 草稿',time:'3-6 周',goal:'让 Timefold 生成组织级排课建议，不直接修改正式课表。',tasks:[['创建独立 solver 子项目','使用 Java 21、Spring Boot 和 Timefold Starter。'],['定义规划实体与问题事实','ActivitySession 为规划实体；教师、场地、时间窗和需求为事实。'],['迁移第一批硬约束','教师、学员、场地不冲突；容量、资质和可用时间满足。'],['增加培训机构软约束','减少空档、跨校区、换老师、连续授课和已发布课程改动。'],['建立求解任务 API','支持提交、查询进度、取消、结果比较和 Constraint Match 解释。'],['实现草稿比较与人工确认','管理员比较原方案和候选方案，确认后才能进入待发布状态。']],accept:['求解结果无硬冲突','任务可取消且不丢数据','每个扣分项可解释','求解器不能直接发布课程']},
-{name:'发布与商业化',time:'持续迭代',goal:'完成排课端到教师端的发布闭环，并为多校区商业交付准备。',tasks:[['实现课表版本与发布','草稿审批后生成不可变发布版本，并记录发布人和时间。'],['实现教师端增量更新','发布后教师端刷新自己的新增、变更和取消课程。'],['实现变更通知与确认','显示调课原因、变更前后时间和教师确认状态。'],['建立审计与回滚','记录排课、审批、发布、考勤和人工覆盖操作。'],['加入组织、校区与授权边界','单机版也保留 organizationId、campusId 和许可证能力。'],['选择一个培训行业试点','用真实机构验证排课时间、人工调整率、接受率和付费意愿。']],accept:['教师只收到已发布课程','发布历史可追踪回滚','调课形成完整审批链','试点完成真实排课周期']}
+{name:'共享数据底座',time:'1-2 周',goal:'迁移到 SQLite，并建立教师端与排课端共用的事实来源。',tasks:[['设计精简 SQLite 表结构','建立 teacher、student、subject、activity_session 和 schedule_snapshot。'],['为旧数据创建默认教师','迁移时生成 currentTeacherId，并把现有课程全部归属该教师。'],['区分当前、候选和已完成','候选方案独立保存，不覆盖当前课程。'],['建立 Repository 与事务边界','课程、参与者、周期和异常规则必须原子保存。'],['实现 localStorage 到 SQLite 迁移器','先备份、再迁移、校验数量与关联，失败自动回滚。'],['建立数据库备份与恢复','支持按版本备份 SQLite 和导出兼容 JSON。']],accept:['教师端改用 SQLite 后行为不变','旧数据可自动升级','候选方案不覆盖当前课表','迁移失败不损坏原数据']},
+{name:'教师端规范化',time:'1-3 周',goal:'保持界面体验，同时让教师端基于共享领域服务运行。',tasks:[['把教师从科目字符串改为实体','subject.teacher 迁移为 activity_session.teacherId，显示名称通过 Teacher 查询。'],['提取 TeacherScheduleService','教师端通过统一服务查询当前教师的课程。'],['提取 TeacherConflictService','统一处理教师时间重叠、1v1、人数上限和试听规则。'],['提取 AttendanceService','考勤和实际课时不再直接修改 UI 内存对象。']],accept:['教师端课程完整显示','即时冲突提示保持可用','考勤与课时统计一致','教师可以直接修改自己的课表']},
+{name:'人工排课端',time:'2-4 周',goal:'先完成不用求解器也可交付的精简排课工作区。',tasks:[['增加排课工作区切换','提供教师日常课表与排课准备两个入口。'],['建立教师与学员可用时间','记录周规则、日期例外和不可用时间。'],['建立课程需求池','需求包含学员、课次、时长和时间窗口。'],['实现人工排课板','支持按教师、学员和时间查看并直接调整。'],['实现实时冲突检查','检测教师、学员、人数和时间窗口冲突。']],accept:['单机无需登录即可使用','课程可直接调整','冲突在保存前提示','现有教师端流程稳定']},
+{name:'Timefold 草稿',time:'3-6 周',goal:'让 Timefold 生成本机排课建议，确认前不修改当前课表。',tasks:[['创建独立 solver 子项目','使用 Java 21、Spring Boot 和 Timefold Starter。'],['定义规划实体与问题事实','ActivitySession 为规划实体；时间段为规划变量，教师、学员和规则为问题事实。'],['迁移第一批硬约束','教师和学员时间不冲突；人数、1v1、试听和可用时间满足。'],['增加实用软约束','减少空档、避免连续授课过长并均匀分布课程。'],['建立求解任务 API','支持提交、查询进度、取消、结果比较和 Constraint Match 解释。'],['实现方案比较与人工确认','比较当前课表和候选方案，确认后才应用。']],accept:['求解结果无硬冲突','任务可取消且不丢数据','每个扣分项可解释','确认前不修改当前课表']},
+{name:'发布与商业化',time:'持续迭代',goal:'完成课表版本、同步、审计和商业交付准备。',tasks:[['实现课表版本与发布','生成不可变发布版本，并记录发布人和时间。'],['实现教师端增量更新','刷新新增、变更和取消课程。'],['实现变更通知与确认','显示变更前后时间和确认状态。'],['建立审计与回滚','记录排课、发布、考勤和人工覆盖操作。'],['加入组织与授权边界','保留 organizationId 和许可证能力。'],['选择一个培训行业试点','验证排课时间、人工调整率、接受率和付费意愿。']],accept:['教师只收到已发布课程','发布历史可追踪回滚','变更流程可追踪','试点完成真实排课周期']}
 ];
 const specs=[
 [
@@ -46,8 +39,8 @@ const specs=[
 {steps:['保留现有 npm test，并在 package.json 新增 teacher:regression 脚本。','在 CI 中要求教师端回归先通过，再运行新增排课端测试。','保存失败日志和测试报告，禁止跳过失败用例合并。'],out:'教师端不可回退的持续集成门禁。'}
 ],
 [
-{steps:['先画实体关系图，明确组织、校区、教师、场地、课程活动和课表版本的主外键。','为业务表统一增加 id、created_at、updated_at，组织级表增加 organization_id。','使用递增 migration 编号创建表、索引、唯一约束和外键。'],out:'SQLite ER 图、建表迁移和字段字典。'},
-{steps:['迁移开始时创建默认 Organization、Campus 和 Teacher。','把现有 subject.teacher 文本保存为兼容字段，并将课程关联到默认 teacher_id。','记录旧 ID 到新 ID 的映射，迁移后检查孤儿关系。'],out:'旧教师数据到新实体的确定性映射。'},
+{steps:['先画实体关系图，明确教师、学员、科目、课程活动和方案快照的主外键。','为业务表统一增加 id、created_at、updated_at。','使用递增 migration 编号创建表、索引、唯一约束和外键。'],out:'SQLite ER 图、建表迁移和字段字典。'},
+{steps:['迁移开始时创建默认 Teacher。','把现有 subject.teacher 文本保存为兼容字段，并将课程关联到默认 teacher_id。','记录旧 ID 到新 ID 的映射，迁移后检查孤儿关系。'],out:'旧教师数据到新实体的确定性映射。'},
 {steps:['在 activity_session 增加 status 和 schedule_version_id。','定义 DRAFT 只供排课端读取，PUBLISHED 供教师端读取，COMPLETED 禁止普通修改。','为非法状态转换增加应用服务校验和测试。'],out:'课表状态机、转换规则和权限测试。'},
 {steps:['定义 TeacherRepository、SessionRepository、ScheduleVersionRepository 接口。','在 Electron 主进程实现 SQLite Repository，渲染进程只走 IPC。','课程、参与者、重复与异常规则放入同一事务提交。'],out:'可测试的 Repository、IPC 契约和事务边界。'},
 {steps:['启动时检测旧 localStorage 与数据库迁移标记。','迁移前生成 JSON 备份，迁移后比较主体数量、关系数量和关键统计。','只有全部校验成功才写 migration_completed，失败回滚并继续使用旧数据。'],out:'可回滚、可重复执行的数据迁移器。'},
@@ -58,22 +51,19 @@ const specs=[
 {steps:['建立 getMySchedule、getSessionDetail、listPublishedChanges 查询。','所有查询必须传 currentTeacherId，并只返回 PUBLISHED 或 COMPLETED。','把当前课表渲染逐步改为调用服务，而不是遍历 this.erpData。'],out:'教师课表查询服务及其权限测试。'},
 {steps:['把最大人数、1v1、试听唯一和时间重叠规则移入纯函数服务。','冲突结果返回 code、message、conflictingSessionIds，不直接 alert。','拖拽和表单统一消费该结果，并为每条规则建立单元测试。'],out:'教师端统一 ConflictService 和可解释冲突对象。'},
 {steps:['定义 markAttendance、setActualMinutes、completeSession 命令。','在事务中更新考勤、实际时长和完成状态，并使统计缓存失效。','用旧样本比较迁移前后的课时统计结果。'],out:'脱离 DOM 的考勤应用服务和一致性测试。'},
-{steps:['新增 schedule_change_request 表和 PENDING、APPROVED、REJECTED、CANCELLED 状态。','教师只能对已发布且未完成课程提交目标时间与原因。','排课端审批时生成新草稿版本，不直接覆盖原发布记录。'],out:'调课申请、审批状态和历史记录。'},
-{steps:['在 IPC 和应用服务层同时检查角色与课表状态。','教师端隐藏草稿入口，并拒绝对 DRAFT 的读取和修改。','添加绕过 UI 直接调用 IPC 的安全回归测试。'],out:'教师端与排课草稿之间的双层权限隔离。'}
 ],
 [
 {steps:['在应用壳增加明确的教师端与排课管理工作区入口。','建立 scheduler 模块目录、路由和独立状态，不复用教师端全局 TimetableApp 状态。','没有管理员角色时完全隐藏并拒绝加载排课端数据。'],out:'独立的排课工作区与角色控制。'},
-{steps:['为教师录入技能、资质、所属校区、可用时间和工时上限。','将可用时间建成日期区间或周规则，并支持临时例外。','增加批量导入和重叠可用时间校验。'],out:'可供人工排课和 Timefold 使用的教师资源档案。'},
-{steps:['建立 Campus、Resource、Equipment 和 ResourceCapability。','场地记录容量、类型、营业时间和不可用维护时段。','删除场地前检查未来课程引用，禁止产生孤儿数据。'],out:'校区、场地、设备及其可用性数据。'},
-{steps:['建立 SchedulingDemand，保存课程类型、学员组、课次、时长和时间窗口。','保存所需教师技能、场地能力、设备和固定条件。','支持需求拆分为具体 ActivitySession 草稿实例。'],out:'从业务需求到待排课程实例的转换流程。'},
-{steps:['提供教师、场地、校区和学员四种课表视图。','同一时间允许不同教师和不同场地的课程并行显示。','拖拽后先运行冲突检查，成功才提交草稿事务。'],out:'支持并行课程的人工排课板。'},
-{steps:['用区间重叠判断共享教师、学员、场地和独占设备冲突。','把容量、资质、营业时间和跨校区缓冲纳入检查。','冲突面板显示对象、时间、原因和可选修正动作。'],out:'组织级实时冲突服务和冲突解释界面。'}
+{steps:['为教师和学员录入周可用时间。','支持指定日期的临时可用或不可用例外。','增加批量导入和重叠时间校验。'],out:'可供人工排课和 Timefold 使用的可用时间数据。'},
+{steps:['建立 SchedulingDemand，保存课程、学员、课次、时长和时间窗口。','支持单次和周期课程需求。','支持需求拆分为具体 ActivitySession 草稿实例。'],out:'从业务需求到待排课程实例的转换流程。'},
+{steps:['提供教师、学员和时间三种课表视图。','拖拽后先运行冲突检查，成功才提交草稿事务。','所有修改保留候选快照用于恢复。'],out:'精简的人工排课板。'},
+{steps:['用区间重叠判断教师和学员冲突。','把人数、1v1、试听和可用时间纳入检查。','冲突面板显示对象、时间、原因和可选修正动作。'],out:'实时冲突服务和冲突解释界面。'}
 ],
 [
 {steps:['在仓库建立 solver 独立目录和 Maven Wrapper。','使用 Java 21、Spring Boot、Timefold Starter，并锁定明确版本。','提供健康检查和开发启动脚本，Electron 不直接依赖 Java 类。'],out:'可独立启动和测试的 Timefold 求解服务。'},
-{steps:['将 ActivitySession 标记为 PlanningEntity。','根据业务决定 timeslot、teacher、resource 为 PlanningVariable 或 ProblemFact。','定义 TimetablePlan、值域、空值策略和 HardMediumSoftLongScore。'],out:'版本化的求解输入 DTO 和规划领域模型。'},
-{steps:['分别实现教师、学员、场地和设备时间冲突。','增加容量、教师资质、可用时间、固定课程和状态约束。','使用 ConstraintVerifier 为每个硬约束准备正例和反例。'],out:'有单元测试的第一版硬约束集合。'},
-{steps:['与试点客户确定空档、跨校区、换教师和连续授课的权重。','使用软约束表达偏好，使用中等级约束保护已发布课程。','保存评分版本，避免权重变化导致旧方案不可解释。'],out:'可配置、可追溯的评分策略。'},
+{steps:['将 ActivitySession 标记为 PlanningEntity。','将 timeslot 设为 PlanningVariable，教师、学员和规则为 ProblemFact。','定义 TimetablePlan、值域、空值策略和 HardMediumSoftLongScore。'],out:'版本化的求解输入 DTO 和规划领域模型。'},
+{steps:['分别实现教师和学员时间冲突。','增加人数、1v1、试听、可用时间和固定课程约束。','使用 ConstraintVerifier 为每个硬约束准备正例和反例。'],out:'有单元测试的第一版硬约束集合。'},
+{steps:['确定空档、连续授课和课程均匀分布的权重。','使用软约束表达偏好，使用中等级约束保护现有课程。','保存评分版本，避免权重变化导致旧方案不可解释。'],out:'可配置、可追溯的评分策略。'},
 {steps:['实现 POST solve、GET status、DELETE cancel 和 GET explain。','每个任务保存 jobId、输入版本、状态、耗时、最佳分数和错误信息。','设置并发上限、超时和取消清理，避免求解阻塞 Electron。'],out:'稳定的异步求解 API 与任务记录。'},
 {steps:['候选结果写入新的 DRAFT schedule_version。','界面并排展示原方案与候选方案的变更数、分数和冲突解释。','管理员接受、局部调整或放弃候选，任何操作都不触碰已发布版本。'],out:'可比较、可解释、可放弃的求解草稿。'}
 ],
@@ -82,8 +72,8 @@ const specs=[
 {steps:['教师端按 currentTeacherId 和 lastSyncVersion 拉取差异。','分别处理新增、改期、取消和教师替换，并保留本地未提交考勤。','同步失败可重试，不允许用旧数据覆盖较新的已发布版本。'],out:'教师端可靠的增量课表更新。'},
 {steps:['为每项变更生成 before、after、reason 和 effectiveAt。','教师端显示未读变更并允许确认，重要变更保留确认时间。','单机阶段先使用站内通知，接口为未来短信微信保留适配器。'],out:'变更通知、教师确认和通知适配边界。'},
 {steps:['审计排课、审批、发布、撤回、考勤和人工覆盖。','记录 actorId、action、entityId、before、after、timestamp。','回滚通过创建新版本完成，禁止直接删除历史发布数据。'],out:'可查询审计日志和版本化回滚。'},
-{steps:['所有组织数据写入 organizationId，场地和教师写入 campusId。','定义管理员、排课员、教师等角色和数据范围。','许可证绑定机构与功能额度，同时提供合规的设备迁移流程。'],out:'组织隔离、角色权限和单机授权基础。'},
-{steps:['选择一个具体行业与一家中型机构，不同时覆盖所有培训类别。','导入真实教师、场地、需求并运行完整排课发布周期。','记录自动方案接受率、人工调整数、求解时间、故障与付费反馈。'],out:'试点报告、约束差距清单和下一版本范围。'}
+{steps:['所有组织数据写入 organizationId。','定义管理员、排课员、教师等角色和数据范围。','许可证绑定机构与功能额度并提供迁移流程。'],out:'组织隔离、角色权限和单机授权基础。'},
+{steps:['选择一个具体行业与一家中型机构，不同时覆盖所有培训类别。','导入真实教师、学员和课程需求并运行完整排课发布周期。','记录自动方案接受率、人工调整数、求解时间、故障与付费反馈。'],out:'试点报告、约束差距清单和下一版本范围。'}
 ]
 ];
 const tabs=document.getElementById('tabs'),panels=document.getElementById('panels'),key='class-schedule-teacher-to-scheduler-v2';
