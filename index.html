@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>A大橙子课时统计（正式版 1.2.4）</title>
+    <title>A大橙子课时统计（正式版 1.3.0）</title>
     <link rel="icon" type="image/png" href="./icon/orange.png">
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -17,7 +17,7 @@
             <img src="./icon/orange.png" alt="" class="electron-app-logo">
             <div class="electron-app-brand-copy">
                 <strong>A大橙子课时统计</strong>
-                <span>课表工作台 · 正式版 1.2.4</span>
+                <span>课表工作台 · 正式版 1.3.0</span>
             </div>
         </div>
     </header>
@@ -36,7 +36,7 @@
                 <img src="./icon/orange.png" alt="" class="app-message-logo">
                 <div>
                     <h3 id="appMessageTitle">A大橙子课时统计</h3>
-                    <span>正式版 1.2.4</span>
+                    <span>正式版 1.3.0</span>
                 </div>
             </div>
             <div id="appMessageText" class="app-message-text"></div>
@@ -1577,22 +1577,6 @@
                         <span class="export-option-title">导出课时表 Excel</span>
                         <span class="export-option-desc">按所选日期范围导出课时、学生、出勤和实际上课时长。</span>
                     </button>
-                </section>
-                <section class="export-section">
-                    <div class="export-section-heading">
-                        <h4>完整数据备份</h4>
-                        <span>包含课表、设置、年级、课程关系和考勤记录</span>
-                    </div>
-                    <div class="export-options">
-                        <button type="button" class="export-option-card" data-onclick="app.createCompleteBackup()">
-                            <span class="export-option-title">创建完整备份</span>
-                            <span class="export-option-desc">保存一个包含全部应用数据的完整备份文件。</span>
-                        </button>
-                        <button type="button" class="export-option-card" data-onclick="app.restoreCompleteBackup()">
-                            <span class="export-option-title">恢复完整备份</span>
-                            <span class="export-option-desc">从完整备份或 SQLite 数据库文件恢复应用数据。</span>
-                        </button>
-                    </div>
                 </section>
                 <section class="export-section">
                     <div class="export-section-heading">

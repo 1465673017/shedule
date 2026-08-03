@@ -435,7 +435,7 @@ TimetableApp.prototype.getStatsLookupIndex = function () {
     return this._statsLookupIndex;
 };
 
-TimetableApp.prototype.collectLessonsForDate = function (date) {
+TimetableApp.prototype.collectLessonsForDate = function (date, projectionReady = false) {
     const normalizedDate = new Date(date);
     normalizedDate.setHours(0, 0, 0, 0);
     const cacheKey = this.getStatsDateCacheKey(normalizedDate);
@@ -461,14 +461,15 @@ TimetableApp.prototype.collectLessonsForDate = function (date) {
     };
     const dateKey = formatLocalDate(date);
 
-    const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
     const lessons = [];
 
-    cells.forEach(cell => {
-        const period = cell.dataset.period;
+    (this.periods || []).forEach((_periodInfo, periodIndex) => {
+        const period = String(periodIndex);
         const key = this.buildCellKey(dayNum, period);
         const weekStartStr = this.formatLocalDate(this.getWeekRange(date).start);
-        const cellData = this.getCellVersion(key, weekStartStr);
+        const cellData = projectionReady
+            ? window.ScheduleErpService.getProjectedCellVersion(this, key, weekStartStr)
+            : this.getCellVersion(key, weekStartStr);
 
         const lesson = this.buildLessonStats(cellData, { key, period, date, dateKey });
         if (lesson) {
@@ -700,9 +701,11 @@ TimetableApp.prototype.aggregateLessons = function (startDate, endDate) {
         return `${y}-${m}-${day}`;
     };
 
+    window.ScheduleErpService.buildTimetableProjection(this);
+
     while (current <= end) {
         const dateStr = formatLocalDate(current);
-        const lessons = this.collectLessonsForDate(current);
+        const lessons = this.collectLessonsForDate(current, true);
         lessons.forEach(lesson => {
             const typeKey = this.getLessonTypeKeyForStats(lesson);
             const aggKey = `${lesson.key}::${typeKey || 'untyped'}`;
@@ -2624,7 +2627,7 @@ TimetableApp.prototype.saveSalarySettings = function () {
         starLevel: Math.max(0, Math.min(5, Math.round(numberValue('salaryStarLevel', 0))))
     };
     localStorage.setItem('timetableSalarySettings', JSON.stringify(settings));
-    this.scheduleSqliteSync();
+    this.cacheSqliteSnapshot();
     this.closeSalarySettings();
     if (this._statsBaseCardLessons) {
         this.renderStatsCards(this._statsBaseCardLessons, { startDate: this._statsBaseCardStart, endDate: this._statsBaseCardEnd });

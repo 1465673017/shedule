@@ -19,7 +19,7 @@ const legacy = schema.normalizeTimetableData({ subjects: [{ id: 's1' }] });
 assert.strictEqual(legacy.schemaVersion, schema.SCHEMA_VERSION, 'unversioned data should migrate to v1');
 assert.strictEqual(legacy.appVersion, schema.APP_VERSION);
 
-const current = schema.normalizeTimetableData({ schemaVersion: 1, appVersion: '1.2.4', students: [] });
+const current = schema.normalizeTimetableData({ schemaVersion: 1, appVersion: '1.3.0', students: [] });
 assert.deepStrictEqual(current.students, []);
 assert.throws(
     () => schema.normalizeTimetableData({ schemaVersion: 2 }),

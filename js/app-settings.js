@@ -283,9 +283,9 @@ TimetableApp.prototype.loadGrades = function() {
     }
 
 TimetableApp.prototype.saveGrades = function() {
-        localStorage.setItem('timetableGrades', JSON.stringify(this.grades));
-        this.scheduleSqliteSync();
-    }
+    localStorage.setItem('timetableGrades', JSON.stringify(this.grades));
+    this.cacheSqliteSnapshot();
+}
 
 TimetableApp.prototype.syncGradeColorsToStudents = function() {
         this.students.forEach(student => {

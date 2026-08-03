@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { DatabaseSync, backup } = require('node:sqlite');
+const { backupDatabase, openDatabase } = require('./sqlite-runtime');
 const { MIGRATIONS } = require('./migrations');
 const { ScheduleVersionRepository, SessionRepository, TeacherRepository } = require('./repositories');
 const { AttendanceService } = require('../domain/attendance-service');
@@ -12,7 +12,6 @@ const { TeacherScheduleService } = require('../domain/teacher-schedule-service')
 const DEFAULT_IDS = Object.freeze({
     organization: 'org-default',
     campus: 'campus-default',
-    teacher: 'teacher-default',
     scheduleVersion: 'schedule-imported-v1'
 });
 const SNAPSHOT_KEY = 'teacher-app-full-backup';
@@ -50,7 +49,7 @@ class ScheduleDatabase {
     }
 
     open() {
-        this.db = new DatabaseSync(this.filePath);
+        this.db = openDatabase(this.filePath);
         this.db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL;');
         this.applyMigrations();
         this.teachers = new TeacherRepository(this.db);
@@ -61,8 +60,9 @@ class ScheduleDatabase {
     }
 
     close() {
-        if (this.db) this.db.close();
+        const database = this.db;
         this.db = null;
+        if (database) database.close();
     }
 
     transaction(callback) {
@@ -78,6 +78,7 @@ class ScheduleDatabase {
     }
 
     checkpoint() {
+        if (!this.db) return null;
         return this.db.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get();
     }
 
@@ -222,16 +223,12 @@ class ScheduleDatabase {
         insert('INSERT INTO organizations VALUES (?, ?, ?, ?)', [DEFAULT_IDS.organization, '默认机构', timestamp, timestamp]);
         insert('INSERT INTO campuses VALUES (?, ?, ?, ?, ?)', [DEFAULT_IDS.campus, DEFAULT_IDS.organization, '默认校区', timestamp, timestamp]);
 
-        const teacherNames = [...new Set(asArray(data.subjects).map(subject => String(subject.teacher || '').trim()).filter(Boolean))];
-        const teacherMap = new Map();
-        if (!teacherNames.length) teacherNames.push('当前教师');
-        teacherNames.forEach(name => {
-            const id = name === '当前教师' ? DEFAULT_IDS.teacher : stableId('teacher', name);
-            teacherMap.set(name, id);
-            insert('INSERT INTO teachers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [id, DEFAULT_IDS.organization, DEFAULT_IDS.campus, name, null, 'active', name, timestamp, timestamp]);
-        });
-        const currentTeacherId = teacherMap.get(teacherNames[0]);
+        const teacherName = asArray(data.subjects)
+            .map(subject => String(subject.teacher || '').trim())
+            .find(Boolean) || '';
+        const currentTeacherId = stableId('teacher', teacherName);
+        insert('INSERT INTO teachers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [currentTeacherId, DEFAULT_IDS.organization, DEFAULT_IDS.campus, teacherName, null, 'active', teacherName, timestamp, timestamp]);
         this.setMetadata('current_teacher_id', currentTeacherId);
 
         asArray(fullBackup.data.timetableGrades).forEach((grade, index) => {
@@ -261,9 +258,6 @@ class ScheduleDatabase {
             DEFAULT_IDS.scheduleVersion, DEFAULT_IDS.organization, '旧版课表迁移', 'PUBLISHED', timestamp, timestamp, timestamp
         ]);
 
-        const subjectTeacher = new Map(asArray(data.subjects).map(subject => [
-            String(subject.id), teacherMap.get(String(subject.teacher || '').trim()) || currentTeacherId
-        ]));
         const templateIds = new Set();
         asArray(erp.courseTemplates).forEach(template => {
             const id = String(template.id);
@@ -272,15 +266,24 @@ class ScheduleDatabase {
                 (id,organization_id,subject_id,teacher_id,class_id,weekday,period_id,start_date,end_date,repeat_type,enabled,payload_json,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
                 id, DEFAULT_IDS.organization, template.subjectId == null ? null : String(template.subjectId),
-                subjectTeacher.get(String(template.subjectId)) || currentTeacherId, null, null, null,
+                currentTeacherId, null, null, null,
                 template.startDate || null, template.endDate || null, template.repeatType || 'weekly',
                 template.archived ? 0 : 1, json(template), template.createdAt || timestamp, template.updatedAt || timestamp
             ]);
         });
 
         const studentIds = new Set(asArray(data.students).map(student => String(student.id)));
+        const templateIdByInstanceId = new Map(asArray(erp.courseInstances).map(instance => [
+            String(instance.id),
+            instance.courseTemplateId == null ? '' : String(instance.courseTemplateId)
+        ]));
         asArray(erp.studentCourseRelations).forEach(relation => {
-            const templateId = String(relation.courseTemplateId || relation.templateId || '');
+            const templateId = String(
+                relation.courseTemplateId
+                || relation.templateId
+                || templateIdByInstanceId.get(String(relation.courseInstanceId || ''))
+                || ''
+            );
             const studentId = String(relation.studentId || relation.studentUid || '');
             if (!templateIds.has(templateId) || !studentIds.has(studentId)) return;
             insert(`INSERT OR REPLACE INTO student_courses
@@ -299,8 +302,6 @@ class ScheduleDatabase {
             const id = String(instance.id);
             const templateId = instance.courseTemplateId == null ? null : String(instance.courseTemplateId);
             if (templateId && !templateIds.has(templateId)) return;
-            const subjectId = instance.subjectId || (templateId && asArray(erp.courseTemplates).find(item => String(item.id) === templateId)?.subjectId);
-            const teacherId = subjectTeacher.get(String(subjectId)) || currentTeacherId;
             const date = sessionDate(instance);
             const periodIndex = Number(String(instance.cellKey || '').split('-').pop());
             const period = asArray(data.periods)[periodIndex];
@@ -310,7 +311,7 @@ class ScheduleDatabase {
             insert(`INSERT INTO activity_sessions
                 (id,organization_id,campus_id,template_id,teacher_id,resource_id,schedule_version_id,class_date,start_time,end_time,status,payload_json,created_at,updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [
-                id, DEFAULT_IDS.organization, DEFAULT_IDS.campus, templateId, teacherId, null,
+                id, DEFAULT_IDS.organization, DEFAULT_IDS.campus, templateId, currentTeacherId, null,
                 DEFAULT_IDS.scheduleVersion, date, startTime || null, endTime || null, 'PUBLISHED',
                 json(instance), instance.createdAt || timestamp, instance.updatedAt || timestamp
             ]);
@@ -404,13 +405,13 @@ class ScheduleDatabase {
     async createBackup(destinationPath) {
         const target = path.resolve(destinationPath);
         fs.mkdirSync(path.dirname(target), { recursive: true });
-        await backup(this.db, target);
+        await backupDatabase(this.db, target);
         return target;
     }
 
     async restoreBackup(sourcePath) {
         const source = path.resolve(sourcePath);
-        const candidate = new DatabaseSync(source, { readOnly: true });
+        const candidate = openDatabase(source, { readonly: true });
         try {
             const integrity = candidate.prepare('PRAGMA integrity_check').get();
             if (!integrity || integrity.integrity_check !== 'ok') throw new Error('SQLite backup integrity check failed');

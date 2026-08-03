@@ -7,7 +7,7 @@ const { ScheduleDatabase } = require('../src/db/database');
 function fullBackup() {
     return {
         schemaVersion: 1,
-        appVersion: '1.2.4',
+        appVersion: '1.3.0',
         exportedAt: '2026-08-02T10:00:00.000Z',
         type: 'class-schedule-full-backup',
         data: {
@@ -26,7 +26,7 @@ function fullBackup() {
                         weekStart: '2026-07-27', cellKey: '2-0', status: 'recurring'
                     }],
                     studentCourseRelations: [
-                        { id: 'rel1', courseTemplateId: 'tpl1', studentId: 's1', relationStatus: 'active' },
+                        { id: 'rel1', courseInstanceId: 'ci1', studentId: 's1', relationStatus: 'active' },
                         { id: 'rel2', courseTemplateId: 'tpl1', studentId: 's2', relationStatus: 'completed' }
                     ],
                     attendanceRecords: [{ id: 'att1', courseInstanceId: 'ci1', studentId: 's1', status: 'leave', actualMinutes: 0 }],
@@ -99,8 +99,11 @@ function fullBackup() {
         assert.strictEqual(secondStart.migrated, false, 'migration must be idempotent after completion');
         const newerCache = fullBackup();
         newerCache.cacheUpdatedAt = '2026-08-04T10:00:00.000Z';
-        const recovered = database.initializeFromLegacy(newerCache);
-        assert.strictEqual(recovered.recoveredNewerCache, true, 'a newer compatibility cache should recover an interrupted write');
+        const reopened = database.initializeFromLegacy(newerCache);
+        assert.strictEqual(reopened.migrated, false);
+        assert.strictEqual(reopened.recoveredNewerCache, true);
+        assert.strictEqual(database.getSnapshot().cacheUpdatedAt, newerCache.cacheUpdatedAt,
+            'startup must recover a newer local cache after an unclean shutdown');
 
         database.close();
         database = new ScheduleDatabase(dbPath);
@@ -110,6 +113,9 @@ function fullBackup() {
             { basePay: 3200, starLevel: 3 },
             'salary settings must persist in the SQLite snapshot'
         );
+        database.close();
+        assert.strictEqual(database.checkpoint(), null, 'checkpoint after close must be safe during shutdown');
+        assert.doesNotThrow(() => database.close(), 'closing an already closed database must be safe');
         console.log('SQLite data layer tests passed');
     } finally {
         if (database.db) database.close();

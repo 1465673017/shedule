@@ -546,7 +546,7 @@ class TimetableApp {
                 }
             }
             localStorage.setItem('timetableData', serialized);
-            this.scheduleSqliteSync();
+            this.cacheSqliteSnapshot();
             return true;
         } catch (e) {
             if (backupWritten) {
@@ -566,16 +566,16 @@ class TimetableApp {
         }
     }
 
-    scheduleSqliteSync() {
+    cacheSqliteSnapshot() {
         const storage = window.electronAPI && window.electronAPI.storage;
-        if (!storage || typeof storage.saveSnapshot !== 'function') return;
+        if (!storage || typeof storage.cacheSnapshot !== 'function') return;
         try {
             const backup = window.TimetableDataSchema.createFullBackup(localStorage);
             const storedData = JSON.parse(localStorage.getItem('timetableData') || '{}');
             backup.cacheUpdatedAt = storedData.exportedAt || backup.exportedAt;
-            storage.saveSnapshot(backup).catch(error => console.error('SQLite 同步失败，已保留 localStorage 数据:', error));
+            storage.cacheSnapshot(backup);
         } catch (error) {
-            console.error('创建 SQLite 同步快照失败:', error);
+            console.error('缓存 SQLite 退出快照失败:', error);
         }
     }
 

@@ -462,19 +462,6 @@ TimetableApp.prototype.syncStudentActualDuration = function(key, studentId, valu
         const totalMinutes = Math.max(0, ...ranges.map(range => Number(range.value) || 0));
         window.ScheduleErpService.setActualMinutes(this, key, totalMinutes, this._attModalDateKey);
         this.saveData();
-        const sessionId = this._attModalCourseInstanceId;
-        if (sessionId && window.TeacherAppService && window.TeacherAppService.isAvailable()) {
-            clearTimeout(this._teacherActualMinutesSyncTimer);
-            this._teacherActualMinutesSyncTimer = setTimeout(() => {
-                ranges.forEach(range => {
-                    window.TeacherAppService.setActualMinutes({
-                        sessionId,
-                        studentId: range.dataset.studentId,
-                        actualMinutes: Number(range.value)
-                    }).catch(error => this.handleTeacherServiceError('实际课时同步失败', error));
-                });
-            }, 250);
-        }
 
         const minutes = Math.max(0, Number(value) || 0);
         const studentValue = document.getElementById(`studentDurationVal-${studentId}`);
@@ -689,11 +676,6 @@ TimetableApp.prototype.setAttendanceStatus = function(key, studentId, status) {
         }
         window.ScheduleErpService.upsertAttendance(this, key, studentId, status, dateKey);
         this.saveData();
-        const sessionId = this._attModalCourseInstanceId;
-        if (sessionId && window.TeacherAppService && window.TeacherAppService.isAvailable()) {
-            window.TeacherAppService.markAttendance({ sessionId, studentId, status })
-                .catch(error => this.handleTeacherServiceError('考勤同步失败', error));
-        }
         return true;
     }
 

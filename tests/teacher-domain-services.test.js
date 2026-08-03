@@ -10,13 +10,16 @@ const { TeacherConflictService } = require('../src/domain/teacher-conflict-servi
 function backup() {
     return {
         schemaVersion: 1,
-        appVersion: '1.2.4',
+        appVersion: '1.3.0',
         exportedAt: '2026-08-02T10:00:00.000Z',
         type: 'class-schedule-full-backup',
         data: {
             timetableData: {
                 schemaVersion: 1,
-                subjects: [{ id: 'math', name: '数学', teacher: '教师甲', color: '#123456' }],
+                subjects: [
+                    { id: 'math', name: '数学', teacher: '教师甲', color: '#123456' },
+                    { id: 'english', name: '英语', teacher: '旧数据中的其他教师文本', color: '#654321' }
+                ],
                 students: [{ id: 's1', name: '学员甲', grade: '七年级' }],
                 periods: [{ id: 'p1', name: '第1节', time: '08:00-10:00' }],
                 erpData: {
@@ -46,9 +49,12 @@ function backup() {
         database.initializeFromLegacy(sourceBackup);
         const teacherId = database.currentTeacherId();
         assert.ok(teacherId);
+        assert.strictEqual(database.teachers.listByOrganization('org-default').length, 1,
+            'single-teacher data must not create teachers from every legacy subject label');
 
         assert.strictEqual(database.teacherSchedule.getMySchedule(teacherId).length, 1);
-        assert.throws(() => database.teacherSchedule.getMySchedule('another-teacher'), /access denied/i);
+        assert.strictEqual(database.teacherSchedule.getMySchedule('another-teacher').length, 1,
+            'teacher identity must not restrict schedule access');
         assert.strictEqual(database.teacherSchedule.getSessionDetail(teacherId, 'ci1').status, 'PUBLISHED');
 
         database.db.prepare(`INSERT INTO activity_sessions
@@ -72,6 +78,8 @@ function backup() {
         assert.strictEqual(database.sessions.getById('draft-hidden').status, 'DRAFT', 'compatibility sync must preserve drafts');
 
         assert.strictEqual(database.attendance.markAttendance(teacherId, 'ci1', 's1', 'present').status, 'present');
+        assert.strictEqual(database.attendance.markAttendance('another-teacher', 'ci1', 's1', 'leave').status, 'leave',
+            'teacher identity must not restrict attendance edits');
         assert.strictEqual(database.attendance.setActualMinutes(teacherId, 'ci1', 's1', 75).actual_minutes, 75);
         assert.throws(() => database.attendance.markAttendance(teacherId, 'ci1', 'missing', 'present'), /not a participant/);
         assert.strictEqual(database.attendance.completeSession(teacherId, 'ci1').status, 'COMPLETED');

@@ -15,24 +15,33 @@ class SessionRepository {
     getById(id) {
         return this.database.prepare('SELECT * FROM activity_sessions WHERE id = ?').get(String(id)) || null;
     }
-    listForTeacher(teacherId, statuses = ['PUBLISHED', 'COMPLETED']) {
+    listPublished(statuses = ['PUBLISHED', 'COMPLETED']) {
         const allowed = statuses.filter(status => ['PUBLISHED', 'COMPLETED'].includes(status));
         if (!allowed.length) return [];
         const placeholders = allowed.map(() => '?').join(',');
         return this.database.prepare(
-            `SELECT * FROM activity_sessions WHERE teacher_id = ? AND status IN (${placeholders}) ORDER BY class_date, start_time`
-        ).all(String(teacherId), ...allowed);
+            `SELECT * FROM activity_sessions WHERE status IN (${placeholders}) ORDER BY class_date, start_time`
+        ).all(...allowed);
     }
-    getPublishedForTeacher(id, teacherId) {
+    listForTeacher(_teacherId, statuses = ['PUBLISHED', 'COMPLETED']) {
+        return this.listPublished(statuses);
+    }
+    getPublished(id) {
         return this.database.prepare(`SELECT * FROM activity_sessions
-            WHERE id = ? AND teacher_id = ? AND status IN ('PUBLISHED','COMPLETED')`)
-            .get(String(id), String(teacherId)) || null;
+            WHERE id = ? AND status IN ('PUBLISHED','COMPLETED')`)
+            .get(String(id)) || null;
     }
-    listChangesForTeacher(teacherId, since) {
+    getPublishedForTeacher(id, _teacherId) {
+        return this.getPublished(id);
+    }
+    listPublishedChanges(since) {
         const timestamp = since || '1970-01-01T00:00:00.000Z';
         return this.database.prepare(`SELECT * FROM activity_sessions
-            WHERE teacher_id = ? AND status IN ('PUBLISHED','COMPLETED') AND updated_at > ?
-            ORDER BY updated_at, id`).all(String(teacherId), String(timestamp));
+            WHERE status IN ('PUBLISHED','COMPLETED') AND updated_at > ?
+            ORDER BY updated_at, id`).all(String(timestamp));
+    }
+    listChangesForTeacher(_teacherId, since) {
+        return this.listPublishedChanges(since);
     }
     transition(id, targetStatus) {
         const session = this.getById(id);

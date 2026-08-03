@@ -10,9 +10,9 @@ function attendanceId(sessionId, studentId) {
 class AttendanceService {
     constructor(database) { this.database = database; }
 
-    requireEditableSession(teacherId, sessionId) {
-        const session = this.database.sessions.getPublishedForTeacher(sessionId, teacherId);
-        if (!session) throw new Error('Session not found or not editable by teacher');
+    requireEditableSession(sessionId) {
+        const session = this.database.sessions.getPublished(sessionId);
+        if (!session) throw new Error('Session not found or not editable');
         if (session.status === 'COMPLETED') throw new Error('Completed session cannot be modified');
         return session;
     }
@@ -22,7 +22,7 @@ class AttendanceService {
             throw new Error(`Invalid attendance status: ${status}`);
         }
         return this.database.transaction(() => {
-            this.requireEditableSession(teacherId, sessionId);
+            this.requireEditableSession(sessionId);
             this.database.requireParticipant(sessionId, studentId);
             const timestamp = nowIso();
             this.database.db.prepare(`INSERT INTO attendance_records
@@ -39,7 +39,7 @@ class AttendanceService {
         const value = Number(actualMinutes);
         if (!Number.isInteger(value) || value < 0 || value > 24 * 60) throw new Error('Invalid actual minutes');
         return this.database.transaction(() => {
-            this.requireEditableSession(teacherId, sessionId);
+            this.requireEditableSession(sessionId);
             this.database.requireParticipant(sessionId, studentId);
             const timestamp = nowIso();
             this.database.db.prepare(`INSERT INTO attendance_records
@@ -54,7 +54,7 @@ class AttendanceService {
 
     completeSession(teacherId, sessionId) {
         return this.database.transaction(() => {
-            this.requireEditableSession(teacherId, sessionId);
+            this.requireEditableSession(sessionId);
             const session = this.database.sessions.transition(sessionId, 'COMPLETED');
             this.database.invalidateStatistics();
             return session;

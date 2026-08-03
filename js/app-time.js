@@ -345,7 +345,7 @@ TimetableApp.prototype.saveSettings = function(e) {
 
         localStorage.setItem('timetableSettings', JSON.stringify(this.settings));
         this.saveGrades();
-        this.scheduleSqliteSync();
+        this.cacheSqliteSnapshot();
 
         if (e) {
             this.applySettings();

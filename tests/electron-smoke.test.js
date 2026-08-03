@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { DatabaseSync } = require('node:sqlite');
+const { openDatabase } = require('../src/db/sqlite-runtime');
 const { _electron: electron } = require('playwright');
 
 (async () => {
@@ -21,6 +21,8 @@ const { _electron: electron } = require('playwright');
         env: launchEnv
     });
     let page;
+    let shutdownSyncExpected = false;
+    const changedSubjectName = '退出同步验证科目';
     try {
         page = await app.firstWindow();
         const errors = [];
@@ -37,10 +39,28 @@ const { _electron: electron } = require('playwright');
         );
         const activeUserDataDir = await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'));
         assert.strictEqual(path.resolve(activeUserDataDir), path.resolve(testUserDataDir));
-        const liveDatabase = new DatabaseSync(path.join(activeUserDataDir, 'schedule.sqlite'), { readOnly: true });
+        const liveDatabase = openDatabase(path.join(activeUserDataDir, 'schedule.sqlite'), { readonly: true });
         try {
             const liveMarker = liveDatabase.prepare("SELECT value FROM app_metadata WHERE key='migration_completed'").get();
             assert.strictEqual(liveMarker && liveMarker.value, '1', 'migration marker must be durable while Electron is running');
+            const persistedBefore = liveDatabase.prepare(
+                "SELECT payload_json FROM app_snapshots WHERE key='teacher-app-full-backup'"
+            ).get().payload_json;
+            await page.evaluate(name => {
+                app.subjects[0].name = name;
+                app.saveData();
+            }, changedSubjectName);
+            assert.strictEqual(await page.evaluate(() => app.subjects[0].name), changedSubjectName);
+            let persistedDuringRun = persistedBefore;
+            for (let attempt = 0; attempt < 50 && persistedDuringRun === persistedBefore; attempt++) {
+                await new Promise(resolve => setTimeout(resolve, 20));
+                persistedDuringRun = liveDatabase.prepare(
+                    "SELECT payload_json FROM app_snapshots WHERE key='teacher-app-full-backup'"
+                ).get().payload_json;
+            }
+            assert.strictEqual(JSON.parse(persistedDuringRun).data.timetableData.subjects[0].name, changedSubjectName,
+                'runtime changes must be durable before shutdown');
+            shutdownSyncExpected = true;
         } finally {
             liveDatabase.close();
         }
@@ -64,10 +84,22 @@ const { _electron: electron } = require('playwright');
     } finally {
         if (page && !page.isClosed()) {
             const closed = app.waitForEvent('close');
-            await page.close();
+            await page.evaluate(() => window.electronAPI.windowControl('close'));
             await closed;
         } else {
             await app.close();
+        }
+        if (shutdownSyncExpected) {
+            const closedDatabase = openDatabase(path.join(testUserDataDir, 'schedule.sqlite'), { readonly: true });
+            try {
+                const snapshot = JSON.parse(closedDatabase.prepare(
+                    "SELECT payload_json FROM app_snapshots WHERE key='teacher-app-full-backup'"
+                ).get().payload_json);
+                assert.strictEqual(snapshot.data.timetableData.subjects[0].name, changedSubjectName,
+                    'closing Electron must flush localStorage changes to SQLite');
+            } finally {
+                closedDatabase.close();
+            }
         }
         fs.rmSync(testUserDataDir, { recursive: true, force: true });
     }

@@ -432,11 +432,71 @@ TimetableApp.prototype.renderSubjects = function () {
     let items = this.currentPool === 'subject' ? this.subjects : this.students;
 
     const scheduledStudentIds = new Set();
+    const ongoingStudentIds = new Set();
     if (this.currentPool === 'student') {
-        this.students.forEach(student => {
-            if (this.hasStudentEverScheduled(student.id)) {
-                scheduledStudentIds.add(String(student.id));
+        const currentWeekStart = this.formatLocalDate(this.getWeekRange(this.currentDate).start);
+        const erp = this.erpData || {};
+        const instances = Array.isArray(erp.courseInstances) ? erp.courseInstances : [];
+        const relations = Array.isArray(erp.studentCourseRelations) ? erp.studentCourseRelations : [];
+        const exceptions = Array.isArray(erp.exceptionRules) ? erp.exceptionRules : [];
+        const relationsByInstance = new Map();
+        const exceptionsByInstance = new Map();
+
+        relations.forEach(relation => {
+            const studentId = String(relation.studentId);
+            const instanceId = String(relation.courseInstanceId);
+            scheduledStudentIds.add(studentId);
+            if (!relationsByInstance.has(instanceId)) relationsByInstance.set(instanceId, []);
+            relationsByInstance.get(instanceId).push(relation);
+        });
+        exceptions.forEach(rule => {
+            const instanceId = String(rule.courseInstanceId || '');
+            if (!exceptionsByInstance.has(instanceId)) exceptionsByInstance.set(instanceId, []);
+            exceptionsByInstance.get(instanceId).push(rule);
+        });
+        instances.forEach(instance => {
+            if (!instance || !instance.cellKey) return;
+            const instanceId = String(instance.id);
+            const instanceRelations = relationsByInstance.get(instanceId) || [];
+            const fallbackIds = Array.isArray(instance.studentIds) ? instance.studentIds.map(String) : [];
+            const studentIds = instanceRelations.length
+                ? instanceRelations.map(relation => String(relation.studentId))
+                : fallbackIds;
+            studentIds.forEach(studentId => scheduledStudentIds.add(studentId));
+            if (instance.isDeleted || !instance.weekStart) return;
+
+            const instanceRules = exceptionsByInstance.get(instanceId) || [];
+            const deletedAtOrigin = instanceRules.some(rule =>
+                (rule.type === 'delete-instance' || rule.type === 'delete-course')
+                && rule.weekStart
+                && currentWeekStart >= rule.weekStart
+            );
+            if (deletedAtOrigin) return;
+
+            if (!instanceRelations.length) {
+                fallbackIds.forEach(studentId => ongoingStudentIds.add(studentId));
+                return;
             }
+            instanceRelations.forEach(relation => {
+                const studentId = String(relation.studentId);
+                if (relation.relationStatus === 'temporary') {
+                    const occurrence = instanceRules.find(rule =>
+                        String(rule.studentId) === studentId
+                        && rule.type === 'temporary-student'
+                        && rule.weekStart
+                    );
+                    if (occurrence && currentWeekStart !== occurrence.weekStart) return;
+                }
+                if (relation.relationStatus === 'paused' || relation.relationStatus === 'ended') {
+                    const cutoff = instanceRules.find(rule =>
+                        String(rule.studentId) === studentId
+                        && (rule.type === 'pause-student' || rule.type === 'complete-student')
+                        && rule.weekStart
+                    );
+                    if (!cutoff || currentWeekStart >= cutoff.weekStart) return;
+                }
+                ongoingStudentIds.add(studentId);
+            });
         });
     }
 
@@ -445,8 +505,7 @@ TimetableApp.prototype.renderSubjects = function () {
             if (this.currentStudentFilter === 'ongoing') {
                 return !student.isAudition
                     && !student.completed
-                    && typeof this.isStudentOngoing === 'function'
-                    && this.isStudentOngoing(student.id);
+                    && ongoingStudentIds.has(String(student.id));
             } else if (this.currentStudentFilter === 'completed') {
                 return !!student.completed && !student.isAudition;
             } else if (this.currentStudentFilter === 'audition') {
@@ -476,6 +535,7 @@ TimetableApp.prototype.renderSubjects = function () {
         });
     }
 
+    const fragment = document.createDocumentFragment();
     items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'subject-card';
@@ -551,6 +611,7 @@ TimetableApp.prototype.renderSubjects = function () {
             }
         });
 
-        pool.appendChild(card);
+        fragment.appendChild(card);
     });
+    pool.appendChild(fragment);
 }

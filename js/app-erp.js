@@ -825,6 +825,22 @@
         return projected;
     }
 
+    function getProjectedCellVersion(app, key, weekStartStr) {
+        const versions = app.timetable && app.timetable[key];
+        if (!versions || !Array.isArray(versions) || versions.length === 0) return null;
+        let best = null;
+        for (const version of versions) {
+            if (version.weekStart <= weekStartStr && (!best || version.weekStart > best.weekStart)) {
+                best = version;
+            }
+        }
+        if (best && (best._cutoff || (!best.subject && (!best.student || best.student.length === 0)))) return null;
+        if (best && !isVersionWithinItsSchedulingStage(app, best, weekStartStr)) return null;
+        best = applyRelationRules(app, best, weekStartStr);
+        if (best && (best._cutoff || (!best.subject && (!best.student || best.student.length === 0)))) return null;
+        return best;
+    }
+
     window.createEmptyErpData = createEmptyErpData;
     window.ScheduleErpService = {
         ensureErpData,
@@ -841,19 +857,11 @@
 
         getCellVersion(app, key, weekStartStr) {
             buildTimetableProjection(app);
-            const versions = app.timetable[key];
-            if (!versions || !Array.isArray(versions) || versions.length === 0) return null;
-            let best = null;
-            for (const v of versions) {
-                if (v.weekStart <= weekStartStr && (!best || v.weekStart > best.weekStart)) {
-                    best = v;
-                }
-            }
-            if (best && (best._cutoff || (!best.subject && (!best.student || best.student.length === 0)))) return null;
-            if (best && !isVersionWithinItsSchedulingStage(app, best, weekStartStr)) return null;
-            best = applyRelationRules(app, best, weekStartStr);
-            if (best && (best._cutoff || (!best.subject && (!best.student || best.student.length === 0)))) return null;
-            return best;
+            return getProjectedCellVersion(app, key, weekStartStr);
+        },
+
+        getProjectedCellVersion(app, key, weekStartStr) {
+            return getProjectedCellVersion(app, key, weekStartStr);
         },
 
         setCellVersion(app, key, weekStartStr, subjectId, studentIds, options = {}) {

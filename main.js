@@ -14,7 +14,7 @@ const isolatedTestDataPath = process.env.ORAGSCHEDULE_E2E_USER_DATA_DIR;
 const portableRoot = (() => {
     if (process.env.ORAGSCHEDULE_PORTABLE_DIR) return path.resolve(process.env.ORAGSCHEDULE_PORTABLE_DIR);
     if (!isMac || !app.isPackaged) return null;
-    const bundleParent = path.dirname(path.dirname(path.dirname(path.dirname(process.execPath))));
+    const bundleParent = path.dirname(path.dirname(path.dirname(process.execPath)));
     return fs.existsSync(path.join(bundleParent, '.oragshedule-portable')) ? bundleParent : null;
 })();
 const portableUserDataPath = portableRoot ? path.join(portableRoot, 'data') : null;
@@ -38,6 +38,7 @@ if (!gotSingleInstanceLock) {
 
 let staleUserDataPath = null;
 let scheduleDatabase = null;
+let pendingShutdownSnapshot = null;
 
 function migrateLegacyUserDataDirectory() {
     if (isolatedTestDataPath || portableUserDataPath) {
@@ -96,6 +97,36 @@ function appendStartupLog(message, error) {
         fs.appendFileSync(path.join(app.getPath('userData'), 'startup.log'), line, 'utf8');
     } catch (_) {
         // Diagnostics must never become another startup failure.
+    }
+}
+
+function closeScheduleDatabase() {
+    const database = scheduleDatabase;
+    // Clear the shared reference first so nested/repeated quit events cannot
+    // attempt to close the same native SQLite handle twice.
+    scheduleDatabase = null;
+    if (!database) return;
+
+    try {
+        database.checkpoint();
+    } catch (error) {
+        appendStartupLog('Database checkpoint during shutdown failed', error);
+    }
+    try {
+        database.close();
+    } catch (error) {
+        appendStartupLog('Database close during shutdown failed', error);
+    }
+}
+
+function flushPendingShutdownSnapshot() {
+    const snapshot = pendingShutdownSnapshot;
+    pendingShutdownSnapshot = null;
+    if (!snapshot || !scheduleDatabase) return;
+    try {
+        scheduleDatabase.replaceSnapshot(snapshot);
+    } catch (error) {
+        appendStartupLog('SQLite background shutdown sync failed', error);
     }
 }
 
@@ -215,46 +246,20 @@ ipcMain.handle('storage-initialize', (_event, payload) => {
     return { source: 'sqlite', migrated: result.migrated, snapshot: result.snapshot, validation: result.validation };
 });
 
-ipcMain.handle('storage-save-snapshot', (_event, payload) => {
-    const validation = requireDatabase().replaceSnapshot(validateBackupPayload(payload));
-    return { saved: true, validation };
+ipcMain.on('storage-cache-snapshot', (_event, payload) => {
+    try {
+        const snapshot = validateBackupPayload(payload);
+        pendingShutdownSnapshot = snapshot;
+        requireDatabase().replaceSnapshot(snapshot);
+        if (pendingShutdownSnapshot === snapshot) pendingShutdownSnapshot = null;
+    } catch (error) {
+        appendStartupLog('Failed to persist runtime snapshot', error);
+    }
 });
 
 ipcMain.handle('storage-replace-snapshot', (_event, payload) => {
     const validation = requireDatabase().replaceSnapshot(validateBackupPayload(payload));
     return { restored: true, validation };
-});
-
-ipcMain.handle('storage-create-database-backup', async () => {
-    const stamp = new Date().toISOString().slice(0, 10);
-    const result = await dialog.showSaveDialog({
-        defaultPath: `课时统计完整备份-${stamp}.oragshedule-backup`,
-        filters: [{ name: '课时统计完整备份', extensions: ['oragshedule-backup'] }]
-    });
-    if (result.canceled || !result.filePath) return { canceled: true };
-    await requireDatabase().createBackup(result.filePath);
-    return { canceled: false, created: true, filePath: result.filePath };
-});
-
-ipcMain.handle('storage-restore-database-backup', async () => {
-    const result = await dialog.showOpenDialog({
-        properties: ['openFile'],
-        filters: [{ name: '课时统计备份', extensions: ['oragshedule-backup', 'sqlite', 'db'] }]
-    });
-    if (result.canceled || !result.filePaths[0]) return { canceled: true };
-    const sourcePath = result.filePaths[0];
-    const sourceFile = await fs.promises.open(sourcePath, 'r');
-    const header = Buffer.alloc(16);
-    try {
-        await sourceFile.read(header, 0, header.length, 0);
-    } finally {
-        await sourceFile.close();
-    }
-    if (header.toString('utf8') !== 'SQLite format 3\0') {
-        throw new TypeError('请选择有效的完整备份或 SQLite 数据库文件');
-    }
-    const restored = await requireDatabase().restoreBackup(sourcePath);
-    return { canceled: false, format: 'sqlite', ...restored, snapshot: requireDatabase().getSnapshot() };
 });
 
 function teacherContext() {
@@ -350,12 +355,14 @@ if (gotSingleInstanceLock) {
 
     app.on('window-all-closed', () => {
         if (process.platform !== 'darwin') {
-            if (scheduleDatabase) {
-                scheduleDatabase.checkpoint();
-                scheduleDatabase.close();
-                scheduleDatabase = null;
-            }
+            flushPendingShutdownSnapshot();
+            closeScheduleDatabase();
             app.quit();
         }
+    });
+
+    app.on('will-quit', () => {
+        flushPendingShutdownSnapshot();
+        closeScheduleDatabase();
     });
 }

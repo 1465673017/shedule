@@ -84,40 +84,6 @@ TimetableApp.prototype.handleExportOption = async function (type) {
     }
 }
 
-TimetableApp.prototype.createCompleteBackup = async function () {
-    const storage = window.electronAPI && window.electronAPI.storage;
-    if (!storage || typeof storage.createDatabaseBackup !== 'function') {
-        alert('完整备份仅在桌面应用中可用');
-        return;
-    }
-    try {
-        const result = await storage.createDatabaseBackup();
-        if (!result || result.canceled) return;
-        window.showAppToast?.(`完整备份成功：${result.filePath}`);
-    } catch (error) {
-        console.error('创建完整备份失败:', error);
-        alert(`完整备份失败：${error.message || '未知错误'}`);
-    }
-}
-
-TimetableApp.prototype.restoreCompleteBackup = async function () {
-    const storage = window.electronAPI && window.electronAPI.storage;
-    if (!storage || typeof storage.restoreDatabaseBackup !== 'function') {
-        alert('完整备份恢复仅在桌面应用中可用');
-        return;
-    }
-    if (!await window.showAppConfirm('确认恢复完整备份吗？恢复前会自动备份当前数据库。')) return;
-    try {
-        const result = await storage.restoreDatabaseBackup();
-        if (!result || result.canceled) return;
-        if (result.snapshot) window.TimetableDataSchema.restoreFullBackup(localStorage, result.snapshot);
-        window.location.reload();
-    } catch (error) {
-        console.error('恢复完整备份失败:', error);
-        alert(`完整备份恢复失败：${error.message || '备份文件无效'}`);
-    }
-}
-
 TimetableApp.prototype.initLessonSheetExportRange = function (forceReset) {
     const startInput = document.getElementById('lessonSheetStartDate');
     const endInput = document.getElementById('lessonSheetEndDate');
