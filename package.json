@@ -13,7 +13,7 @@
     "teacher:regression": "node tests/schedule-erp.test.js && node tests/time-settings.test.js && node tests/salary-stats.test.js && node tests/week-stats.test.js && node tests/security-regressions.test.js && node tests/data-schema.test.js && node tests/teacher-renderer-service.test.js && node --check main.js && node --check preload.js && node --check js/data-schema.js && node --check js/app-dialogs.js && node --check js/app-course-import.js && node --check js/app-core.js && node --check js/app-teacher-services.js && node --check js/app-erp.js && node --check js/app-dragdrop.js && node --check js/app-subjects.js && node --check js/app-courses.js && node --check js/app-timetable.js && node --check js/app-attendance.js && node --check js/app-time.js && node --check js/app-settings.js && node --check js/app-stats.js && node --check js/app-export.js",
     "scheduler:data:test": "node tests/sqlite-data-layer.test.js && node tests/teacher-domain-services.test.js && node --check src/db/migrations.js && node --check src/db/repositories.js && node --check src/db/database.js && node --check src/domain/teacher-conflict-service.js && node --check src/domain/teacher-schedule-service.js && node --check src/domain/attendance-service.js",
     "test:electron": "node tests/electron-smoke.test.js",
-    "build": "electron-builder --win portable --x64 --config.electronVersion=43.1.1",
+    "build": "electron-builder --win portable --x64 --config.electronVersion=43.1.1 --config.npmRebuild=false",
     "build:mac": "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ electron-builder --mac --publish never --config.electronVersion=26.6.10 && bash build/build-mac-portable.sh",
     "screenshots:macos": "node tests/macos-screenshots.js"
   },
@@ -36,6 +36,7 @@
       "icon/**",
       "js/**",
       "src/db/**",
+      "src/domain/**",
       "*.svg"
     ],
     "win": {

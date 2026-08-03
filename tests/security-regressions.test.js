@@ -11,6 +11,8 @@ assert.strictEqual(
     false,
     'packaging must let electron-builder resolve/download the platform-specific Electron runtime'
 );
+assert.ok(packageConfig.build.files.includes('src/db/**'), 'packaging must include the database layer');
+assert.ok(packageConfig.build.files.includes('src/domain/**'), 'packaging must include database domain services');
 
 const mainSource = read('main.js');
 assert.match(mainSource, /setWindowOpenHandler/);
