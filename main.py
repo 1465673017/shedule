@@ -344,7 +344,7 @@ class EduBossClient:
             response = None
             for retry in range(3):
                 # 保持顺序访问，并加入轻微随机间隔，避免形成固定频率的密集请求。
-                minimum_interval = random.uniform(0.8, 1.6)
+                minimum_interval = random.uniform(0.1, 0.5)
                 elapsed = time.monotonic() - self._last_attendance_request_at
                 if elapsed < minimum_interval:
                     time.sleep(minimum_interval - elapsed)
@@ -940,6 +940,13 @@ class CourseApp:
                 for detail in details
                 if first(detail, "studentId", "id", "userId") != ""
             }
+            details_by_name: dict[str, list[dict[str, Any]]] = {}
+            for detail in details:
+                detail_name = str(
+                    first(detail, "studentName", "name", "userName")
+                ).strip()
+                if detail_name:
+                    details_by_name.setdefault(detail_name, []).append(detail)
             raw_students = first(
                 course,
                 "students",
@@ -948,7 +955,10 @@ class CourseApp:
                 "miniClassStudentList",
                 default=[],
             )
-            students: list[dict[str, str]] = []
+            students: list[dict[str, Any]] = []
+            used_details: set[int] = set()
+            known_original_ids: set[str] = set()
+            known_names: set[str] = set()
             if isinstance(raw_students, list):
                 for student in raw_students:
                     if not isinstance(student, dict):
@@ -961,14 +971,65 @@ class CourseApp:
                         "id": anonymous_student_id(original_id, student_name),
                         "name": str(student_name),
                     }
-                    detail = details_by_id.get(str(original_id))
+                    original_id_text = str(original_id)
+                    student_name_text = str(student_name).strip()
+                    if original_id_text:
+                        known_original_ids.add(original_id_text)
+                    if student_name_text:
+                        known_names.add(student_name_text)
+                    detail = details_by_id.get(original_id_text)
+                    if detail is None and student_name_text:
+                        detail = next(
+                            (
+                                candidate
+                                for candidate in details_by_name.get(student_name_text, [])
+                                if id(candidate) not in used_details
+                            ),
+                            None,
+                        )
                     if detail is None and len(details) == 1 and len(raw_students) == 1:
-                        detail = details[0]
+                        only_detail = details[0]
+                        detail_identity = first(
+                            only_detail, "studentId", "id", "userId",
+                            "studentName", "name", "userName"
+                        )
+                        if detail_identity == "":
+                            detail = only_detail
                     if detail is not None:
+                        used_details.add(id(detail))
                         student_result.update(
                             attendance_values(course_type, detail, course_start_time)
                         )
                     students.append(student_result)
+
+            # The attendance endpoint can include students added after the basic
+            # course list was generated. Add those unmatched rows to the roster.
+            for detail in details:
+                if id(detail) in used_details:
+                    continue
+                original_id = first(detail, "studentId", "id", "userId")
+                student_name = str(
+                    first(detail, "studentName", "name", "userName")
+                ).strip()
+                original_id_text = str(original_id)
+                if not student_name:
+                    continue
+                if (
+                    (original_id_text and original_id_text in known_original_ids)
+                    or (not original_id_text and student_name in known_names)
+                ):
+                    continue
+                student_result = {
+                    "id": anonymous_student_id(original_id, student_name),
+                    "name": student_name,
+                }
+                student_result.update(
+                    attendance_values(course_type, detail, course_start_time)
+                )
+                students.append(student_result)
+                if original_id_text:
+                    known_original_ids.add(original_id_text)
+                known_names.add(student_name)
 
             subject_value = first(course, "subject", "subjectName")
             grade_value = first(course, "grade", "gradeName")
