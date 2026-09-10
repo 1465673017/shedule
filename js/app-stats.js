@@ -1416,9 +1416,8 @@ TimetableApp.prototype.collectChartSeriesData = function (startDate, endDate, fo
         var g = groups[key];
         var label;
         if (granularity === 'week' && weekMode === 'monthWeeks') {
-            var weekNames = ['第一周', '第二周', '第三周', '第四周', '第五周'];
             var weekIndex = groupOrder.indexOf(key);
-            label = weekNames[weekIndex] || ('第' + (weekIndex + 1) + '周');
+            label = '第' + (weekIndex + 1) + '周';
         } else if (granularity === 'week' && weekMode === 'naturalWeeks') {
             label = formatAxisDateLabel(g.startDate) + '-' + formatAxisDateLabel(g.endDate);
         } else if (granularity === 'month') {
@@ -3063,7 +3062,21 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
                 grossPay: salary.settings.basePay + chartCoursePay
             };
         }
+        if (config.salaryDisplayValue === undefined
+            && config.startDate
+            && config.endDate
+            && (this._chartGranularity === 'day' || this._chartGranularity === 'week')) {
+            var defaultChartSeries = this.collectChartSeriesData(config.startDate, config.endDate, 'day');
+            var defaultChartSalary = this.calculateSalaryChartSeries(defaultChartSeries, null);
+            salary.grossPay = defaultChartSalary.payData.reduce(function (sum, value) {
+                return sum + (Number(value) || 0);
+            }, 0);
+        }
         var money = function (value) { return '¥' + Number(value || 0).toFixed(2); };
+        if (config.salaryDisplayValue !== undefined) {
+            salary.grossPay = Number(config.salaryDisplayValue) || 0;
+        }
+        var salaryDisplayLabel = config.salaryDisplayLabel || '\u9884\u8ba1\u542b\u7a0e\u5de5\u8d44';
         container.classList.remove('lesson-unit-summary-grid', 'student-summary-grid');
         if (validLessons.length === 0) {
             container.innerHTML = [
@@ -3097,6 +3110,8 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
             '<div class="stats-card stats-card-people"><div class="stats-card-copy"><div class="st-label">课时费</div><div class="st-num">' + money(salary.coursePay) + '</div><div class="st-foot">当前阶段：' + salary.currentRate + '元/小时 · ' + salary.settings.starLevel + '星</div></div></div>',
             '<button type="button" class="stats-card stats-card-average salary-settings-card" data-salary-action="settings"><div class="stats-card-copy"><div class="st-label">预计含税工资</div><div class="st-num">' + money(salary.grossPay) + '</div><div class="st-foot">点击设置底薪和星级</div></div></button>'
         ].join('');
+        var salaryLabelNode = container.querySelector('.stats-card-average .st-label');
+        if (salaryLabelNode) salaryLabelNode.textContent = salaryDisplayLabel;
         bindSalaryCardActions();
         this.animateStatsCards(container, validLessons.length === 0);
         return { empty: validLessons.length === 0, totalHours: salary.weightedHours.toFixed(2), lessonCount: validLessons.length };
@@ -4190,7 +4205,41 @@ TimetableApp.prototype.updateStatsCardsForChartSlice = function (seriesData, ind
     sliceStart = new Date(sliceStart);
     sliceEnd = new Date(sliceEnd);
     var sliceLessons = this.aggregateLessons(sliceStart, sliceEnd);
-    this.renderStatsCards(sliceLessons, { startDate: sliceStart, endDate: sliceEnd });
+    var salaryDisplay = {};
+    if (this._currentChartCategory === 'salary') {
+        var salaryChartData = this.calculateSalaryChartSeries(seriesData, index);
+        var coursePay = Number(salaryChartData.payData[0]) || 0;
+        var salarySettings = this.getSalarySettings();
+        var salaryDisplayValue = coursePay;
+        if (seriesData.granularity === 'month') {
+            salaryDisplayValue += salarySettings.basePay;
+        } else if (seriesData.granularity === 'year') {
+            salaryDisplayValue = 0;
+            var monthCursor = new Date(sliceStart.getFullYear(), sliceStart.getMonth(), 1);
+            var monthEnd = new Date(sliceEnd.getFullYear(), sliceEnd.getMonth(), 1);
+            while (monthCursor <= monthEnd) {
+                var monthStart = new Date(monthCursor);
+                var nextMonth = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1);
+                var monthRangeEnd = new Date(nextMonth);
+                monthRangeEnd.setDate(monthRangeEnd.getDate() - 1);
+                if (monthStart < sliceStart) monthStart = new Date(sliceStart);
+                if (monthRangeEnd > sliceEnd) monthRangeEnd = new Date(sliceEnd);
+                var monthSeries = this.collectChartSeriesData(monthStart, monthRangeEnd, 'day');
+                var monthPayData = this.calculateSalaryChartSeries(monthSeries, null);
+                var monthCoursePay = monthPayData.payData.reduce(function (sum, value) {
+                    return sum + (Number(value) || 0);
+                }, 0);
+                salaryDisplayValue += salarySettings.basePay + monthCoursePay;
+                monthCursor = nextMonth;
+            }
+        }
+        salaryDisplay.salaryDisplayValue = salaryDisplayValue;
+        salaryDisplay.salaryDisplayLabel = '\u9884\u8ba1\u542b\u7a0e\u5de5\u8d44';
+    }
+    this.renderStatsCards(sliceLessons, Object.assign({
+        startDate: sliceStart,
+        endDate: sliceEnd
+    }, salaryDisplay));
 };
 
 TimetableApp.prototype.renderTypeComparisonChart = function (ctx, data, category) {
