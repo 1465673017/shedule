@@ -2893,6 +2893,20 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
         var salary = config.startDate && config.endDate
             ? this.calculateSalaryStatsForRange(config.startDate, config.endDate)
             : this.calculateSalaryStats(validLessons);
+        if (config.startDate && config.endDate) {
+            // The salary chart is the source of truth for course pay. The card
+            // only adds base pay to that same range total.
+            var salaryChartSeries = this.collectChartSeriesData(config.startDate, config.endDate, 'day');
+            var salaryChartData = this.calculateSalaryChartSeries(salaryChartSeries, null);
+            var chartCoursePay = salaryChartData.payData.reduce(function (sum, value) {
+                return sum + (Number(value) || 0);
+            }, 0);
+            salary = {
+                ...salary,
+                coursePay: chartCoursePay,
+                grossPay: salary.settings.basePay + chartCoursePay
+            };
+        }
         var money = function (value) { return '¥' + Number(value || 0).toFixed(2); };
         container.classList.remove('lesson-unit-summary-grid', 'student-summary-grid');
         if (validLessons.length === 0) {
