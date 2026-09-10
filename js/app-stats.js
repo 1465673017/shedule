@@ -787,26 +787,18 @@ TimetableApp.prototype.showDayStats = function (date) {
 }
 
 TimetableApp.prototype.getAttendanceSuffix = function (lesson) {
-    const total = lesson.studentCount + (lesson.leaveCount || 0) + (lesson.absentCount || 0);
+    const present = Math.max(0, Number(lesson.studentCount) || 0);
+    const leave = Math.max(0, Number(lesson.leaveCount) || 0);
+    const absent = Math.max(0, Number(lesson.absentCount) || 0);
+    const total = present + leave + absent;
     if (total === 0) return '';
 
-    const leave = lesson.leaveCount || 0;
-    const absent = lesson.absentCount || 0;
+    const presentEnd = (present / total) * 100;
+    const leaveEnd = presentEnd + (leave / total) * 100;
+    const background = `conic-gradient(#4caf50 0 ${presentEnd}%, #ff9800 ${presentEnd}% ${leaveEnd}%, #f44336 ${leaveEnd}% 100%)`;
+    const label = `出勤${present}人，请假${leave}人，缺勤${absent}人`;
 
-    // 全部出勤 → 只显示绿色色块
-    if (leave === 0 && absent === 0) {
-        return ` <span class="att-dot dot-green" title="全部出勤"></span>`;
-    }
-
-    // 否则显示黄色(请假)和/或红色(缺勤)色块，不显示绿色
-    let html = '';
-    if (leave > 0) {
-        html += ` <span class="att-dot dot-yellow" title="请假${leave}人"></span>`;
-    }
-    if (absent > 0) {
-        html += ` <span class="att-dot dot-red" title="缺勤${absent}人"></span>`;
-    }
-    return html;
+    return ` <span class="attendance-ratio-dot" style="--attendance-ratio-background:${background}" title="${label}" aria-label="${label}"></span>`;
 }
 
 TimetableApp.prototype.getInlineAuditionBadge = function () {

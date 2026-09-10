@@ -2805,6 +2805,17 @@ body.mint-theme-active .app-message-actions {
     background-color: #f44336;
 }
 
+.attendance-ratio-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: 6px;
+    border-radius: 50%;
+    vertical-align: middle;
+    cursor: pointer;
+    background: var(--attendance-ratio-background, #bdbdbd);
+}
+
 .grade-detail {
     border-radius: 0 0 8px 8px;
     margin-top: -1px;
