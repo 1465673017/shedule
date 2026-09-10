@@ -96,6 +96,28 @@ TimetableApp.prototype.formatStatsRangeLabel = function (startDate, endDate) {
     return `${format(startDate)}-${format(endDate)}`;
 }
 
+TimetableApp.prototype.collectDailyLessonsForRange = function (startDate, endDate) {
+    const lessons = [];
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    while (current <= end) {
+        const dateKey = this.formatStatsInputDate(current);
+        this.collectLessonsForDate(current, true).forEach(lesson => {
+            lessons.push({
+                ...lesson,
+                dates: [dateKey],
+                statsDetailKey: `${lesson.key}::${dateKey}`,
+                isDailyStatsLesson: true
+            });
+        });
+        current.setDate(current.getDate() + 1);
+    }
+    return lessons;
+}
+
 TimetableApp.prototype.setStatsDateRange = function (startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -355,7 +377,10 @@ TimetableApp.prototype.updateTextStatsNavButtons = function () {
 
 TimetableApp.prototype.renderTextStatsModal = function () {
     const range = this.getTextStatsRange();
-    const lessons = this.aggregateLessons(range.start, range.end);
+    const summaryLessons = this.aggregateLessons(range.start, range.end);
+    const lessons = this._textStatsTab === 'month' || this._textStatsTab === 'year'
+        ? this.collectDailyLessonsForRange(range.start, range.end)
+        : summaryLessons;
     const isDayView = this._textStatsTab === 'day';
 
     const title = document.getElementById('textStatsTitle');
@@ -368,7 +393,7 @@ TimetableApp.prototype.renderTextStatsModal = function () {
     if (subtitle) subtitle.textContent = isDayView ? '查看当天已完成课程的课时与到课情况。' : '按当前范围汇总课程、课时、试听和到课情况。';
     this.updateTextStatsNavButtons();
 
-    const summary = this.renderStatsCards(lessons, {
+    const summary = this.renderStatsCards(summaryLessons, {
         targetId: 'textStatsCards',
         showClassDays: !isDayView,
         compact: true,
@@ -920,7 +945,8 @@ TimetableApp.prototype.renderStatsByGrade = function (lessons, options) {
         row.className = 'grade-row';
         row.style.cursor = 'pointer';
         row.title = '点击展开/收起出勤记录';
-        let expanded = this._expandedTextStatsLessonKey === lesson.key;
+        const lessonExpandKey = lesson.statsDetailKey || lesson.key;
+        let expanded = this._expandedTextStatsLessonKey === lessonExpandKey;
         row.dataset.expanded = expanded ? 'true' : 'false';
         row.innerHTML = `
                 <div class="gr-name">
@@ -945,7 +971,7 @@ TimetableApp.prototype.renderStatsByGrade = function (lessons, options) {
         row.addEventListener('click', () => {
             expanded = !expanded;
             row.dataset.expanded = expanded ? 'true' : 'false';
-            this._expandedTextStatsLessonKey = expanded ? lesson.key : null;
+            this._expandedTextStatsLessonKey = expanded ? lessonExpandKey : null;
             const icon = row.querySelector('.grade-expand-icon');
             if (expanded) {
                 icon.textContent = '▼';
@@ -972,7 +998,10 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
     // 统计各状态人数
     let presentCount = 0, leaveCount = 0, absentCount = 0;
     studentIds.forEach(id => {
-        const status = this.getAttendanceStatusForStats(lesson, id);
+        const detailStudent = (lesson.students || []).find(item => item && String(item.id) === String(id));
+        const status = lesson.isDailyStatsLesson && detailStudent
+            ? detailStudent.status
+            : this.getAttendanceStatusForStats(lesson, id);
         if (status === 'leave') leaveCount++;
         else if (status === 'absent') absentCount++;
         else presentCount++;
@@ -996,8 +1025,10 @@ TimetableApp.prototype.renderLessonAttendanceDetail = function (panel, lesson) {
         const name = student ? student.name : '未知';
         const auditionBadge = student && student.isAudition ? this.getInlineAuditionBadge() : '';
         const oneV1Badge = student && student.is1v1 ? this.getInlineOneV1Badge() : '';
-        const status = this.getAttendanceStatusForStats(lesson, id) || defaultAttStatus;
         const detailStudent = (lesson.students || []).find(item => item && String(item.id) === String(id));
+        const status = (lesson.isDailyStatsLesson && detailStudent
+            ? detailStudent.status
+            : this.getAttendanceStatusForStats(lesson, id)) || defaultAttStatus;
         const detailMinutes = status === 'leave' || status === 'absent'
             ? 0
             : (detailStudent && detailStudent.actualMinutes !== undefined
