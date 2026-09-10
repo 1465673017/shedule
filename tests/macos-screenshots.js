@@ -14,35 +14,46 @@ const themes = (process.env.SCREENSHOT_THEMES || 'default,dark,mint')
     .map(theme => theme.trim())
     .filter(Boolean);
 const views = [
-    { name: 'main', title: '主界面', action: 'main' },
-    { name: 'subject-add', title: '添加科目', action: 'subject' },
-    { name: 'student-add', title: '添加学生', action: 'student' },
-    { name: 'student-batch', title: '批量添加学生', action: 'studentBatch' },
-    { name: 'course-import', title: '批量导入课程', action: 'courseImport' },
-    { name: 'period-edit', title: '编辑课时时间', action: 'time' },
-    { name: 'lesson-add', title: '添加课程', action: 'lesson' },
-    { name: 'course-manual', title: '手动添加课程', action: 'manualCourse' },
-    { name: 'attendance', title: '出勤记录', action: 'attendance' },
-    { name: 'salary-settings', title: '工资设置', action: 'salarySettings' },
-    { name: 'salary-rule', title: '课时计算规则', action: 'salaryRule' },
+    { category: 'workspace', name: 'main', title: '主界面', action: 'main' },
+    { category: 'course-management', name: 'subject-add', title: '添加科目', action: 'subject' },
+    { category: 'course-management', name: 'student-add', title: '添加学生', action: 'student' },
+    { category: 'course-management', name: 'student-batch', title: '批量添加学生', action: 'studentBatch' },
+    { category: 'course-management', name: 'course-import', title: '批量导入课程', action: 'courseImport' },
+    { category: 'course-management', name: 'period-edit', title: '编辑课时时间', action: 'time' },
+    { category: 'course-management', name: 'lesson-add', title: '添加课程', action: 'lesson' },
+    { category: 'course-management', name: 'course-manual', title: '手动添加课程', action: 'manualCourse' },
+    { category: 'attendance', name: 'attendance', title: '出勤记录', action: 'attendance' },
+    { category: 'salary', name: 'salary-settings', title: '工资设置', action: 'salarySettings' },
+    { category: 'salary', name: 'salary-rule', title: '课时计算规则', action: 'salaryRule' },
     ...['day', 'week', 'month', 'year'].map(tab => ({
-        name: `stats-chart-${tab}`, title: `图表统计-${tab}`, action: 'statsChart', arg: tab
+        category: 'statistics-chart-duration',
+        name: `stats-chart-duration-${tab}`, title: `课时统计图表-${tab}`, action: 'statsChart', arg: tab, chartCategory: 'duration'
     })),
     ...['day', 'week', 'month', 'year'].map(tab => ({
+        category: 'statistics-chart-student',
+        name: `stats-chart-student-${tab}`, title: `人数统计图表-${tab}`, action: 'statsChart', arg: tab, chartCategory: 'student'
+    })),
+    ...['day', 'week', 'month', 'year'].map(tab => ({
+        category: 'statistics-chart-salary',
+        name: `stats-chart-salary-${tab}`, title: `课时费统计图表-${tab}`, action: 'statsChart', arg: tab, chartCategory: 'salary'
+    })),
+    ...['day', 'week', 'month', 'year'].map(tab => ({
+        category: 'statistics-text',
         name: `stats-text-${tab}`, title: `文字统计-${tab}`, action: 'statsText', arg: tab
     })),
-    ...['theme', 'grade', 'stage', 'time'].map(tab => ({
+    ...['basic', 'theme', 'grade', 'stage', 'time'].map(tab => ({
+        category: 'settings',
         name: `settings-${tab}`, title: `设置-${tab}`, action: 'settings', arg: tab
     })),
-    { name: 'grade-add', title: '添加年级', action: 'grade' },
-    { name: 'reset', title: '重置数据', action: 'reset' },
-    { name: 'export', title: '导出数据', action: 'export' },
-    { name: 'quick-start', title: '快速开始', action: 'quickStart' },
-    { name: 'message', title: '应用消息', action: 'message' }
+    { category: 'settings', name: 'grade-add', title: '添加年级', action: 'grade' },
+    { category: 'data-management', name: 'reset', title: '重置数据', action: 'reset' },
+    { category: 'data-management', name: 'export', title: '导出数据', action: 'export' },
+    { category: 'help', name: 'quick-start', title: '快速开始', action: 'quickStart' },
+    { category: 'feedback', name: 'message', title: '应用消息', action: 'message' }
 ];
 
 async function prepareView(page, view) {
-    await page.evaluate(({ action, arg }) => {
+    await page.evaluate(({ action, arg, chartCategory }) => {
         document.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
         document.querySelectorAll('*').forEach(element => {
             element.getAnimations().forEach(animation => animation.finish());
@@ -96,6 +107,7 @@ async function prepareView(page, view) {
                 safely(() => {
                     app.openStatsModal(new Date());
                     app.switchStatsTab(arg);
+                    if (chartCategory) app.switchChartCategory(chartCategory);
                 }, 'statsModal', 'block');
                 break;
             case 'statsText':
@@ -177,12 +189,18 @@ async function prepareView(page, view) {
                     width: 1440,
                     height: Math.max(1000, Math.min(2000, modalHeight + 100))
                 });
-                const relativePath = path.join(theme, `${view.name}.png`);
+                const relativePath = path.join(theme, view.category, `${view.name}.png`);
                 const screenshotPath = path.join(outputDir, relativePath);
                 fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
                 await page.screenshot({ path: screenshotPath, animations: 'disabled' });
-                manifest.push({ theme, view: view.name, title: view.title, file: relativePath.replace(/\\/g, '/') });
-                console.log(`Captured ${theme}/${view.name}`);
+                manifest.push({
+                    theme,
+                    category: view.category,
+                    view: view.name,
+                    title: view.title,
+                    file: relativePath.replace(/\\/g, '/')
+                });
+                console.log(`Captured ${theme}/${view.category}/${view.name}`);
             }
         }
     } finally {
