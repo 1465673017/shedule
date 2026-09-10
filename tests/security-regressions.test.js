@@ -162,6 +162,27 @@ assert.deepStrictEqual(
     },
     'a non-standard imported course should retain its full imported time range'
 );
+const boundaryImportSlot = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [
+            { index: 0, period: { time: '13:00-15:00' } },
+            { index: 1, period: { time: '15:10-17:10' } }
+        ];
+    }
+}, {
+    courseTime: '15:00',
+    courseEndTime: '17:00'
+});
+assert.deepStrictEqual(
+    boundaryImportSlot.slots.map(slot => [slot.index, slot.overlapMinutes]),
+    [[1, 120]],
+    'a course starting at a slot boundary should use the first later slot inside its interval'
+);
+assert.strictEqual(
+    boundaryImportSlot.range.start + '-' + boundaryImportSlot.range.end,
+    '15:00-17:00',
+    'a boundary-assigned course should retain its imported non-standard time'
+);
 const temporaryCalls = [];
 CourseDataImportService.markImportedStudentsTemporary(
     {},

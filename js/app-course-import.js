@@ -225,13 +225,18 @@
         const startSlot = configuredSlots.find(slot =>
             range.startMinutes >= slot.startMinutes && range.startMinutes < slot.endMinutes
         );
-        if (!startSlot) {
+        // If the imported start is exactly on a slot boundary, assign it to
+        // the first later slot whose start falls inside the imported interval.
+        const boundarySlot = startSlot || configuredSlots.find(slot =>
+            slot.startMinutes > range.startMinutes && slot.startMinutes < range.endMinutes
+        );
+        if (!boundarySlot) {
             throw new Error(`未找到 ${range.start} 所在的课时，请先配置对应时间段`);
         }
         return {
             range,
             slots: [{
-                ...startSlot,
+                ...boundarySlot,
                 overlapMinutes: range.durationMinutes
             }]
         };
@@ -613,8 +618,9 @@
     };
     TimetableApp.prototype.importCourseDataText = async function (input, message) {
         message = message || { textContent: '' };
+        let markedInput = { text: String(input || '') };
         try {
-            const markedInput = normalizeMarkedInput(input);
+            markedInput = normalizeMarkedInput(input);
             const segmentedScheduling = !!(this.settings && this.settings.segmentedScheduling);
             if (!markedInput.hasStageMarker) {
                 throw new Error('请输入口令后再导入。');
