@@ -98,7 +98,8 @@ assert.strictEqual(
         { startMinutes: 600, endMinutes: 660, overlapMinutes: 60 },
         { durationMinutes: 120 }
     ),
-    30
+    60,
+    'an explicit imported actual time should retain its complete interval'
 );
 const correctedImportSlot = CourseDataImportService.periodSlots({
     getOrderedPeriods() {
@@ -125,7 +126,42 @@ assert.strictEqual(
     120,
     'student actual time near both slot boundaries should retain the explicit 120 minutes'
 );
-
+assert.strictEqual(
+    CourseDataImportService.studentActualMinutesForSlot(
+        { actualMinutes: 120, actualCourseTime: '18:40-20:40' },
+        { startMinutes: 1050, endMinutes: 1170, overlapMinutes: 120 },
+        { durationMinutes: 120 }
+    ),
+    120,
+    'a non-standard imported student time should not be clipped to the standard slot end'
+);
+const nonStandardImportSlot = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [
+            { index: 0, period: { time: '17:30-19:30' } },
+            { index: 1, period: { time: '19:30-21:30' } }
+        ];
+    }
+}, {
+    courseTime: '18:40',
+    courseEndTime: '20:40'
+});
+assert.deepStrictEqual(
+    nonStandardImportSlot.slots.map(slot => [slot.index, slot.overlapMinutes]),
+    [[0, 120]],
+    'a non-standard imported course should stay in the slot containing its start time'
+);
+assert.deepStrictEqual(
+    nonStandardImportSlot.range,
+    {
+        start: '18:40',
+        end: '20:40',
+        startMinutes: 1120,
+        endMinutes: 1240,
+        durationMinutes: 120
+    },
+    'a non-standard imported course should retain its full imported time range'
+);
 const temporaryCalls = [];
 CourseDataImportService.markImportedStudentsTemporary(
     {},

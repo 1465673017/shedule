@@ -170,13 +170,9 @@
             const actualStart = appTimeToMinutes(match[1]);
             const actualEnd = appTimeToMinutes(match[2]);
             if (Number.isFinite(actualStart) && Number.isFinite(actualEnd) && actualEnd > actualStart) {
-                const correctedStart = Math.abs(actualStart - slot.startMinutes) <= IMPORT_TIME_TOLERANCE_MINUTES
-                    ? slot.startMinutes
-                    : actualStart;
-                const correctedEnd = Math.abs(actualEnd - slot.endMinutes) <= IMPORT_TIME_TOLERANCE_MINUTES
-                    ? slot.endMinutes
-                    : actualEnd;
-                return Math.max(0, Math.min(correctedEnd, slot.endMinutes) - Math.max(correctedStart, slot.startMinutes));
+                // Imported actual time belongs to the start-time slot, but its
+                // duration must remain the complete imported interval.
+                return actualEnd - actualStart;
             }
         }
         if (explicitMinutes === 0 || range.durationMinutes <= 0) return 0;
@@ -223,12 +219,22 @@
                 durationMinutes: correctedSlot.endMinutes - correctedSlot.startMinutes
             };
         }
-        const slots = configuredSlots.map(x => {
-            const overlapMinutes = Math.max(0, Math.min(range.endMinutes, x.endMinutes) - Math.max(range.startMinutes, x.startMinutes));
-            return overlapMinutes > 0 ? { ...x, overlapMinutes } : null;
-        }).filter(Boolean);
-        if (!slots.length) throw new Error(`未找到与 ${range.start}-${range.end} 重叠的课时，请先配置对应时间段`);
-        return { range, slots };
+        // A non-standard imported course belongs to the standard slot where
+        // its start time falls. Keep the full imported interval on that one
+        // slot instead of splitting it across multiple slots.
+        const startSlot = configuredSlots.find(slot =>
+            range.startMinutes >= slot.startMinutes && range.startMinutes < slot.endMinutes
+        );
+        if (!startSlot) {
+            throw new Error(`未找到 ${range.start} 所在的课时，请先配置对应时间段`);
+        }
+        return {
+            range,
+            slots: [{
+                ...startSlot,
+                overlapMinutes: range.durationMinutes
+            }]
+        };
     }
 
     function periodIndex(app, course) {
@@ -362,6 +368,26 @@
             }
         });
 
+        // Also clear every concrete occurrence in the import range. This
+        // removes legacy split-slot remnants that may no longer be represented
+        // by the current instance scan, while preserving courses outside the
+        // selected dates.
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+        while (current <= end) {
+            const day = current.getDay() || 7;
+            const weekStart = app.getWeekStartStrForDate(current);
+            (app.periods || []).forEach((_period, periodIndex) => {
+                const cellKey = app.buildCellKey(day, String(periodIndex));
+                const version = app.getCellVersion(cellKey, weekStart);
+                if (!versionHasCourse(version)) return;
+                window.ScheduleErpService.deleteSingleCellOccurrence(app, cellKey, weekStart);
+            });
+            current.setDate(current.getDate() + 1);
+        }
+
         erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
             !app.isDateWithinCustomResetRange(record.dateKey, startDate, endDate)
         );
@@ -440,7 +466,15 @@
                     instance.importPartCount = slots.length;
                     instance.importSourceTime = `${range.start}-${range.end}`;
                     instance.importTotalMinutes = range.durationMinutes;
-                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [dateKey]: slot.overlapMinutes };
+                    instance.standardStartTime = String(slot.period.time).split('-')[0].trim().slice(0, 5);
+                    instance.standardEndTime = String(slot.period.time).split('-')[1].trim().slice(0, 5);
+                    instance.actualStartTime = range.start;
+                    instance.actualEndTime = range.end;
+                    instance.isNonStandardTime = range.start !== instance.standardStartTime
+                        || range.end !== instance.standardEndTime;
+                    instance.timeSource = 'import';
+                    instance.timeManuallyAdjusted = false;
+                    instance.actualMinutesByDate = { ...(instance.actualMinutesByDate || {}), [dateKey]: range.durationMinutes };
                     const studentMinutes = {};
                     sourceStudents.forEach((source, i) => {
                         const minutes = studentActualMinutesForSlot(source, slot, range);
