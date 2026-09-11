@@ -206,9 +206,24 @@
                 sourceEnd
             };
         }
-        if (!slot) slot = slots.find(item =>
-            range.startMinutes >= item.startMinutes && range.startMinutes < item.endMinutes
-        );
+        if (!slot) {
+            // 非标准课时按与各标准课时的重叠时长归属，避免仅按开始时间误判。
+            slot = slots
+                .map(item => ({
+                    item,
+                    overlapMinutes: Math.max(
+                        0,
+                        Math.min(range.endMinutes, item.endMinutes)
+                            - Math.max(range.startMinutes, item.startMinutes)
+                    )
+                }))
+                .filter(entry => entry.overlapMinutes > 0)
+                .sort((a, b) => (
+                    b.overlapMinutes - a.overlapMinutes
+                    || a.item.startMinutes - b.item.startMinutes
+                    || a.item.index - b.item.index
+                ))[0]?.item;
+        }
         if (!slot) slot = slots.find(item => range.startMinutes < item.startMinutes);
         if (!slot) throw new Error(`未找到 ${range.start}-${range.end} 对应的起始课时，请先配置对应时间段`);
         return { range, slots: [slot] };
@@ -339,6 +354,25 @@
             }
         });
 
+        // Also clear every concrete occurrence in the selected range. This
+        // removes legacy or inherited projections that are not discoverable
+        // from the current courseInstances list.
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+        while (current <= end) {
+            const day = current.getDay() || 7;
+            const weekStart = app.getWeekStartStrForDate(current);
+            (app.periods || []).forEach((_period, periodIndex) => {
+                const cellKey = app.buildCellKey(day, String(periodIndex));
+                const version = app.getCellVersion(cellKey, weekStart);
+                if (!versionHasCourse(version)) return;
+                window.ScheduleErpService.deleteSingleCellOccurrence(app, cellKey, weekStart);
+            });
+            current.setDate(current.getDate() + 1);
+        }
+
         erp.attendanceRecords = (erp.attendanceRecords || []).filter(record =>
             !app.isDateWithinCustomResetRange(record.dateKey, startDate, endDate)
         );
@@ -451,10 +485,10 @@
                         && (record.cellKey === cellKey
                             || (currentInstanceId && record.courseInstanceId === currentInstanceId)))
                 );
-                const remoteCourse = courseByKey.get(key);
-                if (!remoteCourse) {
-                    window.ScheduleErpService.deleteSingleCellOccurrence(app, cellKey, weekStart);
-                }
+                // Clear the selected occurrence before importing the network
+                // snapshot. This also removes inherited or legacy projections
+                // that are not represented by the current course instance.
+                window.ScheduleErpService.deleteSingleCellOccurrence(app, cellKey, weekStart);
             });
 
             const selectedCourses = networkKeys.map(key => courseByKey.get(key)).filter(Boolean);

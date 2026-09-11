@@ -325,6 +325,12 @@ TimetableApp.prototype.prepareLessonTimeEditor = function(cell, version, weekSta
         const endInput = document.getElementById('lessonActualEndTime');
         if (!section || !startInput || !endInput || !cell) return;
         const standard = this.getPeriodTimeParts(cell.dataset.period);
+        const standardStartMinutes = this.timeValueToMinutes(standard.start);
+        const standardEndMinutes = this.timeValueToMinutes(standard.end);
+        const halfDuration = Math.floor((standardEndMinutes - standardStartMinutes) / 2);
+        const midpoint = standardStartMinutes + halfDuration;
+        const startLimit = Math.max(0, standardStartMinutes - halfDuration);
+        const endLimit = Math.min(1439, standardEndMinutes + halfDuration);
         const instance = this.getLessonInstance(version);
         startInput.value = instance && instance.actualStartTime || standard.start;
         endInput.value = instance && instance.actualEndTime || standard.end;
@@ -332,36 +338,62 @@ TimetableApp.prototype.prepareLessonTimeEditor = function(cell, version, weekSta
             {
                 input: startInput,
                 hour: document.getElementById('lessonStartHour'),
-                minute: document.getElementById('lessonStartMinute')
+                minute: document.getElementById('lessonStartMinute'),
+                min: startLimit,
+                max: midpoint
             },
             {
                 input: endInput,
                 hour: document.getElementById('lessonEndHour'),
-                minute: document.getElementById('lessonEndMinute')
+                minute: document.getElementById('lessonEndMinute'),
+                min: midpoint,
+                max: endLimit
             }
         ];
         pickerConfig.forEach(picker => {
             if (!picker.hour || !picker.minute) return;
             const parts = String(picker.input.value || '00:00').split(':');
-            const selectedHour = String(parts[0] || '00').padStart(2, '0');
-            const selectedMinute = String(parts[1] || '00').padStart(2, '0');
-            picker.hour.innerHTML = Array.from({ length: 24 }, (_, hour) => {
+            const selectedValue = this.timeValueToMinutes(`${parts[0] || '00'}:${parts[1] || '00'}`);
+            const allowedMinutes = [];
+            for (let value = picker.min; value <= picker.max; value += 5) {
+                allowedMinutes.push(value);
+            }
+            if (Number.isFinite(selectedValue) && !allowedMinutes.includes(selectedValue)
+                && selectedValue >= picker.min && selectedValue <= picker.max) {
+                allowedMinutes.push(selectedValue);
+                allowedMinutes.sort((a, b) => a - b);
+            }
+            const allowedHours = [...new Set(allowedMinutes.map(value => Math.floor(value / 60)))];
+            picker.hour.innerHTML = allowedHours.map(hour => {
                 const value = String(hour).padStart(2, '0');
                 return `<option value="${value}">${value}</option>`;
             }).join('');
-            const minuteValues = new Set(Array.from({ length: 12 }, (_, index) => String(index * 5).padStart(2, '0')));
-            minuteValues.add(selectedMinute);
-            picker.minute.innerHTML = [...minuteValues].sort().map(value =>
-                `<option value="${value}">${value}</option>`
-            ).join('');
-            picker.hour.value = selectedHour;
-            picker.minute.value = selectedMinute;
+            const updateMinuteOptions = () => {
+                const hour = Number(picker.hour.value);
+                const minuteValues = allowedMinutes
+                    .filter(value => Math.floor(value / 60) === hour)
+                    .map(value => String(value % 60).padStart(2, '0'));
+                picker.minute.innerHTML = minuteValues.map(value =>
+                    `<option value="${value}">${value}</option>`
+                ).join('');
+                const desiredMinute = String((Number.isFinite(selectedValue) ? selectedValue : picker.min) % 60).padStart(2, '0');
+                picker.minute.value = minuteValues.includes(desiredMinute) ? desiredMinute : minuteValues[0];
+            };
+            const initialValue = Number.isFinite(selectedValue)
+                ? Math.max(picker.min, Math.min(picker.max, selectedValue))
+                : picker.min;
+            picker.hour.value = String(Math.floor(initialValue / 60)).padStart(2, '0');
+            updateMinuteOptions();
+            picker.hour.onchange = () => {
+                updateMinuteOptions();
+                refresh();
+            };
         });
         section.dataset.period = cell.dataset.period;
         section.dataset.day = cell.dataset.day;
         section.dataset.weekStart = weekStartStr;
         const hint = document.getElementById('lessonStandardTimeHint');
-        if (hint) hint.textContent = `标准时间：${standard.start}–${standard.end}。开始时间必须位于该标准课时内。`;
+        if (hint) hint.textContent = `标准时间：${standard.start}–${standard.end}。开始：${this.formatSliderTime(startLimit)}–${this.formatSliderTime(midpoint)}，结束：${this.formatSliderTime(midpoint)}–${this.formatSliderTime(endLimit)}。`;
         const refresh = () => {
             pickerConfig.forEach(picker => {
                 if (picker.hour && picker.minute) picker.input.value = `${picker.hour.value}:${picker.minute.value}`;
@@ -394,12 +426,17 @@ TimetableApp.prototype.validateLessonTimeEditor = function(currentInstanceId) {
         const standard = this.getPeriodTimeParts(section.dataset.period);
         const standardStart = this.timeValueToMinutes(standard.start);
         const standardEnd = this.timeValueToMinutes(standard.end);
+        const halfDuration = Math.floor((standardEnd - standardStart) / 2);
+        const midpoint = standardStart + halfDuration;
+        const startLimit = Math.max(0, standardStart - halfDuration);
+        const endLimit = Math.min(1439, standardEnd + halfDuration);
         if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || endMinutes <= startMinutes) {
             alert('课程结束时间必须晚于开始时间。');
             return false;
         }
-        if (startMinutes < standardStart || startMinutes >= standardEnd) {
-            alert(`开始时间必须位于本节标准时间 ${standard.start}–${standard.end} 内。`);
+        if (startMinutes < startLimit || startMinutes > midpoint
+            || endMinutes < midpoint || endMinutes > endLimit) {
+            alert(`实际上课时间必须在开始 ${this.formatSliderTime(startLimit)}–${this.formatSliderTime(midpoint)}、结束 ${this.formatSliderTime(midpoint)}–${this.formatSliderTime(endLimit)} 范围内。`);
             return false;
         }
         const day = String(section.dataset.day);

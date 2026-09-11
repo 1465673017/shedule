@@ -189,12 +189,15 @@ TimetableApp.prototype.showLessonTimeEditor = function(event, key) {
     if (parts.length !== 2) return;
     const standardStart = this.timeToMinutes(parts[0]);
     const standardEnd = this.timeToMinutes(parts[1]);
+    const halfDuration = Math.floor((standardEnd - standardStart) / 2);
+    const startLimit = Math.max(0, standardStart - halfDuration);
+    const midpoint = standardStart + halfDuration;
+    const endLimit = Math.min(1439, standardEnd + halfDuration);
     const instance = this._attModalCourseInstance;
     const savedStart = instance && instance.actualStartTime ? this.timeToMinutes(instance.actualStartTime) : standardStart;
     const savedEnd = instance && instance.actualEndTime ? this.timeToMinutes(instance.actualEndTime) : standardEnd;
-    const startValue = Math.max(standardStart, Math.min(standardEnd, savedStart));
-    const endLimit = Math.min(1439, standardEnd + 120);
-    const endValue = Math.max(standardEnd, Math.min(endLimit, savedEnd));
+    const startValue = Math.max(startLimit, Math.min(midpoint, savedStart));
+    const endValue = Math.max(midpoint, Math.min(endLimit, savedEnd));
 
     const editor = document.createElement('div');
     editor.id = 'lessonTimeEditorDropdown';
@@ -204,13 +207,13 @@ TimetableApp.prototype.showLessonTimeEditor = function(event, key) {
         <div class="duration-editor-body lesson-time-slider-body">
             <div class="lesson-time-slider-row">
                 <div class="lesson-time-slider-heading"><span>开始时间</span><strong id="lessonStartTimeValue">${this.formatSliderTime(startValue)}</strong></div>
-                <input type="range" id="lessonStartTimeRange" class="duration-range" min="${standardStart}" max="${standardEnd}" step="5" value="${startValue}">
-                <small>可选范围 ${this.formatSliderTime(standardStart)}–${this.formatSliderTime(standardEnd)}</small>
+                <input type="range" id="lessonStartTimeRange" class="duration-range" min="${startLimit}" max="${midpoint}" step="5" value="${startValue}">
+                <small>可选范围 ${this.formatSliderTime(startLimit)}–${this.formatSliderTime(midpoint)}</small>
             </div>
             <div class="lesson-time-slider-row">
                 <div class="lesson-time-slider-heading"><span>结束时间</span><strong id="lessonEndTimeValue">${this.formatSliderTime(endValue)}</strong></div>
-                <input type="range" id="lessonEndTimeRange" class="duration-range" min="${standardEnd}" max="${endLimit}" step="5" value="${endValue}">
-                <small>可选范围 ${this.formatSliderTime(standardEnd)}–${this.formatSliderTime(endLimit)}</small>
+                <input type="range" id="lessonEndTimeRange" class="duration-range" min="${midpoint}" max="${endLimit}" step="5" value="${endValue}">
+                <small>可选范围 ${this.formatSliderTime(midpoint)}–${this.formatSliderTime(endLimit)}</small>
             </div>
         </div>
     `;
@@ -289,6 +292,17 @@ TimetableApp.prototype.saveAttendanceLessonTime = function(key, startMinutes, en
 
     const periodInfo = parsed ? this.getPeriod(parsed.periodIndex) : null;
     const standardParts = String(periodInfo && periodInfo.time || '').split('-');
+    const standardStart = this.timeToMinutes(standardParts[0]);
+    const standardEnd = this.timeToMinutes(standardParts[1]);
+    const halfDuration = Math.floor((standardEnd - standardStart) / 2);
+    const startLimit = standardStart - halfDuration;
+    const midpoint = standardStart + halfDuration;
+    const endLimit = Math.min(1439, standardEnd + halfDuration);
+    if (startMinutes < startLimit || startMinutes > midpoint
+        || endMinutes < midpoint || endMinutes > endLimit) {
+        alert(`实际上课时间必须在开始 ${this.formatSliderTime(startLimit)}–${this.formatSliderTime(midpoint)}、结束 ${this.formatSliderTime(midpoint)}–${this.formatSliderTime(endLimit)} 范围内。`);
+        return false;
+    }
     const start = this.formatSliderTime(startMinutes);
     const end = this.formatSliderTime(endMinutes);
     const duration = endMinutes - startMinutes;

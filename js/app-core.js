@@ -345,6 +345,10 @@ class TimetableApp {
             if (e.target.closest('.copy-course-btn, .schedule-block-action, .cell, .timetable th, .period-cell, .date-navigator')) return;
             this.cancelCopyPasteState();
         });
+        window.addEventListener('blur', () => this.hideNonStandardTimeTooltips?.());
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.hideNonStandardTimeTooltips?.();
+        });
         
         // 点击弹窗外部关闭弹窗
         const modalCloseHandlers = {

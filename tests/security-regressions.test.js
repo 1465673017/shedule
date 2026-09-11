@@ -133,6 +133,16 @@ assert.strictEqual(nonStandardTime.range.start, '10:04');
 assert.strictEqual(nonStandardTime.range.end, '12:04');
 assert.strictEqual(nonStandardTime.range.calibrated, undefined);
 
+const overlapMapped = CourseDataImportService.periodSlots({
+    getOrderedPeriods() {
+        return [
+            { index: 0, period: { time: '17:30-19:30' } },
+            { index: 1, period: { time: '19:40-21:40' } }
+        ];
+    }
+}, { courseTime: '18:40', courseEndTime: '20:40' });
+assert.strictEqual(overlapMapped.slots[0].index, 1);
+
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);
 const coreSource = read('js/app-core.js');
 assert.match(coreSource, /timetableDataBackup/);

@@ -603,7 +603,15 @@ TimetableApp.prototype.renderScheduleBlockActions = function() {
         });
     }
 
+TimetableApp.prototype.hideNonStandardTimeTooltips = function() {
+        document.querySelectorAll('.non-standard-time-tooltip').forEach(tooltip => {
+            tooltip.classList.remove('is-visible');
+            tooltip.remove();
+        });
+    }
+
 TimetableApp.prototype.renderTimetable = function() {
+        this.hideNonStandardTimeTooltips();
         if (window.ScheduleErpService.completeStudentsForEndedStages(this)) {
             this.saveData();
             this.renderSubjects();
