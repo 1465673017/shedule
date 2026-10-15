@@ -450,6 +450,33 @@
         return rule;
     }
 
+    // Repair legacy attendance rules that accidentally turned a recurring
+    // course relation into a temporary one. Explicit attendance choices are
+    // tagged with source=manual-attendance and are left untouched.
+    function repairRecurringAttendanceRelations(app) {
+        const erp = ensureErpData(app);
+        const instances = new Map((erp.courseInstances || []).map(instance => [instance.id, instance]));
+        const repaired = new Set();
+        (erp.exceptionRules || []).forEach(rule => {
+            if (rule.type !== 'temporary-student' || rule.reason !== 'attendance-recurrence' || rule.source === 'manual-attendance') return;
+            const instance = instances.get(rule.courseInstanceId);
+            if (!instance || instance.isDeleted || instance.status !== 'recurring' || !rule.studentId) return;
+            const relation = (erp.studentCourseRelations || []).find(rel =>
+                rel.courseInstanceId === instance.id && String(rel.studentId) === String(rule.studentId)
+            );
+            if (!relation || relation.relationStatus !== 'temporary') return;
+            relation.relationStatus = 'recurring';
+            relation.status = 'recurring';
+            relation.updatedAt = new Date().toISOString();
+            repaired.add(rule);
+        });
+        if (repaired.size) {
+            erp.exceptionRules = erp.exceptionRules.filter(rule => !repaired.has(rule));
+            return true;
+        }
+        return false;
+    }
+
     function clearInstanceDeletionRules(app, courseInstanceId, weekStartStr) {
         if (!courseInstanceId || !weekStartStr) return;
         const erp = ensureErpData(app);
@@ -794,6 +821,7 @@
 
     function buildTimetableProjection(app) {
         const erp = ensureErpData(app);
+        repairRecurringAttendanceRelations(app);
         const projected = {};
         erp.courseInstances.forEach(instance => {
             if (!instance.cellKey || !instance.weekStart) return;
@@ -1039,7 +1067,8 @@
                         studentId: String(studentId),
                         type: type === 'stopped' ? 'pause-student' : 'temporary-student',
                         scope: type === 'stopped' ? 'future' : 'single-week',
-                        reason: 'attendance-recurrence'
+                        reason: 'attendance-recurrence',
+                        source: 'manual-attendance'
                     });
                 } else if (type === 'recurring') {
                     clearEmptyRecurringStops(app, cellKey, effectiveWeekStart, 'all-future-empty');
