@@ -273,7 +273,6 @@ class TimetableApp {
             this.updateWeekRange();
             this.renderTimetable();
         });
-        bind('courseCheckBtn', 'click', () => this.openCourseCheckModal());
         bind('courseCheckRunBtn', 'click', () => this.runCourseCheck());
         bind('courseCheckRangeButton', 'click', () => this.toggleCourseCheckDatePicker());
         bind('courseCheckCalendarPrev', 'click', () => this.changeCourseCheckCalendarMonth(-1));

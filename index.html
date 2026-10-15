@@ -557,7 +557,6 @@
                             </div>
                         </div>
                         <div class="date-display">
-                            <button type="button" id="courseCheckBtn" class="today-btn course-check-btn">检查</button>
                             <label class="date-picker-shell" for="datePicker"><span class="calendar-icon"
                                     aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                         <path
@@ -696,51 +695,6 @@
                     <button type="submit" class="btn primary">保存</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <div id="courseCheckModal" class="modal">
-        <div class="modal-content course-check-modal-content">
-            <div class="modal-header">
-                <div class="modal-title-block">
-                    <h3>检查课表数据</h3>
-                    <p class="modal-subtitle">只读比较当前课表与网络课程，不会自动修改本地数据</p>
-                </div>
-                <button type="button" class="modal-close" aria-label="关闭" data-onclick="app.closeCourseCheckModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="course-check-controls">
-                    <div class="course-check-mode-tabs">
-                        <button type="button" class="course-check-mode active" data-mode="range">时段抽检</button>
-                        <button type="button" class="course-check-mode" data-mode="day">定点抽检</button>
-                    </div>
-                    <div id="courseCheckDayFields" class="course-check-date-fields" style="display:none">
-                        <input type="date" id="courseCheckDay">
-                    </div>
-                    <div id="courseCheckRangeFields" class="course-check-date-fields course-check-range-picker">
-                        <input type="hidden" id="courseCheckStartDate">
-                        <input type="hidden" id="courseCheckEndDate">
-                        <button type="button" id="courseCheckRangeButton" class="stats-date-range-picker">
-                            <span class="stats-date-range-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                            <span id="courseCheckRangeText" class="stats-date-range-value">请选择抽检日期范围</span>
-                            <span class="stats-date-range-caret">&#9662;</span>
-                        </button>
-                        <div class="stats-date-popover course-check-date-popover" id="courseCheckDatePopover" style="display:none;">
-                            <div class="stats-calendar-header">
-                                <button type="button" id="courseCheckCalendarPrev" class="stats-calendar-nav">&#8249;</button>
-                                <div class="stats-calendar-title" id="courseCheckCalendarTitle"></div>
-                                <button type="button" id="courseCheckCalendarNext" class="stats-calendar-nav">&#8250;</button>
-                            </div>
-                            <div class="stats-calendar-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
-                            <div class="stats-calendar-grid" id="courseCheckCalendarGrid"></div>
-                        </div>
-                    </div>
-                    <button type="button" id="courseCheckRunBtn" class="btn primary">开始检查</button>
-                    <button type="button" id="courseCheckSyncBtn" class="btn primary" disabled>一键同步</button>
-                </div>
-                <div id="courseCheckStatus" class="course-check-status">请选择检查方式和日期。</div>
-                <div id="courseCheckResults" class="course-check-results"></div>
-            </div>
         </div>
     </div>
 
