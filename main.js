@@ -5,6 +5,8 @@ const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
 const isMac = process.platform === 'darwin';
 const appIconPath = path.join(__dirname, 'icon', isMac ? 'orange.png' : 'orange.ico');
+let memoWindow = null;
+let mainWindow = null;
 const APP_NAME = 'A大橙子课时统计定制版';
 const appDataPath = app.getPath('appData');
 app.setName(APP_NAME);
@@ -85,6 +87,7 @@ function createWindow() {
             zoomFactor: 0.9
         }
     });
+    mainWindow = win;
 
     const appPageUrl = pathToFileURL(path.join(__dirname, 'index.html')).toString();
     let gpuFallbackStarted = false;
@@ -102,7 +105,36 @@ function createWindow() {
         if (targetUrl !== appPageUrl) event.preventDefault();
     });
     win.loadURL(appPageUrl).catch(error => appendStartupLog('loadURL rejected', error));
+    win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
 }
+
+function createMemoWindow() {
+    if (memoWindow && !memoWindow.isDestroyed()) { memoWindow.show(); memoWindow.focus(); return; }
+    memoWindow = new BrowserWindow({
+        icon: appIconPath, width: 460, height: 420, minWidth: 460, minHeight: 420, show: false,
+        title: '\u5927\u6a59\u5b50\u5907\u5fd8\u5f55', autoHideMenuBar: true,
+        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, zoomFactor: 0.9 }
+    });
+    // Keep the memo window titled 大橙子备忘录 instead of adopting the page's app title.
+    memoWindow.on('page-title-updated', event => event.preventDefault());
+    memoWindow.loadURL(pathToFileURL(path.join(__dirname, 'index.html')).toString()).then(() => {
+        const currentWindow = memoWindow;
+        return currentWindow?.webContents.executeJavaScript("document.body.classList.add('memo-window-mode'); new Promise(resolve => { const openMemo = () => { document.getElementById('memoModal').style.display = 'flex'; document.getElementById('memoPinToggle').hidden = false; const coursePicker = document.getElementById('memoPickCourseBtn'); if (coursePicker) { coursePicker.disabled = true; coursePicker.title = '窗口模式下不可选择课表课程'; } app.renderMemoList(); app.showMemoListOnly(); resolve(); }; if (typeof app !== 'undefined') openMemo(); else document.addEventListener('DOMContentLoaded', openMemo, { once: true }); })").then(() => {
+            if (currentWindow && !currentWindow.isDestroyed()) currentWindow.show();
+        });
+    }).catch(error => appendStartupLog('Memo window failed to load', error));
+    memoWindow.on('closed', () => { memoWindow = null; });
+}
+
+ipcMain.handle('open-memo-window', () => { createMemoWindow(); return { opened: true }; });
+
+ipcMain.handle('toggle-memo-window-always-on-top', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed() || win !== memoWindow) return { alwaysOnTop: false };
+    const alwaysOnTop = !win.isAlwaysOnTop();
+    win.setAlwaysOnTop(alwaysOnTop);
+    return { alwaysOnTop };
+});
 
 ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileExt }) => {
     if (typeof data !== 'string') throw new TypeError('Invalid file data');
@@ -272,6 +304,7 @@ if (gotSingleInstanceLock) {
     });
 
     app.on('window-all-closed', () => {
+        if (memoWindow && !memoWindow.isDestroyed()) return;
         if (process.platform !== 'darwin') {
             app.quit();
         }

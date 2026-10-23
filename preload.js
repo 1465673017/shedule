@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
     platform: process.platform,
     windowControl: (action) => ipcRenderer.send('window-control', action),
+    openMemoWindow: () => ipcRenderer.invoke('open-memo-window'),
+    toggleMemoWindowAlwaysOnTop: () => ipcRenderer.invoke('toggle-memo-window-always-on-top'),
     setPageZoom: (percent) => ipcRenderer.send('set-page-zoom', percent),
     readClipboardText: () => ipcRenderer.invoke('read-clipboard-text'),
     courseLogin: (credentials) => ipcRenderer.invoke('course-login', credentials),

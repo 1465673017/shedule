@@ -608,7 +608,11 @@ TimetableApp.prototype.hideNonStandardTimeTooltips = function() {
             tooltip.classList.remove('is-visible');
             tooltip.remove();
         });
-    }
+        document.querySelectorAll('.memo-course-tooltip').forEach(tooltip => {
+            tooltip.classList.remove('is-visible');
+            tooltip.remove();
+        });
+}
 
 TimetableApp.prototype.renderTimetable = function() {
         this.hideNonStandardTimeTooltips();
@@ -626,6 +630,8 @@ TimetableApp.prototype.renderTimetable = function() {
             const row = this.createPeriodRow(index, period, totalPeriodNum);
             tbody.appendChild(row);
         });
+
+        if (this._memoCoursePicking) tbody.querySelectorAll('.cell').forEach(cell => cell.classList.add('memo-course-pickable'));
 
         this.highlightTodayColumn();
         this.renderScheduleBlockActions();
@@ -711,7 +717,69 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             
             const key = this.buildCellKey(day, periodIndex);
             const weekStart = this.getWeekRange(this.currentDate).start;
-            const weekStartStr = this.formatLocalDate(weekStart);
+        const weekStartStr = this.formatLocalDate(weekStart);
+            const cellDate = new Date(weekStart);
+            cellDate.setDate(weekStart.getDate() + day - 1);
+            const cellDateStr = this.formatLocalDate(cellDate);
+            const cellMemos = (this.getMemos?.() || []).filter(memo => {
+                if (memo.done) return false;
+                if (memo.cellRef) return memo.cellRef.date === cellDateStr && Number(memo.cellRef.day) === day && Number(memo.cellRef.period) === periodIndex;
+                if (!memo.due || memo.due.slice(0, 10) !== cellDateStr) return false;
+                const due = new Date(memo.due);
+                const minutes = due.getHours() * 60 + due.getMinutes();
+                const parts = String(period.time || '').split('-');
+                if (parts.length !== 2) return false;
+                return minutes >= this.timeToMinutes(parts[0]) && minutes < this.timeToMinutes(parts[1]);
+            });
+            if (cellMemos.length) {
+                const memoTooltip = document.createElement('div');
+                memoTooltip.className = 'non-standard-time-tooltip memo-course-tooltip';
+                memoTooltip.setAttribute('role', 'tooltip');
+                memoTooltip.innerHTML = cellMemos.map(memo => {
+                    const content = this.escapeHtml(memo.content || '备忘');
+                    const note = String(memo.note || '').trim();
+                    const label = note ? `${content}（${this.escapeHtml(note)}）` : content;
+                    return `<div class="memo-course-tooltip-item"><strong>${label}</strong></div>`;
+                }).join('');
+                let memoHideTimer = null;
+                const todoTag = document.createElement('span');
+                todoTag.className = 'memo-todo-tag';
+                todoTag.textContent = `待办${cellMemos.length > 1 ? ` ${cellMemos.length}` : ''}`;
+                todoTag.setAttribute('aria-label', `${cellMemos.length} 项未完成待办`);
+                const showMemoTooltip = () => {
+                    if (memoHideTimer) { clearTimeout(memoHideTimer); memoHideTimer = null; }
+                    cell.querySelectorAll('.non-standard-time-tooltip').forEach(tooltip => {
+                        tooltip.classList.remove('is-visible');
+                        tooltip.remove();
+                    });
+                    document.body.appendChild(memoTooltip);
+                    const rect = cell.getBoundingClientRect();
+                    const tipRect = memoTooltip.getBoundingClientRect();
+                    const padding = 10;
+                    const preferredLeft = rect.left + 8;
+                    const left = Math.max(padding, Math.min(preferredLeft, window.innerWidth - tipRect.width - padding));
+                    const above = rect.top >= tipRect.height + 12;
+                    memoTooltip.classList.toggle('is-below', !above);
+                    memoTooltip.classList.toggle('arrow-right', left < preferredLeft - 1);
+                    memoTooltip.style.left = `${left}px`;
+                    memoTooltip.style.top = `${Math.max(padding, above ? rect.top - tipRect.height - 8 : rect.bottom + 8)}px`;
+                    requestAnimationFrame(() => memoTooltip.classList.add('is-visible'));
+                };
+                todoTag.addEventListener('mouseenter', showMemoTooltip);
+                cell.appendChild(todoTag);
+                const hideMemoTooltip = () => {
+                    if (memoHideTimer) clearTimeout(memoHideTimer);
+                    memoTooltip.classList.remove('is-visible');
+                    memoTooltip.remove();
+                };
+                todoTag.addEventListener('mouseleave', hideMemoTooltip);
+                cell.addEventListener('mouseleave', () => {
+                    hideMemoTooltip();
+                });
+                cell.addEventListener('dragstart', hideMemoTooltip);
+                cell.addEventListener('dragend', hideMemoTooltip);
+                cell.addEventListener('drop', hideMemoTooltip);
+            }
             const version = this.getCellVersion(key, weekStartStr);
             const courseInstance = version && version.courseInstanceId && this.erpData
                 ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
@@ -778,6 +846,10 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                             tooltip.remove();
                         };
                         cell.addEventListener('mouseenter', () => {
+                            if (cell.querySelector('.memo-todo-tag:hover')) {
+                                hideTooltip();
+                                return;
+                            }
                             if (document.querySelector('.dragging')) {
                                 hideTooltip();
                                 return;
@@ -967,6 +1039,15 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             }
             
             cell.addEventListener('click', () => {
+                // The memo sidebar is non-modal: clicking the timetable should dismiss it
+                // even when this handler opens the lesson editor immediately afterwards.
+                if (localStorage.getItem('memoEntryMode') === 'sidebar') {
+                    const memoModal = document.getElementById('memoModal');
+                    if (memoModal && memoModal.classList.contains('memo-sidebar-mode') && getComputedStyle(memoModal).display !== 'none') {
+                        if (this.activeMemoId || this.memoEditing) this.dismissMemoEditor();
+                        else this.closeMemoModal();
+                    }
+                }
                 if (cell.classList.contains('empty-cell') && this.copiedCourse) {
                     if (this.pasteCopiedCourseToCell(cell)) {
                         return;

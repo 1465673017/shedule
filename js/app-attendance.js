@@ -604,6 +604,8 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
             return;
         }
 
+        const hasAttendanceRecord = Object.values(att).some(Boolean);
+
         // Finished classes auto-fill unmarked students as present.
         if (this._attModalClassFinished) {
             let autoSaved = false;
@@ -627,7 +629,7 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
             const status = att[student.id] || defaultStatus;
             html += `
                 <div class="att-row">
-                    <span style="font-size: 13px;">${this.escapeHtml(student.name)}<small class="student-actual-duration">实上 ${this.escapeHtml(this.getStudentActualDurationDisplay(key, student.id))}</small></span>
+                    <span style="font-size: 13px;">${this.escapeHtml(student.name)}<small class="student-actual-duration"${hasAttendanceRecord ? '' : ' hidden'}>实上 ${this.escapeHtml(this.getStudentActualDurationDisplay(key, student.id))}</small></span>
                     <div class="att-status">
                         <button class="att-btn ${status === 'present' ? 'present' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="present">出勤</button>
                         <button class="att-btn ${status === 'leave' ? 'leave' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="leave">请假</button>
@@ -649,6 +651,7 @@ TimetableApp.prototype.setAttendance = function(key, studentId, status, btn) {
         const row = btn.closest('.att-row');
         row.querySelectorAll('.att-btn').forEach(b => b.classList.remove('present', 'leave', 'absent'));
         btn.classList.add(status);
+        document.querySelectorAll('#attendanceRecords .student-actual-duration').forEach(label => { label.hidden = false; });
         
     }
 

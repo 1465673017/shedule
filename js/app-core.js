@@ -30,8 +30,10 @@ function createDefaultPeriods() {
 }
 
 function createDefaultQuickSettings() {
-    return { totalPeriods: 6, firstStart: '08:00', periodDuration: 120, breakDuration: 10,
-        lunchPosition: 2, lunchDuration: 50, dinnerPosition: 4, dinnerDuration: 20 };
+    return {
+        totalPeriods: 6, firstStart: '08:00', periodDuration: 120, breakDuration: 10,
+        lunchPosition: 2, lunchDuration: 50, dinnerPosition: 4, dinnerDuration: 20
+    };
 }
 
 function createDefaultSettings() {
@@ -126,10 +128,10 @@ class TimetableApp {
         this.copiedCourse = null;
         this.copiedScheduleBlock = null;
         this.draggedItem = null;
-        
+
         this.currentDate = new Date();
         this.currentStudentFilter = 'ongoing';
-        
+
         this.init();
     }
 
@@ -164,7 +166,7 @@ class TimetableApp {
             const el = document.getElementById(id);
             if (el) el.addEventListener(event, handler);
         };
-        
+
         // 科目相关
         bind('addSubjectBtn', 'click', () => this.openSubjectModal());
         bind('addStudentBtn', 'click', () => this.openStudentModal());
@@ -188,47 +190,128 @@ class TimetableApp {
         });
         bind('cancelBtn', 'click', () => this.closeSubjectModal());
         bind('deleteSubjectBtn', 'click', () => this.deleteSubject());
-        
+
         // 添加课程弹窗相关
         bind('addLessonForm', 'submit', (e) => this.saveLessonToCell(e));
         bind('cancelLessonBtn', 'click', () => this.closeAddLessonModal());
-        
+
         // 池切换相关
         document.querySelectorAll('.pool-tab').forEach(tab => {
             tab.addEventListener('click', (e) => this.switchPool(e.target.dataset.tab));
         });
-        
+
         // 学生筛选相关
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.filterStudents(e.target.dataset.filter));
         });
-        
+
         // 时间相关
         bind('timeForm', 'submit', (e) => this.savePeriodTime(e));
         bind('cancelTimeBtn', 'click', () => this.closeTimeModal());
-        
+
         // 初始化时间选择器
         this.initTimeSelectors();
-        
+
         // 教程事件
         bind('tutorialBtn', 'click', () => this.openQuickStartModal());
-        
+
         bind('totalPeriodCount', 'change', (e) => {
             this.updateLunchBreakOptions(e.target.value);
             this.updateDinnerBreakOptions(e.target.value);
         });
-        
+
         // 重置和打印
         bind('resetBtn', 'click', () => this.openResetModal());
         bind('exportBtn', 'click', () => this.openExportModal());
         bind('settingsBtn', 'click', () => this.openSettingsModal());
+        bind('memoBtn', 'click', () => {
+            const modal = document.getElementById('memoModal');
+            if (localStorage.getItem('memoEntryMode') === 'sidebar' && modal?.style.display === 'flex') {
+                if (this.activeMemoId || this.memoEditing) this.dismissMemoEditor();
+                else this.closeMemoModal();
+                return;
+            }
+            this.openMemoModal();
+        });
+        bind('memoViewToggle', 'click', () => this.cycleMemoEntryMode());
+        bind('memoPinToggle', 'click', async () => {
+            const button = document.getElementById('memoPinToggle');
+            if (!button || !document.body.classList.contains('memo-window-mode') || !window.electronAPI?.toggleMemoWindowAlwaysOnTop) return;
+            const result = await window.electronAPI.toggleMemoWindowAlwaysOnTop();
+            const pinned = Boolean(result?.alwaysOnTop);
+            button.classList.toggle('is-pinned', pinned);
+            button.title = pinned ? '取消置顶' : '置顶小窗';
+            button.setAttribute('aria-label', button.title);
+        });
+        bind('memoCloseBtn', 'click', () => this.closeMemoModal());
+        bind('memoNewBtn', 'click', () => this.newMemo());
+        bind('memoSearchToggle', 'click', () => this.toggleMemoSearch());
+        bind('memoPickCourseBtn', 'click', () => {
+            if (document.body.classList.contains('memo-window-mode')) return;
+            this.startMemoCoursePick();
+        });
+        bind('memoDuePickerBtn', 'click', () => { const due = document.getElementById('memoDue'); if (!due || due.readOnly) return; if (typeof due.showPicker === 'function') due.showPicker(); else { due.focus(); due.click(); } });
+        bind('memoForm', 'submit', (e) => this.saveMemo(e));
+        ['memoContent', 'memoDue', 'memoNote'].forEach(id => bind(id, 'input', () => this.updateMemoPreview()));
+        bind('memoDue', 'change', () => this.updateMemoPreview());
+        bind('memoDeleteBtn', 'click', () => this.deleteMemo());
+        bind('memoDoneBtn', 'click', () => this.toggleMemoDone());
+        bind('memoEditBtn', 'click', () => this.enableMemoEditing());
+        bind('memoSearch', 'input', () => this.renderMemoList());
+        bind('memoSearch', 'keydown', (e) => { if (e.key === 'Escape') { const input = e.currentTarget; if (input.value) { input.value = ''; this.renderMemoList(); } this.toggleMemoSearch(false); document.getElementById('memoSearchToggle')?.focus(); } });
+        bind('memoList', 'click', (e) => {
+            const action = e.target.closest('.memo-card-action');
+            if (action) {
+                e.stopPropagation();
+                const id = action.closest('.memo-entry')?.dataset.id;
+                if (action.dataset.action === 'edit') {
+                    if (id === 'new' && this.memoEditing) this.saveMemo();
+                    else if (id === 'new') this.enableMemoEditing();
+                    else if (this.activeMemoId === id && this.memoEditing) this.saveMemo();
+                    else { if (this.activeMemoId !== id) this.editMemo(id); this.enableMemoEditing(); }
+                }
+                else if (action.dataset.action === 'delete') this.deleteMemo(id);
+                return;
+            }
+            const card = e.target.closest('.memo-item');
+            if (card) {
+                e.stopPropagation();
+                if (this.memoEditing) this.cancelMemoEditing();
+                else if (card.dataset.id !== 'new') this.toggleMemoDone(card.dataset.id);
+                return;
+            }
+            if (!e.target.closest('.memo-inline-editor')) this.dismissMemoEditor();
+        });
+        // Main-content clicks dismiss the memo sidebar without an overlay intercepting them.
+        document.addEventListener('click', (e) => {
+            if (document.body.classList.contains('memo-window-mode')) return;
+            if (localStorage.getItem('memoEntryMode') !== 'sidebar') return;
+            const modal = document.getElementById('memoModal');
+            if (!modal || getComputedStyle(modal).display === 'none' || !modal.classList.contains('memo-sidebar-mode')) return;
+            if (e.target.closest('#memoModal .memo-modal-content')) return;
+            // The memoBtn toggle manages open/close itself; don't let its click re-dismiss the sidebar.
+            if (e.target.closest('#memoBtn')) return;
+            // Ignore clicks on other dialogs/overlays; only clicks on the main UI dismiss the sidebar.
+            if (e.target.closest('.modal:not(#memoModal), .electron-window-controls')) return;
+            if (!e.target.closest('.container, header')) return;
+            if (this.activeMemoId || this.memoEditing) this.dismissMemoEditor();
+            else this.closeMemoModal();
+        });
+        bind('memoModal', 'click', (e) => {
+            if (document.body.classList.contains('memo-window-mode')) return;
+            const mode = localStorage.getItem('memoEntryMode') || 'icon';
+            if (mode !== 'icon' || e.target !== e.currentTarget) return;
+            if (this.activeMemoId || this.memoEditing) this.dismissMemoEditor();
+            else this.closeMemoModal();
+        });
+        bind('memoList', 'click', (e) => { if (!e.target.closest('.memo-entry') && !e.target.closest('.memo-inline-editor')) this.dismissMemoEditor(); });
         window.addEventListener('resize', () => this.syncTimetableLayout());
-        
+
         // 设置弹窗相关
         bind('gradeForm', 'submit', (e) => this.saveGrade(e));
         bind('cancelGradeBtn', 'click', () => this.closeGradeModal());
         bind('deleteGradeBtn', 'click', () => this.deleteGrade());
-        
+
         // 年级颜色选择
         document.querySelectorAll('#gradeModal .color-option').forEach(option => {
             option.addEventListener('click', (e) => this.selectGradeColor(e));
@@ -241,13 +324,13 @@ class TimetableApp {
                 document.getElementById('gradeCustomColor').value = e.target.value;
             }
         });
-        
+
         // 预设主题选择
         document.querySelectorAll('.theme-option').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Remove active class from all options
                 document.querySelectorAll('.theme-option').forEach(b => b.classList.remove('active'));
-                
+
                 // Add active class to clicked option
                 const targetBtn = e.target.closest('.theme-option');
                 targetBtn.classList.add('active');
@@ -256,7 +339,7 @@ class TimetableApp {
                 this.applyPredefinedTheme(theme);
             });
         });
-        
+
         // 设置弹窗Tab切换
         document.querySelectorAll('.settings-tab').forEach(tabButton => {
             tabButton.addEventListener('click', (e) => {
@@ -292,9 +375,9 @@ class TimetableApp {
             });
         }
         bind('lessonStudentSearch', 'input', (e) => this.filterLessonStudents(e.target.value));
-        
 
-        
+
+
         // 颜色选择
         document.querySelectorAll('.color-option').forEach(option => {
             option.addEventListener('click', (e) => this.selectColor(e));
@@ -311,10 +394,10 @@ class TimetableApp {
             const count = document.getElementById('subjectNameCount');
             if (count) count.textContent = `${e.target.value.length} / 20`;
         });
-        
+
         // 拖拽相关
         this.setupDragAndDrop();
-        
+
         // 键盘事件
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Delete' && this.editingCell) {
@@ -348,7 +431,7 @@ class TimetableApp {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) this.hideNonStandardTimeTooltips?.();
         });
-        
+
         // 点击弹窗外部关闭弹窗
         const modalCloseHandlers = {
             subjectModal: () => this.closeSubjectModal(),
@@ -366,9 +449,9 @@ class TimetableApp {
             resetModal: () => this.closeResetModal(),
             exportModal: () => this.closeExportModal(),
             courseLoginModal: () => this.closeCourseLoginModal()
-            ,courseCheckModal: () => this.closeCourseCheckModal()
+            , courseCheckModal: () => this.closeCourseCheckModal()
         };
-        
+
         Object.keys(modalCloseHandlers).forEach(modalId => {
             const modal = document.getElementById(modalId);
             if (modal) {
@@ -1015,7 +1098,7 @@ class TimetableApp {
 
     renderCourseAutoSyncSettings() {
         let settings = { enabled: false, intervalHours: 2 };
-        try { settings = { ...settings, ...JSON.parse(localStorage.getItem('courseAutoSyncSettings') || '{}') }; } catch (_) {}
+        try { settings = { ...settings, ...JSON.parse(localStorage.getItem('courseAutoSyncSettings') || '{}') }; } catch (_) { }
         const toggle = document.getElementById('courseAutoSyncToggle');
         toggle.classList.toggle('active', !!settings.enabled);
         toggle.setAttribute('aria-pressed', settings.enabled ? 'true' : 'false');
@@ -2087,14 +2170,14 @@ class TimetableApp {
         const range = this.getWeekRange(this.currentDate);
         const startDate = range.start;
         const endDate = range.end;
-        
+
         const formatDate = (date) => {
             const year = date.getFullYear();
             const month = date.getMonth() + 1;
             const day = date.getDate();
             return `${year}年${month}月${day}日`;
         };
-        
+
         document.getElementById('currentWeekRange').textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
         document.getElementById('currentWeekRange').style.cursor = 'pointer';
         document.getElementById('currentWeekRange').title = '点击查看课时统计';
@@ -2104,43 +2187,43 @@ class TimetableApp {
         const weekNumber = Math.ceil((((startDate - firstDay) / 86400000) + firstDay.getDay() + 1) / 7);
         const weekNumberLabel = document.getElementById('weekNumber');
         if (weekNumberLabel) weekNumberLabel.textContent = `第 ${weekNumber} 周`;
-        
+
         const datePicker = document.getElementById('datePicker');
         const currentDateStr = this.currentDate.toISOString().split('T')[0];
         datePicker.value = currentDateStr;
-        
+
         this.updateDateRow();
     }
-    
+
     updateDateRow() {
         const range = this.getWeekRange(this.currentDate);
         const startDate = range.start;
-        
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         document.querySelectorAll('.today-header').forEach(el => el.classList.remove('today-header'));
-        
+
         for (let i = 0; i < 7; i++) {
             const date = new Date(startDate);
             date.setDate(startDate.getDate() + i);
             date.setHours(0, 0, 0, 0);
-            
+
             const month = date.getMonth() + 1;
             const day = date.getDate();
             const dateCell = document.getElementById(`dateCell${i + 1}`);
             const headerCell = document.querySelector(`[data-day-header="${i + 1}"]`);
-            
+
             if (dateCell) {
                 dateCell.textContent = `${month}/${day}`;
-                
+
                 if (date.getTime() === today.getTime()) {
                     if (headerCell) {
                         headerCell.classList.add('today-header');
                     }
                 }
             }
-            
+
             if (headerCell) {
                 headerCell.style.cursor = 'pointer';
                 headerCell.onclick = () => {
@@ -2148,23 +2231,23 @@ class TimetableApp {
                 };
             }
         }
-        
+
         this.highlightTodayColumn();
     }
-    
+
     highlightTodayColumn() {
         const range = this.getWeekRange(this.currentDate);
         const startDate = range.start;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         document.querySelectorAll('.today-col').forEach(el => el.classList.remove('today-col'));
-        
+
         for (let i = 0; i < 7; i++) {
             const date = new Date(startDate);
             date.setDate(startDate.getDate() + i);
             date.setHours(0, 0, 0, 0);
-            
+
             if (date.getTime() === today.getTime()) {
                 const dayNum = i + 1;
                 const cells = document.querySelectorAll(`[data-day="${dayNum}"]`);
@@ -2173,7 +2256,7 @@ class TimetableApp {
             }
         }
     }
-    
+
     // ========== 综合课时统计（日/周/月/年/自定义） ==========
 
     timeToMinutes(timeStr) {
@@ -2181,7 +2264,7 @@ class TimetableApp {
         if (parts.length !== 2) return 0;
         return parseInt(parts[0]) * 60 + parseInt(parts[1]);
     }
-    
+
     getLessonDuration(timeStr) {
         if (!timeStr) return '0';
         const parts = timeStr.split('-');
@@ -2235,15 +2318,15 @@ class TimetableApp {
     getWeekRange(date) {
         const currentDay = date.getDay();
         const diffToMonday = currentDay === 0 ? 6 : currentDay - 1;
-        
+
         const startOfWeek = new Date(date);
         startOfWeek.setDate(date.getDate() - diffToMonday);
         startOfWeek.setHours(0, 0, 0, 0);
-        
+
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
-        
+
         return { start: startOfWeek, end: endOfWeek };
     }
 
@@ -2456,18 +2539,18 @@ class TimetableApp {
         const endHourSelect = document.getElementById('endHour');
         const startMinuteSelect = document.getElementById('startMinute');
         const endMinuteSelect = document.getElementById('endMinute');
-        
+
         startHourSelect.innerHTML = '';
         endHourSelect.innerHTML = '';
         startMinuteSelect.innerHTML = '';
         endMinuteSelect.innerHTML = '';
-        
+
         for (let i = 6; i <= 22; i++) {
             const hour = i.toString().padStart(2, '0');
             startHourSelect.appendChild(new Option(hour, hour));
             endHourSelect.appendChild(new Option(hour, hour));
         }
-        
+
         for (let i = 0; i < 60; i += 5) {
             const minute = i.toString().padStart(2, '0');
             startMinuteSelect.appendChild(new Option(minute, minute));
@@ -2514,6 +2597,32 @@ function bindStaticDeclarativeHandlers() {
         });
     });
 }
+
+TimetableApp.prototype.getMemos = function () { try { return JSON.parse(localStorage.getItem('scheduleMemos') || '[]'); } catch (_) { return []; } };
+TimetableApp.prototype.saveMemos = function (v) { localStorage.setItem('scheduleMemos', JSON.stringify(v)); this.renderTimetable?.(); };
+TimetableApp.prototype.memoCreatedLabel = function (x) { const d = new Date(x.createdAt || Date.now()); const now = new Date(); return d.getFullYear() === now.getFullYear() ? `${d.getMonth() + 1}-${d.getDate()}` : `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+TimetableApp.prototype.getMemoCourseLabel = function (value) { if (!value) return ''; const due = new Date(value); if (Number.isNaN(due.getTime())) return ''; const weekday = due.getDay() || 7, minutes = due.getHours() * 60 + due.getMinutes(); const index = (this.periods || []).findIndex(period => { const parts = String(period.time || '').split('-'); if (parts.length !== 2) return false; const start = this.timeToMinutes(parts[0]), end = this.timeToMinutes(parts[1]); return minutes >= start && minutes < end; }); if (index < 0) return ''; return `${['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'][weekday]} ${this.periods[index].name || `第${index + 1}节`}`; };
+TimetableApp.prototype.toggleMemoSearch = function (forceOpen) { const wrap = document.querySelector('.memo-search-wrap'); const toggle = document.getElementById('memoSearchToggle'); const input = document.getElementById('memoSearch'); if (!wrap || !toggle) return; const open = typeof forceOpen === 'boolean' ? forceOpen : !wrap.classList.contains('is-open'); wrap.classList.toggle('is-open', open); toggle.setAttribute('aria-expanded', String(open)); toggle.setAttribute('aria-label', open ? '收起搜索' : '展开搜索'); if (open) requestAnimationFrame(() => input?.focus()); };
+TimetableApp.prototype.getMemoCurrentLessonStudentIds = function () { const dueValue = document.getElementById('memoDue')?.value; if (!dueValue) return []; const due = new Date(dueValue), weekday = due.getDay() || 7, minutes = due.getHours() * 60 + due.getMinutes(), index = (this.periods || []).findIndex(period => { const parts = String(period.time || '').split('-'); return parts.length === 2 && minutes >= this.timeToMinutes(parts[0]) && minutes < this.timeToMinutes(parts[1]); }); if (index < 0) return []; const weekStart = this.formatLocalDate(this.getWeekRange(due).start), version = this.getCellVersion(this.buildCellKey(weekday, index), weekStart); return Array.isArray(version?.student) ? version.student.map(String) : []; };
+TimetableApp.prototype.startMemoCoursePick = function () { const modal = document.getElementById('memoModal'); if (!modal) return; if (this._memoCoursePickHandler) document.removeEventListener('click', this._memoCoursePickHandler, true); if (this._memoCoursePickKeyHandler) document.removeEventListener('keydown', this._memoCoursePickKeyHandler, true); modal.style.display = 'none'; this._memoCoursePicking = true; document.body.classList.add('memo-course-picking'); document.querySelectorAll('.cell').forEach(cell => cell.classList.add('memo-course-pickable')); let hint = document.getElementById('memoCoursePickHint'); if (!hint) { hint = document.createElement('div'); hint.id = 'memoCoursePickHint'; hint.className = 'memo-course-pick-hint'; document.body.appendChild(hint); } hint.innerHTML = '请选择课表中的课程/节次 <button type="button" id="memoCoursePickCancel">Esc 取消</button>'; this._memoCoursePickHandler = e => { const cancel = e.target.closest('#memoCoursePickCancel'); if (cancel) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); this.cancelMemoCoursePick(); return; } if (e.target.closest('.copy-course-btn,.schedule-block-action')) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); return; } const cell = e.target.closest('.cell'); if (!cell) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); this.finishMemoCoursePick(cell); }; document.addEventListener('click', this._memoCoursePickHandler, true); this._memoCoursePickKeyHandler = e => { if (e.key === 'Escape') this.cancelMemoCoursePick(); }; document.addEventListener('keydown', this._memoCoursePickKeyHandler, true); };
+TimetableApp.prototype.cancelMemoCoursePick = function () { this._memoCoursePicking = false; document.body.classList.remove('memo-course-picking'); if (this._memoCoursePickHandler) document.removeEventListener('click', this._memoCoursePickHandler, true); if (this._memoCoursePickKeyHandler) document.removeEventListener('keydown', this._memoCoursePickKeyHandler, true); this._memoCoursePickHandler = null; this._memoCoursePickKeyHandler = null; document.querySelectorAll('.cell.memo-course-pickable').forEach(cell => cell.classList.remove('memo-course-pickable')); document.getElementById('memoCoursePickHint')?.remove(); const modal = document.getElementById('memoModal'); if (modal) modal.style.display = 'flex'; };
+TimetableApp.prototype.finishMemoCoursePick = function (cell) { const day = Number(cell.dataset.day), periodIndex = Number(cell.dataset.period), period = this.periods[periodIndex]; if (!day || !period) { this.cancelMemoCoursePick(); return; } const startOfWeek = this.getWeekRange(this.currentDate).start, selectedDate = new Date(startOfWeek); selectedDate.setDate(startOfWeek.getDate() + day - 1); const startTime = String(period.time || '00:00').split('-')[0]; selectedDate.setHours(Number(startTime.slice(0, 2)), Number(startTime.slice(3, 5)), 0, 0); const due = document.getElementById('memoDue'); due.value = `${this.formatLocalDate(selectedDate)}T${startTime}`; this._memoSelectedCell = { date: this.formatLocalDate(selectedDate), day, period: periodIndex }; this.cancelMemoCoursePick(); this.updateMemoPreview(); };
+TimetableApp.prototype.openMemoModal = function () { const m = document.getElementById('memoModal'); if (!m) return; const mode = localStorage.getItem('memoEntryMode') || 'icon'; if (mode === 'popup' && window.electronAPI?.openMemoWindow) { window.electronAPI.openMemoWindow(); return; } if (mode === 'sidebar') { m.style.display = 'flex'; m.classList.add('memo-sidebar-mode'); this.renderMemoList(); this.showMemoListOnly(); return; } const c = m.querySelector('.memo-modal-content'); if (c && !c.querySelector('.memo-close-float')) { const b = document.createElement('button'); b.type = 'button'; b.className = 'memo-close-float'; b.textContent = '×'; b.setAttribute('aria-label', '关闭'); b.onclick = () => this.closeMemoModal(); c.appendChild(b); } m.classList.remove('memo-sidebar-mode'); m.style.display = 'flex'; this.renderMemoList(); this.showMemoListOnly(); };
+TimetableApp.prototype.cycleMemoEntryMode = function () { const modes = ['icon', 'sidebar', 'popup']; const current = localStorage.getItem('memoEntryMode') || 'icon'; const next = modes[(modes.indexOf(current) + 1) % modes.length]; localStorage.setItem('memoEntryMode', next); const labels = { icon: '右上角图标入口', sidebar: '侧边栏模式', popup: '常驻弹窗模式' }; const button = document.getElementById('memoViewToggle'); if (button) { button.title = `当前：${labels[next]}；点击切换`; button.setAttribute('aria-label', `当前：${labels[next]}，点击切换备忘录入口模式`); } this.closeMemoModal(); if (next === 'popup' && window.electronAPI?.openMemoWindow) window.electronAPI.openMemoWindow(); };
+TimetableApp.prototype.showMemoListOnly = function () { const f = document.getElementById('memoForm'), panel = document.querySelector('.memo-detail-panel'); if (f) { f.hidden = true; f.reset(); if (panel) panel.appendChild(f); } this.activeMemoId = null; this.memoEditing = false; this.memoEditSnapshot = null; document.getElementById('memoModal')?.classList.add('memo-list-only'); this.renderMemoList(); };
+TimetableApp.prototype.cancelMemoEditing = function () { if (!this.memoEditing) return; const f = document.getElementById('memoForm'); if (this.activeMemoId === 'new') { this.showMemoListOnly(); return; } const x = this.memoEditSnapshot; if (x && f) { ['Id', 'Content', 'Due', 'Note'].forEach(k => { const el = document.getElementById('memo' + k); if (el) el.value = x[k.toLowerCase()] || ''; }); this.memoColor = x.color || '#ffe477'; } this.memoEditing = false; this.memoEditSnapshot = null; this.setMemoEditable(false); this.updateMemoPreview(); this.renderMemoList(); };
+TimetableApp.prototype.dismissMemoEditor = function () { if (this.memoEditing) this.cancelMemoEditing(); this.showMemoListOnly(); };
+TimetableApp.prototype.closeMemoModal = function () { const m = document.getElementById('memoModal'); if (m) { m.classList.remove('memo-sidebar-mode'); m.style.display = 'none'; m.classList.remove('memo-no-selection'); } };
+TimetableApp.prototype.setMemoEditable = function (editable) { const f = document.getElementById('memoForm'); if (!f) return; this.memoEditing = editable; f.querySelectorAll('input:not([type="hidden"]),textarea').forEach(e => { e.readOnly = !editable; }); const course = document.getElementById('memoCourse'); if (course) course.readOnly = true; const dueButton = document.getElementById('memoDuePickerBtn'); if (dueButton) dueButton.disabled = !editable; document.querySelectorAll('.memo-color').forEach(b => { b.disabled = !editable; }); };
+TimetableApp.prototype.ensureMemoColors = function () { const c = document.getElementById('memoColors'); const f = document.getElementById('memoForm'); if (!f) return; const due = document.getElementById('memoDue'); if (due && !due.closest('.memo-date-picker')) { const wrap = document.createElement('span'); wrap.className = 'memo-date-picker'; due.parentNode.insertBefore(wrap, due); wrap.appendChild(due); const button = document.createElement('button'); button.id = 'memoDuePickerBtn'; button.type = 'button'; button.title = '选择日期和时间'; button.setAttribute('aria-label', '选择日期和时间'); button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"></rect><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17"></path></svg>'; button.addEventListener('click', () => { if (due.readOnly) return; if (typeof due.showPicker === 'function') due.showPicker(); else { due.focus(); due.click(); } }); wrap.appendChild(button); } if (c) return; const box = document.createElement('div'); box.id = 'memoColors'; box.className = 'memo-colors'; box.innerHTML = '<span>颜色</span>' + ['#ffe477', '#9bea8f', '#f3a6d3', '#c89bf2', '#91d3ee', '#d9d9d9', '#858585'].map(x => `<button type="button" class="memo-color" data-color="${x}" style="background:${x}"></button>`).join(''); const content = document.getElementById('memoContent'); content.parentElement.after(box); box.onclick = e => { const b = e.target.closest('.memo-color'); if (!b || !this.memoEditing) return; this.memoColor = b.dataset.color; box.querySelectorAll('.memo-color').forEach(x => x.classList.toggle('selected', x === b)); this.updateMemoPreview(); }; };
+TimetableApp.prototype.newMemo = function () { const f = document.getElementById('memoForm'); if (!f) return; document.getElementById('memoModal')?.classList.remove('memo-list-only'); this.ensureMemoColors(); this.activeMemoId = 'new'; f.reset(); document.getElementById('memoId').value = ''; const now = new Date(); document.getElementById('memoCreatedAt').textContent = `创建于 ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`; document.getElementById('memoDue').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`; f.hidden = false; this.memoColor = '#ffe477'; this.setMemoEditable(true); this.renderMemoList(); document.getElementById('memoContent').focus(); };
+TimetableApp.prototype.renderMemoList = function () { const el = document.getElementById('memoList'); if (!el) return; const q = (document.getElementById('memoSearch')?.value || '').toLowerCase(); const data = this.getMemos().filter(x => !q || `${x.title} ${x.content} ${x.note} ${x.tags}`.toLowerCase().includes(q)).sort((a, b) => Number(!!a.done) - Number(!!b.done) || new Date(b.createdAt || b.due || 0) - new Date(a.createdAt || a.due || 0)); const form = document.getElementById('memoForm'); const active = this.activeMemoId; const card = (x, isNew = false) => { const isActive = active === (isNew ? 'new' : x.id), isEditing = isActive && this.memoEditing; let courseTags = ''; if (!isNew) { let day = Number(x.cellRef?.day), periodIndex = Number(x.cellRef?.period); if ((!day || !Number.isInteger(periodIndex)) && x.due) { const due = new Date(x.due); if (!Number.isNaN(due.getTime())) { day = due.getDay() || 7; const minutes = due.getHours() * 60 + due.getMinutes(); periodIndex = (this.periods || []).findIndex(period => { const parts = String(period.time || '').split('-'); return parts.length === 2 && minutes >= this.timeToMinutes(parts[0]) && minutes < this.timeToMinutes(parts[1]); }); } } if (day >= 1 && day <= 7 && Number.isInteger(periodIndex) && periodIndex >= 0) { const period = this.periods[periodIndex]; courseTags = `<span class="memo-course-tags"><span class="memo-course-tag">${['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'][day]}</span><span class="memo-course-tag">${this.escapeHtml(period?.name || `第${periodIndex + 1}节`)}</span></span>`; } } const content = this.escapeHtml(x.content || ' '), note = String(x.note || '').trim(), preview = note ? `${content}（${this.escapeHtml(note)}）` : content; return `<div class="memo-entry ${isEditing ? 'memo-editing' : ''}" data-id="${isNew ? 'new' : x.id}" style="--memo-card-color:${x.color || '#ffe477'}"><button type="button" class="memo-item ${!isNew && x.done ? 'done' : ''}" data-id="${isNew ? 'new' : x.id}" style="background-color:${x.color || '#ffe477'}"><time class="memo-created">${isNew ? '新建' : this.memoCreatedLabel(x)}</time>${x.due ? `<span class="memo-title-row"><strong>${new Date(x.due).toLocaleString()}</strong>${courseTags}</span>` : ''}<span class="memo-content-preview">${preview}</span></button><div class="memo-card-actions"><button type="button" class="memo-card-action memo-delete-action" data-action="delete" aria-label="删除"><img src="./icon/memo-delete.svg" alt=""></button><button type="button" class="memo-card-action" data-action="edit" aria-label="${isEditing || isNew ? '保存' : '编辑'}"><img src="./icon/${isEditing || isNew ? 'memo-save' : 'memo-edit'}.svg" alt=""></button></div>${isActive ? '<div class="memo-inline-editor"></div>' : ''}</div>`; }; el.innerHTML = (active === 'new' ? card({ color: this.memoColor || '#ffe477' }, true) : '') + data.map(x => card(x)).join('') || '<div class="memo-empty">暂无备忘</div>'; if (active && form) { const target = el.querySelector(active === 'new' ? '.memo-entry .memo-inline-editor' : `.memo-item[data-id="${CSS.escape(active)}"]`)?.closest('.memo-entry')?.querySelector('.memo-inline-editor'); if (target) target.appendChild(form); } };
+TimetableApp.prototype.updateMemoPreview = function () { const f = document.getElementById('memoForm'); if (!f || f.hidden) return; const course = document.getElementById('memoCourse'); if (course) course.value = this.getMemoCourseLabel(document.getElementById('memoDue').value); const card = document.querySelector(`#memoList .memo-item[data-id="${CSS.escape(this.activeMemoId || '')}"]`); if (!card) return; const due = document.getElementById('memoDue').value, content = document.getElementById('memoContent').value, color = this.memoColor || '#ffe477'; let titleRow = card.querySelector('.memo-title-row'); if (due) { if (!titleRow) { titleRow = document.createElement('span'); titleRow.className = 'memo-title-row'; card.insertBefore(titleRow, card.querySelector('.memo-content-preview')); } let strong = titleRow.querySelector('strong'); if (!strong) { strong = document.createElement('strong'); titleRow.appendChild(strong); } strong.textContent = new Date(due).toLocaleString(); } else if (titleRow) { titleRow.remove(); } const preview = card.querySelector('.memo-content-preview'); if (preview) preview.textContent = content || ' '; card.style.setProperty('--memo-card-color', color); card.style.backgroundColor = color; card.closest('.memo-entry')?.style.setProperty('--memo-card-color', color); };
+TimetableApp.prototype.editMemo = function (id) { const x = this.getMemos().find(v => v.id === id); if (!x) return; document.getElementById('memoModal')?.classList.remove('memo-list-only'); this.ensureMemoColors(); this.activeMemoId = id; this.memoEditSnapshot = { ...x }; const f = document.getElementById('memoForm'); f.hidden = false;['Id', 'Content', 'Due', 'Note'].forEach(k => { const e = document.getElementById('memo' + k); if (e) e.value = x[k.toLowerCase()] || ''; }); const created = new Date(x.createdAt || Date.now()); document.getElementById('memoCreatedAt').textContent = `创建于 ${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}-${String(created.getDate()).padStart(2, '0')} ${String(created.getHours()).padStart(2, '0')}:${String(created.getMinutes()).padStart(2, '0')}`; this.memoColor = x.color || '#ffe477'; document.querySelectorAll('.memo-color').forEach(b => b.classList.toggle('selected', b.dataset.color === this.memoColor)); this.setMemoEditable(false); this.renderMemoList(); this.updateMemoPreview(); };
+TimetableApp.prototype.enableMemoEditing = function () { if (this.activeMemoId !== 'new' && !this.memoEditSnapshot) { const x = this.getMemos().find(v => v.id === this.activeMemoId); if (x) this.memoEditSnapshot = { ...x }; } this.setMemoEditable(true); this.renderMemoList(); document.getElementById('memoContent').focus(); };
+TimetableApp.prototype.saveMemo = function (e) { if (e) e.preventDefault(); const isNew = this.activeMemoId === 'new', id = document.getElementById('memoId').value || (isNew ? String(Date.now()) : String(Date.now())); const old = this.getMemos().find(x => x.id === id); const all = this.getMemos().filter(x => x.id !== id); all.push({ id, title: old?.title || '', content: document.getElementById('memoContent').value, color: this.memoColor || '#ffe477', createdAt: old?.createdAt || new Date().toISOString(), due: document.getElementById('memoDue').value, note: document.getElementById('memoNote').value, tags: old?.tags || '', done: old?.done || false, cellRef: this._memoSelectedCell || old?.cellRef || null }); this._memoSelectedCell = null; this.saveMemos(all); this.activeMemoId = id; this.memoEditing = false; this.memoEditSnapshot = null; this.editMemo(id); };
+TimetableApp.prototype.deleteMemo = function (id) { id = id || document.getElementById('memoId').value; if (id === 'new') { this.showMemoListOnly(); return; } this.saveMemos(this.getMemos().filter(x => x.id !== id)); this.activeMemoId = null; document.getElementById('memoForm').hidden = true; this.renderMemoList(); };
+TimetableApp.prototype.toggleMemoDone = function (id) { id = id || document.getElementById('memoId').value; const a = this.getMemos(); const x = a.find(v => v.id === id); if (x) { x.done = !x.done; this.saveMemos(a); this.renderMemoList(); } };
 
 // Initialize app on DOMContentLoaded
 let app;

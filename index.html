@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- saved from url=(0037)https://2hanzi.com/kebiao/kebiao.html -->
 <html lang="zh-CN">
+<script>if(location.protocol==='file:'&&new URLSearchParams(location.search).has('memoWindow'))document.documentElement.classList.add('memo-window-mode');</script>
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -549,14 +550,16 @@
                 <div class="timetable-container">
                     <div class="date-navigator">
                         <div class="week-summary">
-                            <button id="prevWeekBtn" aria-label="上一周">‹</button>
+                            <button id="prevWeekBtn" aria-label="上一周"><img src="./icon/arrow-left.svg" alt=""></button>
                             <div class="week-copy">
                                 <strong id="weekNumber">本周</strong>
-                                <button id="nextWeekBtn" aria-label="下一周">›</button>
+                                <button id="nextWeekBtn" aria-label="下一周"><img src="./icon/arrow-right.svg" alt=""></button>
                                 <span id="currentWeekRange">加载中...</span>
                             </div>
                         </div>
                         <div class="date-display">
+                            <div class="memo-entry-slot"><button type="button" id="memoBtn" class="memo-trigger" aria-label="打开备忘录" title="备忘录"><img src="./icon/memo-entry.svg" alt=""></button></div>
+                            <button type="button" id="todayBtn" class="date-locate-btn" aria-label="定位到今天" title="定位到今天"><img src="./icon/date-locate.svg" alt=""></button>
                             <label class="date-picker-shell" for="datePicker"><span class="calendar-icon"
                                     aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                         <path
@@ -566,7 +569,6 @@
                                         <path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor"
                                             stroke-width="1.8" stroke-linecap="round" />
                                     </svg></span><input type="date" id="datePicker" class="date-picker"></label>
-                            <button type="button" id="todayBtn" class="today-btn">今天</button>
                         </div>
                     </div>
                     <div class="timetable-wrapper">
@@ -1663,6 +1665,15 @@
         </div>
     </div>
 
+    <div id="memoModal" class="modal memo-modal" role="dialog" aria-modal="true" aria-labelledby="memoModalTitle">
+        <div class="modal-content memo-modal-content">
+            <div class="modal-header"><div class="modal-title-block"><h3 id="memoModalTitle">备忘录</h3><p class="modal-subtitle">管理待办事项与课程提醒</p></div><button type="button" class="modal-close" id="memoCloseBtn" aria-label="关闭">×</button></div>
+            <div class="memo-layout">
+                <section class="memo-list-panel"><div class="memo-list-toolbar"><strong>备忘录列表</strong><div class="memo-list-toolbar-actions"><button id="memoPinToggle" class="memo-pin-toggle" type="button" aria-label="置顶小窗" title="置顶小窗" hidden><img src="./icon/memo-pin.svg" alt=""></button><button id="memoViewToggle" class="memo-view-toggle" type="button" aria-label="切换显示模式" title="切换显示模式"><img src="./icon/memo-view-toggle.svg" alt=""></button><div class="memo-search-wrap"><button id="memoSearchToggle" class="memo-search-toggle" type="button" aria-label="展开搜索" aria-expanded="false" aria-controls="memoSearch" title="搜索备忘"><img src="./icon/memo-search.svg" alt=""></button><label class="memo-search" id="memoSearchPanel"><input id="memoSearch" placeholder="搜索" aria-label="搜索备忘"></label></div><button id="memoNewBtn" class="memo-new-btn" type="button" aria-label="新建备忘" title="新建备忘"><img src="./icon/memo-new.svg" alt=""></button></div></div><div id="memoList" class="memo-list"></div></section>
+                <section class="memo-detail-panel"><div class="memo-detail-empty" id="memoDetailEmpty">选择一条备忘查看详情</div><form id="memoForm" class="memo-form" hidden><input type="hidden" id="memoId"><div class="memo-content-row"><label><span class="memo-content-heading"><span>内容</span><time id="memoCreatedAt" class="memo-created-at"></time></span><textarea id="memoContent" rows="4" readonly></textarea></label></div><div class="memo-form-row memo-schedule-row"><label>日期 / 时间<input id="memoDue" type="datetime-local" readonly></label><label>课程<span class="memo-course-picker"><input id="memoCourse" type="text" readonly placeholder="选择课表节次"><button id="memoPickCourseBtn" type="button" aria-label="从课表选择课程" title="从课表选择课程"><img src="./icon/course-picker.svg" alt=""></button></span></label><label>备注<input id="memoNote" placeholder="可选" readonly></label></div></form></section>
+            </div>
+        </div>
+    </div>
     <script src="./chart.umd.min.js"></script>
     <script src="./html2canvas.min.js"></script>
     <script src="./js/app-dialogs.js"></script>
