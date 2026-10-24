@@ -1070,22 +1070,31 @@ TimetableApp.prototype.openTimeModal = function(e, periodIndex) {
         this.editingPeriod = { periodIndex };
         const modal = document.getElementById('timeModal');
         const nameInput = document.getElementById('periodName');
-        const startHourSelect = document.getElementById('startHour');
-        const startMinuteSelect = document.getElementById('startMinute');
-        const endHourSelect = document.getElementById('endHour');
-        const endMinuteSelect = document.getElementById('endMinute');
+        const startRange = document.getElementById('periodStartTimeRange');
+        const endRange = document.getElementById('periodEndTimeRange');
+        const startValue = document.getElementById('periodStartTimeValue');
+        const endValue = document.getElementById('periodEndTimeValue');
+        const startLabel = startRange.closest('.form-group').querySelector('label');
+        const endLabel = endRange.closest('.form-group').querySelector('label');
+        startLabel.appendChild(startValue);
+        endLabel.appendChild(endValue);
         
         const period = this.periods[periodIndex];
         nameInput.value = period.name;
         
         const [startTime, endTime] = period.time.split('-');
-        const [startH, startM] = startTime.split(':');
-        const [endH, endM] = endTime.split(':');
-        
-        startHourSelect.value = startH;
-        startMinuteSelect.value = startM;
-        endHourSelect.value = endH;
-        endMinuteSelect.value = endM;
+        startRange.value = String(this.timeToMinutes(startTime));
+        endRange.value = String(this.timeToMinutes(endTime));
+        startRange.min = endRange.min = '0';
+        startRange.max = endRange.max = '1435';
+        document.getElementById('periodStartTimeValue').textContent = startTime;
+        document.getElementById('periodEndTimeValue').textContent = endTime;
+        if (!this._periodTimeSliderBound) {
+            const update = (range, label) => { label.textContent = this.formatSliderTime(Number(range.value)); };
+            startRange.addEventListener('input', () => update(startRange, document.getElementById('periodStartTimeValue')));
+            endRange.addEventListener('input', () => update(endRange, document.getElementById('periodEndTimeValue')));
+            this._periodTimeSliderBound = true;
+        }
         
         modal.style.display = 'block';
     }
@@ -1097,20 +1106,11 @@ TimetableApp.prototype.savePeriodTime = function(e) {
         
         const { periodIndex } = this.editingPeriod;
         const nameInput = document.getElementById('periodName');
-        const startHourSelect = document.getElementById('startHour');
-        const startMinuteSelect = document.getElementById('startMinute');
-        const endHourSelect = document.getElementById('endHour');
-        const endMinuteSelect = document.getElementById('endMinute');
-        
         const newName = nameInput.value.trim();
-        const startHour = startHourSelect.value;
-        const startMinute = startMinuteSelect.value;
-        const endHour = endHourSelect.value;
-        const endMinute = endMinuteSelect.value;
-        
-        if (!newName || !startHour || !startMinute || !endHour || !endMinute) return;
-        
-        const newTime = `${startHour}:${startMinute}-${endHour}:${endMinute}`;
+        const start = Number(document.getElementById('periodStartTimeRange').value);
+        const end = Number(document.getElementById('periodEndTimeRange').value);
+        if (!newName || end <= start) { alert('结束时间必须晚于开始时间。'); return; }
+        const newTime = `${this.formatSliderTime(start)}-${this.formatSliderTime(end)}`;
         this.periods[periodIndex].time = newTime;
         this.periods[periodIndex].name = newName;
         this.syncRealtime({ subjects: false });

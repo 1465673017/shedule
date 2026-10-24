@@ -6796,6 +6796,50 @@ body.dark-theme-active .student-chip .sc-grade {
     background: var(--light-color, #f8fafc);
 }
 
+#timeModal .time-modal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#timeModal .time-modal-section > .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+}
+
+#timeModal .lesson-time-slider-row {
+    gap: 8px;
+    background: transparent;
+}
+
+#timeModal .form-group > label:has(#periodStartTimeValue),
+#timeModal .form-group > label:has(#periodEndTimeValue) {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+#timeModal #periodStartTimeValue,
+#timeModal #periodEndTimeValue {
+    color: var(--primary-color, #4b91df);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+#timeModal .time-select-row[hidden] {
+    display: none !important;
+}
+
+#timeModal .lesson-time-slider-row .duration-range {
+    width: 100%;
+    accent-color: var(--primary-color, #4b91df);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
 .modal-section.form-group,
 .modal-section .form-group {
     margin-bottom: 0;
