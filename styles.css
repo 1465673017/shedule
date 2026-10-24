@@ -4267,7 +4267,7 @@ body.mint-theme-active .app-message-actions {
 /* Keep Chinese student names crisp in the lesson picker. Small 10px text and
    eight narrow columns were noticeably blurred in Windows/Electron. */
 body.reference-main-ui .lesson-editor-modal .student-picker {
-    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     gap: 10px 12px !important;
 }
 
@@ -4519,7 +4519,7 @@ body.mint-theme-active.reference-main-ui #addLessonModal .student-picker .studen
 
 @media (max-height: 760px) {
     body.reference-main-ui .lesson-editor-modal .student-picker {
-        grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     }
 
     body.reference-main-ui .lesson-editor-modal .student-chip {
@@ -10491,7 +10491,7 @@ body.reference-main-ui #addLessonModal {
 }
 
 body.reference-main-ui .lesson-editor-modal {
-    width: min(980px, calc(100vw - 40px));
+    width: min(600px, calc(100vw - 40px));
     max-width: none;
     max-height: calc(100vh - 28px);
     border-radius: 18px;
@@ -10721,6 +10721,55 @@ body.reference-main-ui .lesson-editor-modal .student-chip.selected {
     box-shadow: 0 0 0 2px rgba(67, 141, 245, .1);
 }
 
+body.reference-main-ui .lesson-editor-modal .lesson-subject-add-chip {
+    cursor: pointer;
+    border-style: dashed;
+    border-color: #9db7d8;
+}
+
+body.reference-main-ui .lesson-editor-modal .lesson-subject-add-chip:hover {
+    border-color: #438df5;
+    background: #f4f8ff;
+}
+
+body.reference-main-ui .lesson-editor-modal .lesson-subject-plus {
+    color: #438df5;
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.lesson-subject-popover {
+    position: fixed;
+    z-index: 5000;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(86px, 1fr));
+    gap: 6px;
+    width: 190px;
+    padding: 8px;
+    border: 1px solid #d9e3f0;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(36, 61, 95, .18);
+}
+
+.lesson-subject-popover button {
+    min-height: 34px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #172235;
+    cursor: pointer;
+    font: inherit;
+}
+
+.lesson-subject-popover button:hover,
+.lesson-subject-popover button.active {
+    background: #edf5ff;
+    color: #2878e8;
+}
+
 body.reference-main-ui .lesson-editor-modal .student-chip .sc-name {
     color: #172235;
     font-size: 17px;
@@ -10829,7 +10878,6 @@ body.reference-main-ui .lesson-editor-modal .form-actions .btn.primary {
 /* Compact lesson dialog: keep the common course form on one screen. */
 @media (min-width:801px) {
     body.reference-main-ui .lesson-editor-modal {
-        width: min(820px, calc(100vw - 48px));
         max-height: calc(100vh - 24px);
         overflow: hidden;
     }

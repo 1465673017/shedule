@@ -519,6 +519,54 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
         });
 
+        const subjectTile = document.createElement('div');
+        subjectTile.className = 'student-chip lesson-subject-add-chip';
+        const selectedSubjectChip = document.querySelector('#lessonSubjectPicker .subject-chip.selected');
+        const activeSubject = selectedSubjectChip
+            ? this.subjects.find(subject => String(subject.id) === String(selectedSubjectChip.dataset.subjectId))
+            : null;
+        const openSubjectPopover = (event) => {
+            event.stopPropagation();
+            document.querySelector('.lesson-subject-popover')?.remove();
+            const popover = document.createElement('div');
+            popover.className = 'lesson-subject-popover';
+            this.subjects.forEach(subject => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.textContent = subject.name;
+                option.className = String(subject.id) === String(activeSubject?.id) ? 'active' : '';
+                option.addEventListener('click', (clickEvent) => {
+                    clickEvent.stopPropagation();
+                    const chip = Array.from(document.querySelectorAll('#lessonSubjectPicker .subject-chip'))
+                        .find(item => String(item.dataset.subjectId) === String(subject.id));
+                    if (chip) chip.click();
+                    popover.remove();
+                    this.renderLessonStudentPicker(selectedIds, excludeKeys);
+                });
+                popover.appendChild(option);
+            });
+            document.body.appendChild(popover);
+            const rect = subjectTile.getBoundingClientRect();
+            popover.style.left = `${Math.min(rect.left, window.innerWidth - popover.offsetWidth - 12)}px`;
+            popover.style.top = `${rect.top}px`;
+            const close = (closeEvent) => {
+                if (!popover.contains(closeEvent.target) && closeEvent.target !== subjectTile) {
+                    popover.remove();
+                    document.removeEventListener('click', close);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', close), 0);
+        };
+        if (activeSubject) {
+            subjectTile.classList.add('lesson-subject-chip');
+            subjectTile.innerHTML = `<span class="sc-name">${this.escapeHtml(activeSubject.name)}</span><span class="sc-grade">科目</span>`;
+            subjectTile.addEventListener('click', openSubjectPopover);
+        } else {
+            subjectTile.innerHTML = '<span class="lesson-subject-plus" aria-hidden="true">+</span><span class="sc-grade">选择科目</span>';
+            subjectTile.addEventListener('click', openSubjectPopover);
+        }
+        picker.appendChild(subjectTile);
+
         this.students.forEach(student => {
 
             const isSelected = selectedIds.includes(student.id);
