@@ -3039,7 +3039,11 @@ TimetableApp.prototype.renderStatsCards = function (lessons, options) {
                 return sum + (Number(value) || 0);
             }, 0);
             salary.coursePay = chartCoursePay;
-            salary.grossPay = salary.settings.basePay + chartCoursePay;
+            // The day overview shows only that day's lesson pay; base pay is
+            // a monthly component and must not be repeated in a daily total.
+            salary.grossPay = this._chartGranularity === 'day'
+                ? chartCoursePay
+                : salary.settings.basePay + chartCoursePay;
         }
         var money = function (value) { return '¥' + Number(value || 0).toFixed(2); };
         container.classList.remove('lesson-unit-summary-grid', 'student-summary-grid');

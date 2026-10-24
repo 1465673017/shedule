@@ -559,7 +559,8 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
         };
         if (activeSubject) {
             subjectTile.classList.add('lesson-subject-chip');
-            subjectTile.innerHTML = `<span class="sc-name">${this.escapeHtml(activeSubject.name)}</span><span class="sc-grade">科目</span>`;
+            subjectTile.style.setProperty('--lesson-subject-color', activeSubject.color || '#e8eef7');
+            subjectTile.innerHTML = `<span class="sc-name">${this.escapeHtml(activeSubject.name)}</span>`;
             subjectTile.addEventListener('click', openSubjectPopover);
         } else {
             subjectTile.innerHTML = '<span class="lesson-subject-plus" aria-hidden="true">+</span><span class="sc-grade">选择科目</span>';
@@ -567,7 +568,17 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
         }
         picker.appendChild(subjectTile);
 
-        this.students.forEach(student => {
+        const gradeOrder = new Map(this.grades.map((grade, index) => [grade.name, index]));
+        const sortedStudents = [...this.students].sort((a, b) => {
+            const aGrade = gradeOrder.has(a.grade) ? gradeOrder.get(a.grade) : Number.MAX_SAFE_INTEGER;
+            const bGrade = gradeOrder.has(b.grade) ? gradeOrder.get(b.grade) : Number.MAX_SAFE_INTEGER;
+            if (aGrade !== bGrade) return aGrade - bGrade;
+            const gradeCompare = String(a.grade || '').localeCompare(String(b.grade || ''), 'zh-CN');
+            if (gradeCompare !== 0) return gradeCompare;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { sensitivity: 'base' });
+        });
+
+        sortedStudents.forEach(student => {
 
             const isSelected = selectedIds.includes(student.id);
 
@@ -641,6 +652,7 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
             chip.dataset.studentId = student.id;
             chip.dataset.searchText = `${student.name} ${student.grade || ''}`.toLowerCase();
+            chip.style.setProperty('--student-grade-color', this.getStudentGradeColor(student));
 
             const oneV1Badge = student.is1v1 ? '<span class="one-v1-badge">1v1</span>' : '';
 
