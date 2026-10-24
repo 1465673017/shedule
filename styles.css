@@ -4537,6 +4537,12 @@ body.mint-theme-active.reference-main-ui #addLessonModal .student-picker .studen
 }
 
 /* Electron-only workspace toolbar and stable timetable density. */
+.menu-trigger{display:inline-grid;place-items:center;box-sizing:border-box;flex:none;width:36px;height:36px;padding:3px!important;margin-right:-6px;border:0!important;border-radius:6px!important;background:transparent!important;box-shadow:none!important;line-height:0;vertical-align:middle;cursor:pointer;-webkit-app-region:no-drag;transition:transform .15s ease,background-color .15s ease,box-shadow .15s ease}
+.menu-trigger img{display:block;width:27px;height:27px;margin:0;object-fit:contain;transform:none}
+.menu-trigger:hover,.menu-trigger:focus-visible{transform:translateY(-1px);background:rgba(0,0,0,.06)!important;outline:0}
+.menu-trigger:active{transform:scale(.96)}
+.app-menu-popover{position:fixed;z-index:1000;width:min(360px,calc(100vw - 16px));max-height:calc(3 * 88px + 16px);padding:8px;border:1px solid rgba(100,116,139,.24);border-radius:12px;background:var(--menu-bg-color,#fff);box-shadow:0 14px 36px rgba(15,23,42,.18);overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:thin}
+.app-menu-list{display:grid;grid-auto-flow:row;grid-template-rows:repeat(3,80px);grid-template-columns:repeat(4,80px);grid-auto-columns:80px;grid-auto-rows:80px;gap:4px;width:max-content;min-width:100%}.app-menu-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:80px;height:80px;min-width:0;padding:8px 5px;border:0;border-radius:9px;background:transparent;color:inherit;text-align:center;font:inherit;cursor:pointer}.app-menu-item:hover,.app-menu-item:focus-visible{background:rgba(100,116,139,.12);outline:none}.app-menu-item svg,.app-menu-item img{width:28px;height:28px;flex:none}.app-menu-item [hidden]{display:none!important}.app-menu-item span{max-width:100%;font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-menu-add-shortcut{grid-column:auto!important}.navigation-shortcut-modal-content{width:min(560px,94vw);max-height:85vh;overflow:auto}.navigation-shortcut-form{display:grid;gap:12px}.navigation-shortcut-form label{display:grid;gap:5px}.navigation-shortcut-form input{padding:9px;border:1px solid #d1d5db;border-radius:6px}.navigation-shortcut-form-actions{display:flex;gap:8px;flex-wrap:wrap}.navigation-shortcut-icon-row{display:flex;justify-content:flex-start}.navigation-shortcut-icon-button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}.navigation-shortcut-icon-button #navigationShortcutIconPreview{display:flex;width:100px;height:100px;align-items:center;justify-content:center;border:1px solid #cbd5e1;border-radius:8px;font-size:48px;line-height:1}.navigation-shortcut-icon-button #navigationShortcutIconPreview img{width:100%;height:100%;object-fit:contain}.navigation-shortcut-icon-button small{font-size:14px;line-height:1.2}.navigation-shortcut-form-actions #navigationShortcutIconButton{display:none}.navigation-shortcut-icon-preview img{width:20px;height:20px;vertical-align:middle}.navigation-shortcut-list{display:grid;gap:6px;margin-top:18px}.navigation-shortcut-saved-item{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid #eee}.navigation-shortcut-saved-icon img{width:24px;height:24px}.navigation-shortcut-saved-text{display:grid;flex:1}.navigation-shortcut-saved-text small{color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.navigation-shortcut-item-actions{display:flex;gap:4px}.navigation-shortcut-item-actions button{border:0;background:transparent;color:#2563eb;cursor:pointer}
 :root {
     --electron-toolbar-height: 64px;
 }
@@ -10404,6 +10410,8 @@ body.reference-main-ui .calendar-icon svg {
 .memo-trigger{margin-right:-6px}
 body.reference-main-ui.dark-theme-active .date-locate-btn,body.reference-main-ui.dark-theme-active .memo-trigger{background:transparent!important;color:inherit}
 body.reference-main-ui.dark-theme-active .date-locate-btn:hover,body.reference-main-ui.dark-theme-active .date-locate-btn:focus-visible,body.reference-main-ui.dark-theme-active .memo-trigger:hover,body.reference-main-ui.dark-theme-active .memo-trigger:focus-visible{background:rgba(255,255,255,.08)!important}
+.date-display>.menu-trigger:hover,.date-display>.menu-trigger:focus-visible{background:rgba(0,0,0,.06)!important}
+body.reference-main-ui.dark-theme-active .date-display>.menu-trigger:hover,body.reference-main-ui.dark-theme-active .date-display>.menu-trigger:focus-visible{background:rgba(255,255,255,.08)!important}
 .date-display>.memo-entry-slot>.memo-trigger{margin-right:-6px}
 
 body.reference-main-ui .timetable-wrapper {
@@ -14118,3 +14126,22 @@ body.memo-window-mode .memo-course-picker button:disabled{cursor:not-allowed;opa
 .memo-modal .memo-view-toggle img{display:block;width:20px;height:20px;object-fit:contain}
 .memo-modal .memo-view-toggle:hover,.memo-modal .memo-view-toggle:focus-visible{border-color:#a5b4fc;background:#eef2ff;transform:translateY(-1px);outline:0}
 @media(prefers-reduced-motion:reduce){.memo-modal .memo-view-toggle{transition:none}.memo-modal .memo-view-toggle:hover,.memo-modal .memo-view-toggle:focus-visible{transform:none}}
+
+/* 导航目标输入框与文件/文件夹选择按钮保持同一行 */
+.navigation-shortcut-target-row{display:flex;align-items:end;gap:8px;min-width:0}
+.navigation-shortcut-target-row>label{flex:1;min-width:0}
+.navigation-shortcut-browse-actions{display:flex;flex:none;gap:6px}
+.navigation-shortcut-browse-actions .btn{white-space:nowrap}
+@media(max-width:520px){.navigation-shortcut-target-row{flex-wrap:wrap}.navigation-shortcut-target-row>label{flex-basis:100%}}
+.navigation-shortcut-icon-button #navigationShortcutIconPreview{width:72px;height:72px;font-size:40px}
+.navigation-shortcut-modal-content{display:flex;flex-direction:column;overflow:hidden}
+.navigation-shortcut-modal-content{padding-top:12px}
+.navigation-shortcut-modal-content>.modal-header{padding-top:10px;padding-bottom:12px}
+.navigation-shortcut-modal-content>.modal-header,.navigation-shortcut-modal-content>.navigation-shortcut-form{flex:none}
+.navigation-shortcut-modal-content>.navigation-shortcut-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.app-menu-popover{height:calc(3 * 80px + 2 * 4px + 16px + 2px);max-height:calc(100vh - 24px);overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin;scrollbar-color:rgba(100,116,139,.48) transparent}
+.app-menu-list{width:100%;min-width:0;grid-template-columns:repeat(4,minmax(0,80px));grid-auto-columns:minmax(0,80px)}
+.app-menu-popover::-webkit-scrollbar{width:7px}
+.app-menu-popover::-webkit-scrollbar-thumb{border-radius:8px;background:rgba(100,116,139,.38)}
+
+.modal .modal-close{width:36px;height:36px;border:0;border-radius:6px;background:transparent;color:#94a3b8;font-size:34px;font-weight:400;line-height:1;transition:color .18s ease,background-color .18s ease,transform .18s ease}.modal .modal-close:hover,.modal .modal-close:focus-visible{background:rgba(59,130,246,.08);color:#2563eb;transform:rotate(90deg) scale(1.08);outline:none}.modal .modal-close:active{transform:rotate(90deg) scale(.94)}

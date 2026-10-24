@@ -406,7 +406,6 @@ class TimetableApp {
             if (e.key === 'Escape') {
                 this.cancelCopyPasteState();
                 this.closeSubjectModal();
-                this.closeStudentBatchModal();
                 this.closeTimeModal();
                 this.closeQuickStartModal();
                 this.closeAddLessonModal();

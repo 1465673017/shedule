@@ -558,6 +558,7 @@
                             </div>
                         </div>
                         <div class="date-display">
+                            <button type="button" class="menu-trigger" aria-label="菜单" aria-expanded="false" title="菜单"><img src="./icon/menu.svg" alt=""></button>
                             <div class="memo-entry-slot"><button type="button" id="memoBtn" class="memo-trigger" aria-label="打开备忘录" title="备忘录"><img src="./icon/memo-entry.svg" alt=""></button></div>
                             <button type="button" id="todayBtn" class="date-locate-btn" aria-label="定位到今天" title="定位到今天"><img src="./icon/date-locate.svg" alt=""></button>
                             <label class="date-picker-shell" for="datePicker"><span class="calendar-icon"
@@ -1674,6 +1675,18 @@
             </div>
         </div>
     </div>
+    <div id="navigationShortcutModal" class="modal navigation-shortcut-modal" role="dialog" aria-modal="true" aria-labelledby="navigationShortcutModalTitle" style="display:none">
+        <div class="modal-content navigation-shortcut-modal-content">
+            <div class="modal-header"><h3 id="navigationShortcutModalTitle">添加导航</h3><button id="navigationShortcutCloseButton" type="button" class="modal-close" aria-label="关闭">×</button></div>
+            <div class="navigation-shortcut-form">
+                <div class="navigation-shortcut-icon-row"><button id="navigationShortcutIconButton" type="button" class="navigation-shortcut-icon-button" aria-label="选择图标" title="选择图标"><span id="navigationShortcutIconPreview" aria-hidden="true">+</span></button></div>
+                <label>名称<input id="navigationShortcutTitleInput" type="text" placeholder="请输入导航名称"></label>
+                <div class="navigation-shortcut-target-row"><label>目标<input id="navigationShortcutTargetInput" type="text" placeholder="请输入网址或本机路径"></label><div class="navigation-shortcut-browse-actions"><button id="navigationShortcutBrowseButton" type="button" class="btn secondary">选择文件</button><button id="navigationShortcutBrowseFolderButton" type="button" class="btn secondary">选择文件夹</button></div></div>
+                <button id="navigationShortcutAddButton" type="button" class="btn primary">添加到菜单</button>
+            </div>
+            <div id="navigationShortcutList" class="navigation-shortcut-list"></div>
+        </div>
+    </div>
     <script src="./chart.umd.min.js"></script>
     <script src="./html2canvas.min.js"></script>
     <script src="./js/app-dialogs.js"></script>
@@ -1689,6 +1702,7 @@
     <script src="./js/app-settings.js"></script>
     <script src="./js/app-stats.js"></script>
     <script src="./js/app-export.js"></script>
+    <script src="./js/app-menu.js"></script>
 
 
 </body>

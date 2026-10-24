@@ -163,6 +163,74 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
 
 ipcMain.handle('read-clipboard-text', () => clipboard.readText());
 
+const navigationShortcutsPath = path.join(app.getPath('userData'), 'navigation-shortcuts.json');
+ipcMain.handle('navigation-shortcuts:load', async () => {
+    try {
+        const shortcuts = JSON.parse(await fs.promises.readFile(navigationShortcutsPath, 'utf8'));
+        return Array.isArray(shortcuts) ? shortcuts.slice(0, 100) : [];
+    } catch (error) {
+        if (error.code !== 'ENOENT') appendStartupLog('Failed to load navigation shortcuts', error);
+        return [];
+    }
+});
+ipcMain.handle('navigation-shortcuts:save', async (_event, shortcuts) => {
+    if (!Array.isArray(shortcuts) || shortcuts.length > 100) throw new TypeError('Invalid navigation shortcuts');
+    const normalized = shortcuts.map(item => {
+        if (!item || typeof item.title !== 'string' || typeof item.target !== 'string' || typeof item.icon !== 'string') throw new TypeError('Invalid navigation shortcut');
+        if (item.title.length > 100 || item.target.length > 2048 || item.icon.length > 2_000_000) throw new RangeError('Navigation shortcut is too large');
+        if (item.icon && !/^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[\w+/=]+$/i.test(item.icon)) throw new TypeError('Invalid shortcut icon');
+        return { id: String(item.id || '').slice(0, 80), title: item.title.trim(), target: item.target.trim(), icon: item.icon };
+    });
+    await fs.promises.mkdir(path.dirname(navigationShortcutsPath), { recursive: true });
+    await fs.promises.writeFile(navigationShortcutsPath, JSON.stringify(normalized), 'utf8');
+    return { saved: true };
+});
+ipcMain.handle('navigation-shortcuts:choose-icon', async event => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] }] });
+    if (result.canceled || !result.filePaths[0]) return { canceled: true };
+    const filePath = result.filePaths[0];
+    const extension = path.extname(filePath).toLowerCase();
+    const mimeType = ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml' })[extension];
+    const stat = await fs.promises.stat(filePath);
+    if (stat.size > 1_500_000) throw new RangeError('图片不能超过 1.5 MB');
+    return { canceled: false, dataUrl: `data:${mimeType};base64,${(await fs.promises.readFile(filePath)).toString('base64')}` };
+});
+ipcMain.handle('navigation-shortcuts:choose-target', async (event, mode) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const options = mode === 'folder' ? { properties: ['openDirectory'] } : { properties: ['openFile'], treatPackageAsDirectory: false, filters: [{ name: '应用程序和快捷方式', extensions: process.platform === 'darwin' ? ['app', 'command', 'sh'] : ['exe', 'lnk'] }, { name: '所有文件', extensions: ['*'] }] };
+    const result = await dialog.showOpenDialog(win, options);
+    return result.canceled || !result.filePaths[0] ? { canceled: true } : { canceled: false, target: result.filePaths[0] };
+});
+ipcMain.handle('navigation-shortcuts:open', async (_event, target) => {
+    if (typeof target !== 'string' || target.length > 2048) throw new TypeError('Invalid navigation target');
+    const value = target.trim();
+    if (/^https?:\/\//i.test(value)) { await shell.openExternal(value); return { opened: true }; }
+    const localPath = path.resolve(value.replace(/^file:\/\//i, ''));
+    if (!path.isAbsolute(localPath) || !fs.existsSync(localPath)) throw new Error('找不到指定的本机文件或目录');
+    const error = await shell.openPath(localPath);
+    if (error) throw new Error(error);
+    return { opened: true };
+});
+ipcMain.handle('navigation-shortcuts:file-icon', async (_event, target) => {
+    if (typeof target !== 'string' || target.length > 2048) return { dataUrl: '' };
+    const localPath = path.resolve(target.trim().replace(/^file:\/\//i, ''));
+    try {
+        let iconPath = localPath;
+        const stat = await fs.promises.stat(localPath);
+        if (process.platform === 'win32' && path.extname(localPath).toLowerCase() === '.lnk') {
+            try {
+                const shortcut = shell.readShortcutLink(localPath);
+                const shortcutTarget = shortcut?.target && path.resolve(shortcut.target);
+                if (shortcutTarget && fs.existsSync(shortcutTarget)) iconPath = shortcutTarget;
+            } catch (_) {}
+        }
+        const iconStat = iconPath === localPath ? stat : await fs.promises.stat(iconPath);
+        const image = iconStat.isDirectory() ? await app.getFileIcon(process.platform === 'win32' ? path.join(process.env.SystemRoot || 'C:\\Windows', 'explorer.exe') : iconPath, { size: 'normal' }) : await app.getFileIcon(iconPath, { size: 'normal' });
+        return { dataUrl: image.toDataURL() };
+    } catch (_) { return { dataUrl: '' }; }
+});
+
 let courseLoginProcess = null;
 let courseLoginOwner = null;
 function resolveCourseBridgePath() {
