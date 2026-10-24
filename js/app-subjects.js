@@ -445,4 +445,16 @@ TimetableApp.prototype.renderSubjects = function () {
 
         pool.appendChild(card);
     });
+
+    // Keep the add action as the first, non-draggable card in the active pool.
+    const addCard = document.createElement('button');
+    addCard.type = 'button';
+    addCard.className = 'subject-card pool-add-card';
+    addCard.textContent = this.currentPool === 'subject' ? '＋ 添加科目' : '＋ 添加学生';
+    addCard.setAttribute('aria-label', addCard.textContent.trim());
+    addCard.addEventListener('click', () => {
+        if (this.currentPool === 'subject') this.openSubjectModal();
+        else this.openStudentModal();
+    });
+    pool.prepend(addCard);
 }

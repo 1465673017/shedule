@@ -168,8 +168,6 @@ class TimetableApp {
         };
 
         // 科目相关
-        bind('addSubjectBtn', 'click', () => this.openSubjectModal());
-        bind('addStudentBtn', 'click', () => this.openStudentModal());
         bind('addCourseBtn', 'click', () => this.openManualCourseModal());
         bind('subjectForm', 'submit', (e) => this.saveSubject(e));
         bind('courseLoginBtn', 'click', () => this.openCourseLogin());
@@ -2510,11 +2508,6 @@ class TimetableApp {
         document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
 
         // 切换课程池时调整按钮可见性 - 始终显示所有按钮
-        const addButtons = document.querySelector('.add-buttons');
-        if (addButtons) {
-            addButtons.style.display = 'flex';
-        }
-
         // 切换到学生池时显示筛选按钮，其他池隐藏
         const filterButtons = document.querySelector('.student-filter-buttons');
         if (filterButtons) {
