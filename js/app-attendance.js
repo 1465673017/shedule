@@ -77,6 +77,9 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
             ? `${courseInstance.actualStartTime}-${courseInstance.actualEndTime}`
             : (periodInfo ? periodInfo.time : '');
         const actualDisplay = this.formatDuration(Math.floor(actualMin / 60), actualMin % 60);
+        const hasAttendanceRecord = students.some(student =>
+            ['present', 'leave', 'absent'].includes(this.getAttendanceStatusForModal(key, student.id))
+        );
 
         lessonInfo.innerHTML = `
             <div class="attendance-lesson-summary">
@@ -85,13 +88,13 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
                     <span class="attendance-lesson-subject">${this.escapeHtml(subject ? subject.name : '无科目')}</span>
                     <button type="button" class="attendance-lesson-time attendance-lesson-time-button" title="点击调整上课时间"><span class="attendance-lesson-time-value">${attendanceTime}</span></button>
                 </div>
-                <div class="actual-duration-display" title="点击设置每个学生的实际上课时长">
+                ${hasAttendanceRecord ? `<div class="actual-duration-display" title="点击设置每个学生的实际上课时长">
                     <span class="actual-duration-label">实上</span>
                     <span class="actual-duration-value">${actualDisplay}</span>
                     <span class="actual-duration-edit-icon" aria-hidden="true">
                         <svg viewBox="0 0 16 16"><path d="M4 6L8 10L12 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </span>
-                </div>
+                </div>` : ''}
             </div>
         `;
         lessonInfo.querySelector('.actual-duration-display')?.addEventListener('click', event => {
@@ -128,14 +131,14 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
 
 TimetableApp.prototype.getAttendanceStatusForModal = function(key, studentId) {
         const dateKey = this._attModalDateKey || '';
+        const courseInstanceId = this._attModalCourseInstanceId;
+        if (!courseInstanceId) return null;
         if (this.erpData && Array.isArray(this.erpData.attendanceRecords)) {
             const erpRecord = this.erpData.attendanceRecords.find(record =>
                 record.studentId === String(studentId) &&
                 record.dateKey === dateKey &&
-                (
-                    (this._attModalCourseInstanceId && record.courseInstanceId === this._attModalCourseInstanceId) ||
-                    record.cellKey === key
-                )
+                record.courseInstanceId === courseInstanceId &&
+                ['present', 'leave', 'absent'].includes(record.status)
             );
             if (erpRecord) return erpRecord.status;
         }
@@ -640,10 +643,14 @@ TimetableApp.prototype.renderAttendanceRecords = function(students, key) {
 
         let html = '';
         students.forEach(student => {
-            const status = att[student.id] || defaultStatus;
+            const savedStatus = att[student.id];
+            const status = savedStatus || defaultStatus;
+            const actualDuration = (savedStatus === 'present' || savedStatus === 'leave')
+                ? `<small class="student-actual-duration">实上 ${this.escapeHtml(this.getStudentActualDurationDisplay(key, student.id))}</small>`
+                : '';
             html += `
                 <div class="att-row">
-                    <span style="font-size: 13px;">${this.escapeHtml(student.name)}<small class="student-actual-duration">实上 ${this.escapeHtml(this.getStudentActualDurationDisplay(key, student.id))}</small></span>
+                    <span style="font-size: 13px;">${this.escapeHtml(student.name)}${actualDuration}</span>
                     <div class="att-status">
                         <button class="att-btn ${status === 'present' ? 'present' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="present">出勤</button>
                         <button class="att-btn ${status === 'leave' ? 'leave' : ''}" data-student-id="${this.escapeHtml(student.id)}" data-status="leave">请假</button>

@@ -328,6 +328,57 @@ assert.strictEqual(
     'switching back to recurring should clear temporary rules for that student'
 );
 
+const legacyAttendanceRecurrenceApp = makeApp();
+ScheduleErpService.setCellVersion(legacyAttendanceRecurrenceApp, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
+const legacyInstance = ScheduleErpService.getCellVersion(legacyAttendanceRecurrenceApp, '3-afternoon-0', '2026-07-06');
+const legacyRelation = legacyAttendanceRecurrenceApp.erpData.studentCourseRelations.find(item =>
+    item.courseInstanceId === legacyInstance.courseInstanceId && item.studentId === 's1'
+);
+legacyRelation.relationStatus = 'temporary';
+legacyAttendanceRecurrenceApp.erpData.exceptionRules.push({
+    id: 'legacy-attendance-temporary',
+    courseInstanceId: legacyInstance.courseInstanceId,
+    cellKey: '3-afternoon-0',
+    weekStart: '2026-07-06',
+    studentId: 's1',
+    type: 'temporary-student',
+    scope: 'single-week',
+    reason: 'attendance-recurrence'
+});
+ScheduleErpService.buildTimetableProjection(legacyAttendanceRecurrenceApp);
+assert.strictEqual(legacyRelation.relationStatus, 'recurring', 'legacy attendance recurrence data should restore the recurring relation');
+assert.strictEqual(legacyRelation.status, 'recurring', 'legacy repair should synchronize the compatibility status field');
+assert.strictEqual(
+    legacyAttendanceRecurrenceApp.erpData.exceptionRules.some(rule => rule.id === 'legacy-attendance-temporary'),
+    false,
+    'legacy attendance recurrence rule should be removed after repair'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(legacyAttendanceRecurrenceApp, '3-afternoon-0', '2026-07-13')),
+    ['s1'],
+    'a repaired recurring relation should continue into the following week'
+);
+
+const explicitTemporaryAttendanceApp = makeApp();
+ScheduleErpService.setCellVersion(explicitTemporaryAttendanceApp, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
+ScheduleErpService.setRecurrenceStatus(explicitTemporaryAttendanceApp, '3-afternoon-0', 's1', 'temporary', '2026-07-06');
+assert.strictEqual(
+    explicitTemporaryAttendanceApp.erpData.exceptionRules.find(rule => rule.type === 'temporary-student').source,
+    'manual-attendance',
+    'explicit temporary attendance choices should be marked as manual'
+);
+ScheduleErpService.buildTimetableProjection(explicitTemporaryAttendanceApp);
+assert.strictEqual(
+    explicitTemporaryAttendanceApp.erpData.studentCourseRelations.find(item => item.studentId === 's1').relationStatus,
+    'temporary',
+    'repair should preserve an explicitly selected temporary relation'
+);
+assert.deepStrictEqual(
+    studentIds(ScheduleErpService.getCellVersion(explicitTemporaryAttendanceApp, '3-afternoon-0', '2026-07-13')),
+    [],
+    'an explicitly temporary student should not recur next week'
+);
+
 const app2 = makeApp();
 ScheduleErpService.setCellVersion(app2, '3-afternoon-0', '2026-07-06', 'math', ['s1']);
 ScheduleErpService.completeStudentFromWeek(app2, '3-afternoon-0', 's1', '2026-07-13');

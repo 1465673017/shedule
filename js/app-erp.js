@@ -460,6 +460,38 @@
         });
     }
 
+    // Repair legacy attendance rules that accidentally left a recurring
+    // student relation marked as temporary. New explicit temporary choices
+    // are tagged below so they are never mistaken for legacy corruption.
+    function repairRecurringAttendanceRelations(app) {
+        const erp = ensureErpData(app);
+        const instances = new Map((erp.courseInstances || []).map(instance => [instance.id, instance]));
+        const repairedRules = new Set();
+
+        (erp.exceptionRules || []).forEach(rule => {
+            if (rule.type !== 'temporary-student' ||
+                rule.reason !== 'attendance-recurrence' ||
+                rule.source === 'manual-attendance') return;
+
+            const instance = instances.get(rule.courseInstanceId);
+            if (!instance || instance.isDeleted || instance.status !== 'recurring' || !rule.studentId) return;
+
+            const relation = (erp.studentCourseRelations || []).find(item =>
+                item.courseInstanceId === instance.id && String(item.studentId) === String(rule.studentId)
+            );
+            if (!relation || relation.relationStatus !== 'temporary') return;
+
+            relation.relationStatus = 'recurring';
+            relation.status = 'recurring';
+            relation.updatedAt = new Date().toISOString();
+            repairedRules.add(rule);
+        });
+
+        if (repairedRules.size === 0) return false;
+        erp.exceptionRules = erp.exceptionRules.filter(rule => !repairedRules.has(rule));
+        return true;
+    }
+
     function clearStudentRecurrenceExceptions(app, courseInstanceId, studentId, fromWeekStart) {
         if (!courseInstanceId || !studentId || !fromWeekStart) return;
         const erp = ensureErpData(app);
@@ -794,6 +826,7 @@
 
     function buildTimetableProjection(app) {
         const erp = ensureErpData(app);
+        repairRecurringAttendanceRelations(app);
         const projected = {};
         erp.courseInstances.forEach(instance => {
             if (!instance.cellKey || !instance.weekStart) return;
@@ -1024,7 +1057,8 @@
                         studentId: String(studentId),
                         type: type === 'stopped' ? 'pause-student' : 'temporary-student',
                         scope: type === 'stopped' ? 'future' : 'single-week',
-                        reason: 'attendance-recurrence'
+                        reason: 'attendance-recurrence',
+                        ...(type === 'temporary' ? { source: 'manual-attendance' } : {})
                     });
                 } else if (type === 'recurring') {
                     clearEmptyRecurringStops(app, cellKey, effectiveWeekStart, 'all-future-empty');
