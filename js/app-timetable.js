@@ -1,6 +1,24 @@
 // app-timetable.js - Timetable rendering and cell operations
 // Auto-split from script.js
 
+TimetableApp.prototype.getMemoPeriodIndexForTime = function(minutes) {
+    const periods = (this.periods || []).map((period, index) => {
+        const parts = String(period.time || '').split('-');
+        if (parts.length !== 2) return null;
+        const start = this.timeToMinutes(parts[0]);
+        const end = this.timeToMinutes(parts[1]);
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+        return { index, start };
+    }).filter(Boolean).sort((a, b) => a.start - b.start || a.index - b.index);
+    if (!periods.length) return -1;
+
+    // Assign gaps to the preceding lesson; times before the first lesson wrap to the first.
+    for (let i = 1; i < periods.length; i++) {
+        if (minutes < periods[i].start) return periods[i - 1].index;
+    }
+    return periods[periods.length - 1].index;
+};
+
 TimetableApp.prototype.closeTimeModal = function() {
         document.getElementById('timeModal').style.display = 'none';
     }
@@ -723,13 +741,17 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             const cellDateStr = this.formatLocalDate(cellDate);
             const cellMemos = (this.getMemos?.() || []).filter(memo => {
                 if (memo.done) return false;
-                if (memo.cellRef) return memo.cellRef.date === cellDateStr && Number(memo.cellRef.day) === day && Number(memo.cellRef.period) === periodIndex;
-                if (!memo.due || memo.due.slice(0, 10) !== cellDateStr) return false;
-                const due = new Date(memo.due);
-                const minutes = due.getHours() * 60 + due.getMinutes();
-                const parts = String(period.time || '').split('-');
-                if (parts.length !== 2) return false;
-                return minutes >= this.timeToMinutes(parts[0]) && minutes < this.timeToMinutes(parts[1]);
+                if (memo.due) {
+                    if (memo.due.slice(0, 10) !== cellDateStr) return false;
+                    const due = new Date(memo.due);
+                    if (Number.isNaN(due.getTime())) return false;
+                    const minutes = due.getHours() * 60 + due.getMinutes();
+                    return this.getMemoPeriodIndexForTime(minutes) === periodIndex;
+                }
+                return !!memo.cellRef
+                    && memo.cellRef.date === cellDateStr
+                    && Number(memo.cellRef.day) === day
+                    && Number(memo.cellRef.period) === periodIndex;
             });
             if (cellMemos.length) {
                 const memoTooltip = document.createElement('div');

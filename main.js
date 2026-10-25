@@ -14,8 +14,10 @@ const customUserDataPath = path.join(appDataPath, APP_NAME);
 const isolatedTestDataPath = process.env.KEBIAO_E2E_USER_DATA_DIR;
 const portableRoot = (() => {
     if (process.env.KEBIAO_PORTABLE_DIR) return path.resolve(process.env.KEBIAO_PORTABLE_DIR);
-    if (!isMac || !app.isPackaged) return null;
-    const bundleParent = path.dirname(path.dirname(path.dirname(path.dirname(process.execPath))));
+    if (!app.isPackaged) return null;
+    const bundleParent = isMac
+        ? path.dirname(path.dirname(path.dirname(path.dirname(process.execPath))))
+        : path.dirname(process.execPath);
     return fs.existsSync(path.join(bundleParent, '.kebiao-portable')) ? bundleParent : null;
 })();
 const portableUserDataPath = portableRoot ? path.join(portableRoot, 'data') : null;
@@ -235,18 +237,29 @@ let courseLoginProcess = null;
 let courseLoginOwner = null;
 function resolveCourseBridgePath() {
     const bridgeName = process.platform === 'win32' ? 'course-sync-bridge.exe' : 'course-sync-bridge';
+    const appPath = app.getAppPath();
+    const appPathIsAsar = /\.asar(?:[\\/]|$)/i.test(appPath);
     const candidates = [
         path.join(process.resourcesPath, 'python-dist', bridgeName),
         path.join(process.resourcesPath, 'app.asar.unpacked', 'build', 'python-dist', bridgeName),
+        path.join(process.resourcesPath, 'app', 'build', 'python-dist', bridgeName),
+        ...(appPathIsAsar ? [] : [path.join(appPath, 'build', 'python-dist', bridgeName)]),
         path.join(process.resourcesPath, 'build', 'python-dist', bridgeName),
         path.join(path.dirname(app.getAppPath()), 'app.asar.unpacked', 'build', 'python-dist', bridgeName)
     ];
-    return candidates.find(candidate => fs.existsSync(candidate)) || candidates[0];
+    return candidates.find(candidate => fs.existsSync(candidate)) || null;
 }
 function ensureCourseBridge(event) {
     if (courseLoginProcess && !courseLoginProcess.killed) return courseLoginProcess;
     const scriptPath = path.join(app.getAppPath(), 'main.py');
     const packagedBridge = resolveCourseBridgePath();
+    if (app.isPackaged && !packagedBridge) {
+        const bridgeName = process.platform === 'win32' ? 'course-sync-bridge.exe' : 'course-sync-bridge';
+        const message = `找不到同步服务程序 ${bridgeName}，请重新安装包含完整资源的应用`;
+        appendStartupLog(message);
+        if (event.sender && !event.sender.isDestroyed()) event.sender.send('course-sync-event', { type: 'error', message });
+        return null;
+    }
     const bridgeCwd = app.isPackaged ? path.dirname(packagedBridge) : path.dirname(scriptPath);
     const bridgeCommand = app.isPackaged
         ? packagedBridge
@@ -294,6 +307,7 @@ function ensureCourseBridge(event) {
 }
 function sendCourseBridgeCommand(event, command) {
     const child = ensureCourseBridge(event);
+    if (!child) return { started: false, message: '同步服务程序不可用' };
     child.stdin.write(`${JSON.stringify(command)}\n`);
     return { started: true };
 }

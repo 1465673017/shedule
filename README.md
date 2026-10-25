@@ -9,6 +9,17 @@ npm ci
 npm start
 ```
 
+## Windows 打包
+
+在 Windows 环境运行以下命令，会在 `dist` 同时生成 NSIS 安装程序和便携版 EXE：
+
+```bash
+npm ci
+npm run build
+```
+
+便携版需与 `.kebiao-portable` 标记文件及 `data` 文件夹放在同一目录运行；首次使用时可自行创建空的 `data` 文件夹，数据会保存在其中，移动整个目录即可迁移。
+
 ## macOS 打包
 
 macOS 产物必须在 macOS（本机或 GitHub Actions）上构建：

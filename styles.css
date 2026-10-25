@@ -13752,6 +13752,21 @@ body.mint-theme-active.reference-main-ui .lesson-editor-modal .student-chip.sele
     box-shadow: inset 0 0 0 3px var(--primary-color), inset 0 0 0 6px var(--primary-bg), 0 3px 10px var(--shadow-color);
 }
 
+/* 默认主题的课程添加卡片沿用浅绿色主题的悬停与选中反馈，强调色使用默认蓝色变量。 */
+body.reference-main-ui:not(.mint-theme-active):not(.dark-theme-active) .lesson-editor-modal .subject-chip:hover,
+body.reference-main-ui:not(.mint-theme-active):not(.dark-theme-active) .lesson-editor-modal .student-chip:hover {
+    border-color: var(--primary-hover);
+    background: #f7faff;
+    box-shadow: 0 8px 18px var(--shadow-color);
+}
+
+body.reference-main-ui:not(.mint-theme-active):not(.dark-theme-active) .lesson-editor-modal .subject-chip.selected,
+body.reference-main-ui:not(.mint-theme-active):not(.dark-theme-active) .lesson-editor-modal .student-chip.selected {
+    outline: 0;
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 3px var(--primary-color), inset 0 0 0 6px var(--primary-bg), 0 3px 10px var(--shadow-color);
+}
+
 body.mint-theme-active.reference-main-ui .lesson-editor-modal .student-count-tag:not(:empty) {
     background: transparent;
     color: var(--primary-pressed);

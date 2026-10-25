@@ -6,6 +6,14 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const packageConfig = JSON.parse(read('package.json'));
+assert.strictEqual(packageConfig.build.asar, true, 'application files should be packaged in app.asar');
+assert(packageConfig.build.asarUnpack.includes('build/python-dist/**'), 'the sync bridge must remain unpacked so it can be spawned');
+assert.match(packageConfig.scripts.build, /electron-builder --win --x64/);
+assert.deepStrictEqual(
+    packageConfig.build.win.target.map(target => target.target),
+    ['nsis', 'portable'],
+    'Windows packaging must produce both installer and portable artifacts'
+);
 assert.strictEqual(
     Object.prototype.hasOwnProperty.call(packageConfig.build, 'electronDist'),
     false,
@@ -22,10 +30,15 @@ assert.match(mainSource, /APP_NAME = 'A大橙子课时统计定制版'/);
 assert.match(mainSource, /path\.join\(appDataPath, APP_NAME\)/);
 assert.doesNotMatch(mainSource, /LEGACY_APP_NAME|migrateLegacyUserDataDirectory/);
 assert.match(mainSource, /\.kebiao-portable/);
+assert.match(mainSource, /const bundleParent = isMac[\s\S]*path\.dirname\(process\.execPath\)/);
 assert.match(mainSource, /path\.join\(portableRoot, 'data'\)/);
 assert.match(mainSource, /portableUserDataPath \|\| customUserDataPath/);
 assert.match(mainSource, /build',\s*'python-dist'/);
 assert.match(mainSource, /resourcesPath,\s*'python-dist'/);
+assert.match(mainSource, /path\.join\(appPath,\s*'build',\s*'python-dist'/);
+assert.match(mainSource, /appPathIsAsar \? \[\] : \[path\.join\(appPath/);
+const bridgeCandidates = mainSource.slice(mainSource.indexOf('const candidates = [', mainSource.indexOf('function resolveCourseBridgePath')));
+assert(bridgeCandidates.indexOf("'app.asar.unpacked', 'build', 'python-dist'") < bridgeCandidates.indexOf('appPathIsAsar ?'), 'prefer the unpacked bridge over the virtual asar path');
 assert.match(mainSource, /course-sync-bridge\.exe/);
 assert.match(mainSource, /app\.asar\.unpacked/);
 assert.match(mainSource, /resolveCourseBridgePath/);
