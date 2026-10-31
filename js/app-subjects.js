@@ -614,4 +614,16 @@ TimetableApp.prototype.renderSubjects = function () {
         fragment.appendChild(card);
     });
     pool.appendChild(fragment);
+
+    // Keep the add action in the active pool so it follows subject/student switching.
+    const addCard = document.createElement('button');
+    addCard.type = 'button';
+    addCard.className = 'subject-card pool-add-card';
+    addCard.textContent = this.currentPool === 'subject' ? '+ 添加科目' : '+ 添加学生';
+    addCard.setAttribute('aria-label', addCard.textContent.trim());
+    addCard.addEventListener('click', () => {
+        if (this.currentPool === 'subject') this.openSubjectModal();
+        else this.openStudentModal();
+    });
+    pool.prepend(addCard);
 }

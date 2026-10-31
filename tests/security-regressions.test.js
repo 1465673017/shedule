@@ -13,6 +13,7 @@ assert.strictEqual(
 );
 assert.ok(packageConfig.build.files.includes('src/db/**'), 'packaging must include the database layer');
 assert.ok(packageConfig.build.files.includes('src/domain/**'), 'packaging must include database domain services');
+assert.ok(packageConfig.build.files.includes('src/db/**'), 'packaging must include SQLite-backed memo repository');
 
 const mainSource = read('main.js');
 assert.match(mainSource, /setWindowOpenHandler/);
@@ -201,6 +202,10 @@ assert.deepStrictEqual(temporaryCalls, [
 ], 'every student added by course import must use a temporary relationship');
 
 assert.match(read('js/app-course-import.js'), /restoreImportSnapshot/);
+assert.match(read('preload.js'), /memos:\s*Object\.freeze/);
+assert.match(read('main.js'), /memos-list/);
+assert.match(read('js/app-memos.js'), /window\.electronAPI\.memos\.save/);
+assert.match(read('js/app-timetable.js'), /cell-memo-marker/);
 const coreSource = read('js/app-core.js');
 assert.match(coreSource, /timetableDataBackup/);
 assert.match(coreSource, /restoreRuntimeDataSnapshot/);

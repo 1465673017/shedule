@@ -147,6 +147,7 @@ class TimetableApp {
         this.applySettings();
         this.updateThemeSettingsUI(); // Ensure UI matches loaded settings
         this.updateWeekRange();
+        window.MemoFeature?.initialize(this);
     }
 
     bindEvents() {
@@ -156,8 +157,6 @@ class TimetableApp {
         };
         
         // 科目相关
-        bind('addSubjectBtn', 'click', () => this.openSubjectModal());
-        bind('addStudentBtn', 'click', () => this.openStudentModal());
         bind('addCourseBtn', 'click', () => this.openManualCourseModal());
         bind('subjectForm', 'submit', (e) => this.saveSubject(e));
         bind('studentBatchForm', 'submit', (e) => this.saveStudentBatch(e));

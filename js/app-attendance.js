@@ -88,13 +88,13 @@ TimetableApp.prototype.openAttendanceModal = function(cell) {
                     <span class="attendance-lesson-subject">${this.escapeHtml(subject ? subject.name : '无科目')}</span>
                     <button type="button" class="attendance-lesson-time attendance-lesson-time-button" title="点击调整上课时间"><span class="attendance-lesson-time-value">${attendanceTime}</span></button>
                 </div>
-                ${hasAttendanceRecord ? `<div class="actual-duration-display" title="点击设置每个学生的实际上课时长">
+                <div class="actual-duration-display" title="点击设置每个学生的实际上课时长">
                     <span class="actual-duration-label">实上</span>
                     <span class="actual-duration-value">${actualDisplay}</span>
                     <span class="actual-duration-edit-icon" aria-hidden="true">
                         <svg viewBox="0 0 16 16"><path d="M4 6L8 10L12 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </span>
-                </div>` : ''}
+                </div>
             </div>
         `;
         lessonInfo.querySelector('.actual-duration-display')?.addEventListener('click', event => {
@@ -371,9 +371,9 @@ TimetableApp.prototype.showDurationEditor = function(event, key) {
         editor.innerHTML = `
             <div class="duration-editor-header">设置学生实际上课时长</div>
             <div class="duration-editor-body student-duration-editor-body">
-                ${students.length ? `<div class="student-duration-master-row">
+                <div class="student-duration-master-row">
                     <input type="range" class="duration-range student-duration-master-range" min="0" max="${rangeMax}" step="5" value="${masterMinutes}">
-                </div>` : ''}
+                </div>
                 ${students.map((student, index) => {
                     const minutes = studentDurations[index];
                     return `<div class="student-duration-row">

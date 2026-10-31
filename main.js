@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, Menu, clipboard, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, clipboard, shell, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -39,6 +39,7 @@ if (!gotSingleInstanceLock) {
 let staleUserDataPath = null;
 let scheduleDatabase = null;
 let pendingShutdownSnapshot = null;
+let memoWindow = null;
 
 function migrateLegacyUserDataDirectory() {
     if (isolatedTestDataPath || portableUserDataPath) {
@@ -147,6 +148,48 @@ function requireAppIcon() {
     return false;
 }
 
+function createMemoWindow() {
+    if (memoWindow && !memoWindow.isDestroyed()) {
+        memoWindow.show();
+        memoWindow.focus();
+        return;
+    }
+    memoWindow = new BrowserWindow({
+        icon: appIconPath,
+        width: 460,
+        height: 420,
+        minWidth: 460,
+        minHeight: 420,
+        show: false,
+        backgroundColor: '#ffffff',
+        paintWhenInitiallyHidden: false,
+        title: '大橙子备忘录',
+        autoHideMenuBar: true,
+        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, zoomFactor: 0.9 }
+    });
+    memoWindow.on('page-title-updated', event => event.preventDefault());
+    memoWindow.loadURL(pathToFileURL(path.join(__dirname, 'index.html')).toString()).then(() => {
+        const currentWindow = memoWindow;
+        return currentWindow?.webContents.executeJavaScript("document.body.classList.add('memo-window-mode'); new Promise(resolve => { const openMemo = () => { if (window.MemoFeature && typeof app !== 'undefined') window.MemoFeature.open(app); else document.getElementById('memoModal').style.display='flex'; resolve(); }; if (document.readyState !== 'loading') openMemo(); else document.addEventListener('DOMContentLoaded', openMemo, { once: true }); })").then(() => {
+            if (currentWindow && !currentWindow.isDestroyed()) {
+                currentWindow.setTitle('大橙子备忘录');
+                currentWindow.show();
+            }
+        });
+    }).catch(error => appendStartupLog('Memo window failed to load', error));
+    memoWindow.on('closed', () => { memoWindow = null; });
+}
+
+ipcMain.handle('open-memo-window', () => { createMemoWindow(); return { opened: true }; });
+
+ipcMain.handle('toggle-memo-window-always-on-top', event => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed() || win !== memoWindow) return { alwaysOnTop: false };
+    const alwaysOnTop = !win.isAlwaysOnTop();
+    win.setAlwaysOnTop(alwaysOnTop);
+    return { alwaysOnTop };
+});
+
 // Apply the branded icon to every window opened by a link, including links
 // opened from an existing external document window.
 app.on('web-contents-created', (_event, contents) => {
@@ -227,6 +270,51 @@ ipcMain.handle('save-file', async (_event, { data, encoding, defaultName, fileEx
 
 ipcMain.handle('read-clipboard-text', () => clipboard.readText());
 
+const navigationShortcutsPath = path.join(app.getPath('userData'), 'navigation-shortcuts.json');
+ipcMain.handle('navigation-shortcuts:load', async () => {
+    try {
+        const value = JSON.parse(await fs.promises.readFile(navigationShortcutsPath, 'utf8'));
+        return Array.isArray(value) ? value.slice(0, 100) : [];
+    } catch (error) { if (error.code !== 'ENOENT') console.error('Failed to load navigation shortcuts', error); return []; }
+});
+ipcMain.handle('navigation-shortcuts:save', async (_event, shortcuts) => {
+    if (!Array.isArray(shortcuts) || shortcuts.length > 100) throw new TypeError('Invalid navigation shortcuts');
+    const normalized = shortcuts.map(item => {
+        if (!item || typeof item.title !== 'string' || typeof item.target !== 'string' || typeof item.icon !== 'string') throw new TypeError('Invalid navigation shortcut');
+        if (item.title.length > 100 || item.target.length > 2048 || item.icon.length > 2_000_000) throw new RangeError('Navigation shortcut is too large');
+        if (item.icon && !/^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[\w+/=]+$/i.test(item.icon)) throw new TypeError('Invalid shortcut icon');
+        return { id: String(item.id || '').slice(0, 80), title: item.title.trim(), target: item.target.trim(), icon: item.icon };
+    });
+    await fs.promises.mkdir(path.dirname(navigationShortcutsPath), { recursive: true });
+    await fs.promises.writeFile(navigationShortcutsPath, JSON.stringify(normalized), 'utf8');
+    return { saved: true };
+});
+ipcMain.handle('navigation-shortcuts:choose-icon', async event => {
+    const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), { properties: ['openFile'], filters: [{ name: '图片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'] }] });
+    if (result.canceled || !result.filePaths[0]) return { canceled: true };
+    const filePath = result.filePaths[0];
+    const mime = ({ '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml' })[path.extname(filePath).toLowerCase()];
+    const stat = await fs.promises.stat(filePath); if (stat.size > 1_500_000) throw new RangeError('图片不能超过 1.5 MB');
+    return { canceled: false, dataUrl: `data:${mime};base64,${(await fs.promises.readFile(filePath)).toString('base64')}` };
+});
+ipcMain.handle('navigation-shortcuts:choose-target', async (event, mode) => {
+    const options = mode === 'folder' ? { properties: ['openDirectory'] } : { properties: ['openFile'] };
+    const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), options);
+    return result.canceled || !result.filePaths[0] ? { canceled: true } : { canceled: false, target: result.filePaths[0] };
+});
+ipcMain.handle('navigation-shortcuts:open', async (_event, target) => {
+    if (typeof target !== 'string' || target.length > 2048) throw new TypeError('Invalid navigation target');
+    const value = target.trim();
+    if (/^https?:\/\//i.test(value)) { await shell.openExternal(value); return { opened: true }; }
+    const localPath = path.resolve(value.replace(/^file:\/\//i, ''));
+    if (!fs.existsSync(localPath)) throw new Error('找不到指定的本机文件或目录');
+    const error = await shell.openPath(localPath); if (error) throw new Error(error); return { opened: true };
+});
+ipcMain.handle('navigation-shortcuts:file-icon', async (_event, target) => {
+    if (typeof target !== 'string' || target.length > 2048) return { dataUrl: '' };
+    try { const icon = nativeImage.createFromPath(path.resolve(target.trim().replace(/^file:\/\//i, ''))); return icon.isEmpty() ? { dataUrl: '' } : { dataUrl: icon.toDataURL() }; } catch (_) { return { dataUrl: '' }; }
+});
+
 function requireDatabase() {
     if (!scheduleDatabase) throw new Error('Schedule database is not ready');
     return scheduleDatabase;
@@ -302,6 +390,21 @@ ipcMain.handle('teacher-complete-session', (_event, sessionId) => {
     return database.attendance.completeSession(teacherId, String(sessionId));
 });
 
+ipcMain.handle('memos-list', () => {
+    const { database, teacherId } = teacherContext();
+    return database.memos.list(teacherId);
+});
+
+ipcMain.handle('memos-save', (_event, memo) => {
+    const { database, teacherId } = teacherContext();
+    return database.memos.save(teacherId, memo);
+});
+
+ipcMain.handle('memos-delete', (_event, memoId) => {
+    const { database, teacherId } = teacherContext();
+    return database.memos.remove(teacherId, memoId);
+});
+
 ipcMain.on('window-control', (event, action) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win || win.isDestroyed()) return;
@@ -354,6 +457,7 @@ if (gotSingleInstanceLock) {
     });
 
     app.on('window-all-closed', () => {
+        if (memoWindow && !memoWindow.isDestroyed()) return;
         if (process.platform !== 'darwin') {
             flushPendingShutdownSnapshot();
             closeScheduleDatabase();

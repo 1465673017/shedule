@@ -237,6 +237,27 @@ const MIGRATIONS = [{
     version: 3,
     name: 'remove_schedule_change_requests',
     sql: `DROP TABLE IF EXISTS schedule_change_requests;`
+}, {
+    version: 4,
+    name: 'schedule_memos',
+    sql: `
+        CREATE TABLE IF NOT EXISTS schedule_memos (
+            id TEXT PRIMARY KEY,
+            teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL DEFAULT '',
+            color TEXT NOT NULL DEFAULT '#fff7cc',
+            due_date TEXT,
+            note TEXT NOT NULL DEFAULT '',
+            tags_json TEXT NOT NULL DEFAULT '[]',
+            done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0,1)),
+            cell_ref TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_schedule_memos_teacher_due
+            ON schedule_memos(teacher_id, due_date, done, updated_at);
+    `
 }];
 
 module.exports = { MIGRATIONS };

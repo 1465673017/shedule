@@ -1,6 +1,19 @@
 // app-timetable.js - Timetable rendering and cell operations
 // Auto-split from script.js
 
+TimetableApp.prototype.getMemoPeriodIndexForTime = function(minutes) {
+    const periods = (this.periods || []).map((period, index) => {
+        const parts = String(period.time || '').split('-');
+        if (parts.length !== 2) return null;
+        const start = this.timeToMinutes(parts[0]);
+        const end = this.timeToMinutes(parts[1]);
+        return Number.isFinite(start) && Number.isFinite(end) && end > start ? { index, start } : null;
+    }).filter(Boolean).sort((a, b) => a.start - b.start || a.index - b.index);
+    if (!periods.length) return -1;
+    for (let i = 1; i < periods.length; i++) if (minutes < periods[i].start) return periods[i - 1].index;
+    return periods[periods.length - 1].index;
+};
+
 TimetableApp.prototype.closeTimeModal = function() {
         document.getElementById('timeModal').style.display = 'none';
     }
@@ -619,6 +632,12 @@ TimetableApp.prototype.renderTimetable = function() {
             tbody.appendChild(row);
         });
 
+        // Re-apply course-picking state after week navigation rebuilds the cells.
+        // The selection mode remains active while the timetable is re-rendered.
+        if (document.body.classList.contains('memo-course-picking')) {
+            tbody.querySelectorAll('.cell').forEach(cell => cell.classList.add('memo-course-pickable'));
+        }
+
         this.highlightTodayColumn();
         this.renderScheduleBlockActions();
         this.syncTimetableLayout();
@@ -705,6 +724,21 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
             const weekStart = this.getWeekRange(this.currentDate).start;
             const weekStartStr = this.formatLocalDate(weekStart);
             const version = this.getCellVersion(key, weekStartStr);
+            const cellDate = new Date(weekStart);
+            cellDate.setDate(weekStart.getDate() + day - 1);
+            const cellDateStr = this.formatLocalDate(cellDate);
+            const cellMemos = (this.getMemos?.() || this.memos || []).filter(memo => {
+                if (memo.done) return false;
+                if (memo.due) {
+                    if (String(memo.due).slice(0, 10) !== cellDateStr) return false;
+                    const due = new Date(memo.due);
+                    if (Number.isNaN(due.getTime())) return false;
+                    return this.getMemoPeriodIndexForTime(due.getHours() * 60 + due.getMinutes()) === periodIndex;
+                }
+                let ref = memo.cellRef;
+                if (typeof ref === 'string' && ref.startsWith('{')) { try { ref = JSON.parse(ref); } catch {} }
+                return !!ref && ref.date === cellDateStr && Number(ref.day) === day && Number(ref.period) === periodIndex;
+            });
             const courseInstance = version && version.courseInstanceId && this.erpData
                 ? (this.erpData.courseInstances || []).find(item => item.id === version.courseInstanceId)
                 : null;
@@ -770,6 +804,10 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                             tooltip.remove();
                         };
                         cell.addEventListener('mouseenter', () => {
+                            if (cell.querySelector('.memo-todo-tag:hover')) {
+                                hideTooltip();
+                                return;
+                            }
                             if (document.querySelector('.dragging')) {
                                 hideTooltip();
                                 return;
@@ -956,6 +994,46 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                         plusIndicator.style.display = 'flex';
                     });
                 }
+            }
+
+            if (cellMemos.length) {
+                const marker = document.createElement('button');
+                marker.type = 'button';
+                marker.className = 'memo-todo-tag cell-memo-marker';
+                marker.setAttribute('aria-label', `${cellMemos.length} 项未完成待办`);
+                marker.textContent = cellMemos.length > 1 ? `待办 ${cellMemos.length}` : '待办';
+                marker.addEventListener('click', event => {
+                    event.stopPropagation();
+                    window.MemoFeature?.open(this, cellMemos[0].id);
+                });
+                cell.appendChild(marker);
+                const memoTooltip = document.createElement('div');
+                memoTooltip.className = 'non-standard-time-tooltip memo-course-tooltip';
+                memoTooltip.setAttribute('role', 'tooltip');
+                memoTooltip.innerHTML = cellMemos.map(memo => {
+                    const content = this.escapeHtml(memo.content || memo.title || '备忘');
+                    const note = String(memo.note || '').trim();
+                    return `<div class="memo-course-tooltip-item"><strong>${content}${note ? `（${this.escapeHtml(note)}）` : ''}</strong></div>`;
+                }).join('');
+                const showMemoTooltip = () => {
+                    document.querySelectorAll('.non-standard-time-tooltip').forEach(item => item.remove());
+                    document.body.appendChild(memoTooltip);
+                    const rect = marker.getBoundingClientRect();
+                    const tipRect = memoTooltip.getBoundingClientRect();
+                    const left = Math.max(10, Math.min(rect.left, window.innerWidth - tipRect.width - 10));
+                    const above = rect.top >= tipRect.height + 12;
+                    memoTooltip.classList.toggle('is-below', !above);
+                    memoTooltip.style.left = `${left}px`;
+                    memoTooltip.style.top = `${Math.max(10, above ? rect.top - tipRect.height - 8 : rect.bottom + 8)}px`;
+                    requestAnimationFrame(() => memoTooltip.classList.add('is-visible'));
+                };
+                const hideMemoTooltip = () => {
+                    memoTooltip.classList.remove('is-visible');
+                    memoTooltip.remove();
+                    if (cell.matches(':hover')) cell.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+                };
+                marker.addEventListener('mouseenter', showMemoTooltip);
+                marker.addEventListener('mouseleave', hideMemoTooltip);
             }
             
             cell.addEventListener('click', () => {

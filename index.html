@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>A大橙子课时统计（正式版 1.3.1）</title>
+    <title>A大橙子课时统计（正式版 1.4.0）</title>
     <link rel="icon" type="image/png" href="./icon/orange.png">
     <link rel="stylesheet" href="./styles.css">
 </head>
@@ -17,7 +17,7 @@
             <img src="./icon/orange.png" alt="" class="electron-app-logo">
             <div class="electron-app-brand-copy">
                 <strong>A大橙子课时统计</strong>
-                <span>课表工作台 · 正式版 1.3.1</span>
+                <span>课表工作台 · 正式版 1.4.0</span>
             </div>
         </div>
     </header>
@@ -29,6 +29,25 @@
             <button type="button" class="electron-window-close" aria-label="关闭" title="关闭"
                 data-onclick="window.electronAPI.windowControl('close')">&#215;</button>
     </div>
+
+    <div id="memoModal" class="modal memo-modal" role="dialog" aria-modal="true" aria-labelledby="memoModalTitle">
+        <div class="modal-content memo-modal-content">
+            <button type="button" id="memoCloseButton" class="memo-close-float" aria-label="关闭">×</button>
+            <div class="memo-layout">
+                <section class="memo-list-panel">
+                    <div class="memo-list-toolbar"><strong>备忘录列表</strong><div class="memo-list-toolbar-actions">
+                        <button type="button" id="memoPinToggle" class="memo-icon-button memo-pin-toggle" title="置顶小窗" aria-label="置顶小窗" hidden><img src="./icon/memo-pin.svg" alt=""></button>
+                        <button type="button" id="memoViewToggle" class="memo-icon-button memo-view-toggle" title="切换备忘录入口模式" aria-label="切换备忘录入口模式"><img src="./icon/memo-view-toggle.svg" alt=""></button>
+                        <div class="memo-search-wrap"><button type="button" id="memoSearchToggle" class="memo-icon-button" title="搜索" aria-label="展开搜索" aria-expanded="false"><img src="./icon/memo-search.svg" alt=""></button>
+                        <label id="memoSearchPanel" class="memo-search"><input id="memoSearchInput" type="search" placeholder="搜索" aria-label="搜索备忘"></label></div>
+                        <button type="button" id="memoNewButton" class="memo-icon-button" title="新建备忘" aria-label="新建备忘"><img src="./icon/memo-new.svg" alt=""></button>
+                    </div></div>
+                    <div id="memoList" class="memo-list" aria-label="备忘录列表"></div>
+                </section>
+                <section class="memo-detail-panel" id="memoDetailPanel"><div class="memo-detail-empty">选择一条备忘查看详情</div></section>
+            </div>
+        </div>
+    </div>
     <div id="appMessageModal" class="modal app-message-modal" role="dialog" aria-modal="true"
         aria-labelledby="appMessageTitle">
         <div class="app-message-dialog">
@@ -36,7 +55,7 @@
                 <img src="./icon/orange.png" alt="" class="app-message-logo">
                 <div>
                     <h3 id="appMessageTitle">A大橙子课时统计</h3>
-                    <span>正式版 1.3.1</span>
+                    <span>正式版 1.4.0</span>
                 </div>
             </div>
             <div id="appMessageText" class="app-message-text"></div>
@@ -62,10 +81,6 @@
                     <div class="pool-tabs">
                         <button class="pool-tab active" data-tab="subject">科目池</button>
                         <button class="pool-tab" data-tab="student">学生池</button>
-                    </div>
-                    <div class="add-buttons">
-                        <button id="addSubjectBtn" class="btn primary btn-sm">添加科目</button>
-                        <button id="addStudentBtn" class="btn primary btn-sm">添加学生</button>
                     </div>
                     <div id="studentFilterButtons" class="student-filter-buttons">
                         <button class="filter-btn" data-filter="all">全部</button>
@@ -548,14 +563,17 @@
                 <div class="timetable-container">
                     <div class="date-navigator">
                         <div class="week-summary">
-                            <button id="prevWeekBtn" aria-label="上一周">‹</button>
+                            <button id="prevWeekBtn" aria-label="上一周" title="上一周"><img src="./icon/arrow-left.svg" alt=""></button>
                             <div class="week-copy">
                                 <strong id="weekNumber">本周</strong>
-                                <button id="nextWeekBtn" aria-label="下一周">›</button>
+                                <button id="nextWeekBtn" aria-label="下一周" title="下一周"><img src="./icon/arrow-right.svg" alt=""></button>
                                 <span id="currentWeekRange">加载中...</span>
                             </div>
                         </div>
                         <div class="date-display">
+                            <button type="button" class="menu-trigger" aria-label="菜单" aria-expanded="false" title="菜单"><img src="./icon/menu.svg" alt=""></button>
+                            <button type="button" id="memoEntryButton" class="memo-entry-button" aria-label="打开备忘录" title="备忘录"><img src="./icon/memo-entry.svg" alt=""></button>
+                            <button type="button" id="todayBtn" class="today-btn" aria-label="定位到今天" title="定位到今天"><img src="./icon/date-locate.svg" alt=""></button>
                             <label class="date-picker-shell" for="datePicker"><span class="calendar-icon"
                                     aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">
                                         <path
@@ -565,7 +583,6 @@
                                         <path d="M8 13H10M14 13H16M8 17H10M14 17H16" stroke="currentColor"
                                             stroke-width="1.8" stroke-linecap="round" />
                                     </svg></span><input type="date" id="datePicker" class="date-picker"></label>
-                            <button type="button" id="todayBtn" class="today-btn">今天</button>
                         </div>
                     </div>
                     <div class="timetable-wrapper">
@@ -597,6 +614,18 @@
                 </div>
             </div> <!-- 关闭 right-content -->
         </main>
+    </div>
+    <div id="navigationShortcutModal" class="modal navigation-shortcut-modal" role="dialog" aria-modal="true" aria-labelledby="navigationShortcutModalTitle" style="display:none">
+        <div class="modal-content navigation-shortcut-modal-content">
+            <div class="modal-header"><h3 id="navigationShortcutModalTitle">添加导航</h3><button id="navigationShortcutCloseButton" type="button" class="modal-close" aria-label="关闭">×</button></div>
+            <div class="navigation-shortcut-form">
+                <div class="navigation-shortcut-icon-row"><button id="navigationShortcutIconButton" type="button" class="navigation-shortcut-icon-button" aria-label="选择图标" title="选择图标"><span id="navigationShortcutIconPreview" aria-hidden="true">+</span></button></div>
+                <label>名称<input id="navigationShortcutTitleInput" type="text" placeholder="请输入导航名称"></label>
+                <div class="navigation-shortcut-target-row"><label>目标<input id="navigationShortcutTargetInput" type="text" placeholder="请输入网址或本机路径"></label><div class="navigation-shortcut-browse-actions"><button id="navigationShortcutBrowseButton" type="button" class="btn secondary">选择文件</button><button id="navigationShortcutBrowseFolderButton" type="button" class="btn secondary">选择文件夹</button></div></div>
+                <button id="navigationShortcutAddButton" type="button" class="btn primary">添加到菜单</button>
+            </div>
+            <div id="navigationShortcutList" class="navigation-shortcut-list"></div>
+        </div>
     </div>
 
     <!-- 科目/学生编辑弹窗 -->
@@ -843,21 +872,14 @@
             </div>
             <form id="addLessonForm">
                 <div class="modal-body">
+                    <div id="lessonSubjectPicker" hidden></div>
                     <div class="modal-section form-group">
-                        <label>选择科目</label>
-                        <div class="subject-picker" id="lessonSubjectPicker"></div>
-                    </div>
-                    <div class="modal-section form-group">
-                        <div class="section-heading-row picker-heading">
-                            <label>选择学生</label>
-                            <span id="lessonStudentCount" class="student-count-tag"></span>
-                        </div>
                         <div class="lesson-student-search-wrap">
                             <span aria-hidden="true">⌕</span>
                             <input type="search" id="lessonStudentSearch" placeholder="搜索学生姓名" autocomplete="off">
                         </div>
                         <div class="student-picker" id="lessonStudentPicker"></div>
-                        <p class="lesson-picker-hint"><span aria-hidden="true">ⓘ</span> 点击学生姓名即可选择或取消</p>
+                        <p class="lesson-picker-hint"><span><span aria-hidden="true">ⓘ</span> 点击学生姓名即可选择或取消</span><span id="lessonStudentCount" class="student-count-tag"></span></p>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -1647,6 +1669,7 @@
     <script src="./js/data-schema.js"></script>
     <script src="./js/app-dialogs.js"></script>
     <script src="./js/app-erp.js"></script>
+    <script src="./js/app-memos.js"></script>
     <script src="./js/app-core.js"></script>
     <script src="./js/app-teacher-services.js"></script>
     <script src="./js/app-course-import.js"></script>
@@ -1657,6 +1680,7 @@
     <script src="./js/app-attendance.js"></script>
     <script src="./js/app-time.js"></script>
     <script src="./js/app-settings.js"></script>
+    <script src="./js/app-menu.js"></script>
     <script src="./js/app-stats.js"></script>
     <script src="./js/app-export.js"></script>
 

@@ -72,6 +72,23 @@ function fullBackup() {
 
         const teacher = database.teachers.listByOrganization('org-default')[0];
         assert.strictEqual(teacher.name, '教师甲');
+        const memo = database.memos.save(teacher.id, { title: '备课', content: '准备练习', due: '2026-08-05', cellRef: '3-0', tags: ['数学'] });
+        assert.strictEqual(memo.title, '备课');
+        assert.strictEqual(database.memos.list(teacher.id)[0].cellRef, '3-0');
+        assert.strictEqual(database.memos.save(teacher.id, { ...memo, done: true }).done, true);
+        const recurring = database.memos.save(teacher.id, { title: '循环备忘', content: '每周处理', due: '2026-10-31T14:02:37', note: '循环' });
+        const nextRecurringDue = new Date(`${recurring.due.replace('T', ' ')}:00`);
+        nextRecurringDue.setDate(nextRecurringDue.getDate() + 7);
+        assert.strictEqual(`${nextRecurringDue.getFullYear()}-${String(nextRecurringDue.getMonth() + 1).padStart(2, '0')}-${String(nextRecurringDue.getDate()).padStart(2, '0')}T${String(nextRecurringDue.getHours()).padStart(2, '0')}:${String(nextRecurringDue.getMinutes()).padStart(2, '0')}`, '2026-11-07T14:02');
+        assert.strictEqual(recurring.note, '循环');
+        assert.strictEqual(database.memos.save(teacher.id, { ...recurring, done: true }).done, true);
+        assert.strictEqual(database.memos.remove(teacher.id, memo.id), true);
+        assert.strictEqual(database.memos.list(teacher.id).length, 1);
+        assert.strictEqual(database.memos.list(teacher.id)[0].id, recurring.id);
+        assert.strictEqual(database.memos.remove(teacher.id, recurring.id), true);
+        assert.strictEqual(database.memos.list(teacher.id).length, 0);
+        assert.throws(() => database.memos.save(teacher.id, { title: 'bad', due: 'tomorrow' }), /date/i);
+        assert.throws(() => database.memos.save('another-teacher', memo), /owner not found/i);
         assert.strictEqual(database.sessions.listForTeacher(teacher.id).length, 1);
         database.db.prepare(`INSERT INTO activity_sessions
             (id,organization_id,campus_id,template_id,teacher_id,resource_id,schedule_version_id,class_date,start_time,end_time,status,payload_json,created_at,updated_at)

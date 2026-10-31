@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { backupDatabase, openDatabase } = require('./sqlite-runtime');
 const { MIGRATIONS } = require('./migrations');
-const { ScheduleVersionRepository, SessionRepository, TeacherRepository } = require('./repositories');
+const { MemoRepository, ScheduleVersionRepository, SessionRepository, TeacherRepository } = require('./repositories');
 const { AttendanceService } = require('../domain/attendance-service');
 const { TeacherScheduleService } = require('../domain/teacher-schedule-service');
 
@@ -55,6 +55,7 @@ class ScheduleDatabase {
         this.teachers = new TeacherRepository(this.db);
         this.sessions = new SessionRepository(this.db);
         this.scheduleVersions = new ScheduleVersionRepository(this.db);
+        this.memos = new MemoRepository(this.db);
         this.teacherSchedule = new TeacherScheduleService(this);
         this.attendance = new AttendanceService(this);
     }

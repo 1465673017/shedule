@@ -339,7 +339,64 @@ TimetableApp.prototype.renderLessonStudentPicker = function(selectedIds = [], ex
 
         });
 
-        this.students.forEach(student => {
+        // The target dialog exposes subject selection as the first tile in the student grid.
+        const subjectTile = document.createElement('div');
+        subjectTile.className = 'student-chip lesson-subject-add-chip';
+        const selectedSubjectChip = document.querySelector('#lessonSubjectPicker .subject-chip.selected');
+        const activeSubject = selectedSubjectChip
+            ? this.subjects.find(subject => String(subject.id) === String(selectedSubjectChip.dataset.subjectId))
+            : null;
+        const openSubjectPopover = (event) => {
+            event.stopPropagation();
+            document.querySelector('.lesson-subject-popover')?.remove();
+            const popover = document.createElement('div');
+            popover.className = 'lesson-subject-popover';
+            this.subjects.forEach(subject => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.textContent = subject.name;
+                option.className = String(subject.id) === String(activeSubject?.id) ? 'active' : '';
+                option.addEventListener('click', (clickEvent) => {
+                    clickEvent.stopPropagation();
+                    const chip = Array.from(document.querySelectorAll('#lessonSubjectPicker .subject-chip'))
+                        .find(item => String(item.dataset.subjectId) === String(subject.id));
+                    if (chip) chip.click();
+                    popover.remove();
+                    this.renderLessonStudentPicker(selectedIds, excludeKeys);
+                });
+                popover.appendChild(option);
+            });
+            document.body.appendChild(popover);
+            const rect = subjectTile.getBoundingClientRect();
+            popover.style.left = `${Math.min(rect.left, window.innerWidth - popover.offsetWidth - 12)}px`;
+            popover.style.top = `${rect.top}px`;
+            const close = (closeEvent) => {
+                if (!popover.contains(closeEvent.target) && closeEvent.target !== subjectTile) {
+                    popover.remove();
+                    document.removeEventListener('click', close);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', close), 0);
+        };
+        if (activeSubject) {
+            subjectTile.classList.add('lesson-subject-chip');
+            subjectTile.style.setProperty('--lesson-subject-color', activeSubject.color || '#e8eef7');
+            subjectTile.innerHTML = `<span class="sc-name">${this.escapeHtml(activeSubject.name)}</span>`;
+        } else {
+            subjectTile.innerHTML = '<span class="lesson-subject-plus" aria-hidden="true">+</span><span class="sc-grade">选择科目</span>';
+        }
+        subjectTile.addEventListener('click', openSubjectPopover);
+        picker.appendChild(subjectTile);
+
+        const gradeOrder = new Map((this.grades || []).map((grade, index) => [String(grade.name), index]));
+        const sortedStudents = [...this.students].sort((a, b) => {
+            const aGrade = gradeOrder.has(String(a.grade)) ? gradeOrder.get(String(a.grade)) : Number.MAX_SAFE_INTEGER;
+            const bGrade = gradeOrder.has(String(b.grade)) ? gradeOrder.get(String(b.grade)) : Number.MAX_SAFE_INTEGER;
+            if (aGrade !== bGrade) return aGrade - bGrade;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { sensitivity: 'base' });
+        });
+
+        sortedStudents.forEach(student => {
 
             const isSelected = selectedIds.includes(student.id);
 
