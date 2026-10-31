@@ -766,6 +766,10 @@ TimetableApp.prototype.createPeriodRow = function(periodIndex, period, periodNum
                 let memoHideTimer = null;
                 const todoTag = document.createElement('span');
                 todoTag.className = 'memo-todo-tag';
+                todoTag.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    this.openMemoModal?.();
+                });
                 todoTag.textContent = `待办${cellMemos.length > 1 ? ` ${cellMemos.length}` : ''}`;
                 todoTag.setAttribute('aria-label', `${cellMemos.length} 项未完成待办`);
                 const showMemoTooltip = () => {

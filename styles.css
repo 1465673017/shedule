@@ -14223,17 +14223,17 @@ body.memo-window-mode #memoModal .memo-modal-content{width:100%!important;height
 .memo-entry:has(.memo-inline-editor) .memo-form-row.memo-schedule-row input{min-width:0;width:100%;font-size:12px;padding:7px 8px}
 .memo-entry:has(.memo-inline-editor) .memo-course-picker{position:relative;display:block;margin-top:5px}
 .memo-entry:has(.memo-inline-editor) .memo-course-picker input{width:100%;min-width:0;margin-top:0;padding-right:25px}
-.memo-entry:has(.memo-inline-editor) .memo-course-picker button{position:absolute;top:1px;right:1px;bottom:1px;width:22px;padding:4px;border:0;border-left:1px solid #d1d5db;border-radius:0 5px 5px 0;background:transparent;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
+.memo-entry:has(.memo-inline-editor) .memo-course-picker button{position:absolute;top:1px;right:1px;bottom:1px;width:22px;padding:0;display:flex;align-items:center;justify-content:center;border:0;border-left:1px solid #d1d5db;border-radius:0 5px 5px 0;background:transparent;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
 .memo-entry:has(.memo-inline-editor) .memo-course-picker button:hover,.memo-entry:has(.memo-inline-editor) .memo-course-picker button:focus-visible{background:color-mix(in srgb,var(--primary-color,#4a7c59) 14%,white);border-left-color:var(--primary-color,#4a7c59);outline:0}
 .memo-entry:has(.memo-inline-editor) .memo-course-picker button:hover img,.memo-entry:has(.memo-inline-editor) .memo-course-picker button:focus-visible img{filter:brightness(0) saturate(100%) invert(39%) sepia(16%) saturate(1090%) hue-rotate(79deg) brightness(92%) contrast(88%)}
-.memo-entry:has(.memo-inline-editor) .memo-course-picker img{display:block;width:14px;height:14px;transition:filter .15s ease}
+.memo-entry:has(.memo-inline-editor) .memo-course-picker img{display:block;width:18px;height:18px;transition:filter .15s ease}
 .memo-entry:has(.memo-inline-editor) .memo-date-picker{position:relative;display:block;margin-top:5px}
 .memo-entry:has(.memo-inline-editor) .memo-date-picker input{width:100%;min-width:0;margin-top:0;padding-right:25px;font-variant-numeric:tabular-nums}
 .memo-entry:has(.memo-inline-editor) .memo-date-picker input::-webkit-calendar-picker-indicator{opacity:0;position:absolute;right:0;width:22px;height:100%;cursor:pointer}
-.memo-entry:has(.memo-inline-editor) .memo-date-picker button{position:absolute;top:1px;right:1px;bottom:1px;width:22px;padding:4px;border:0;border-left:1px solid #d1d5db;border-radius:0 5px 5px 0;background:transparent;color:#333;cursor:pointer;transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+.memo-entry:has(.memo-inline-editor) .memo-date-picker button{position:absolute;top:1px;right:1px;bottom:1px;width:22px;padding:0;display:flex;align-items:center;justify-content:center;border:0;border-left:1px solid #d1d5db;border-radius:0 5px 5px 0;background:transparent;color:#333;cursor:pointer;transition:background-color .15s ease,border-color .15s ease,color .15s ease}
 .memo-entry:has(.memo-inline-editor) .memo-date-picker button:hover:not(:disabled),.memo-entry:has(.memo-inline-editor) .memo-date-picker button:focus-visible:not(:disabled){background:color-mix(in srgb,var(--primary-color,#4a7c59) 14%,white);border-left-color:var(--primary-color,#4a7c59);color:var(--primary-color,#4a7c59);outline:0}
 .memo-entry:has(.memo-inline-editor) .memo-date-picker button:disabled{cursor:default;opacity:.55}
-.memo-entry:has(.memo-inline-editor) .memo-date-picker svg{display:block;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.memo-entry:has(.memo-inline-editor) .memo-date-picker svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 /* Keep scheduled memo fields readable at the compact sidebar/window widths. */
 .memo-modal .memo-form-row.memo-schedule-row{grid-template-columns:minmax(190px,1.35fr) minmax(140px,1fr) minmax(110px,.8fr)!important;gap:12px}
 .memo-modal .memo-form-row.memo-schedule-row label{min-width:0;overflow-wrap:normal}
@@ -14313,3 +14313,5 @@ body.memo-window-mode .memo-course-picker button:disabled{cursor:not-allowed;opa
 .app-menu-popover::-webkit-scrollbar-thumb{border-radius:8px;background:rgba(100,116,139,.38)}
 
 .modal .modal-close{width:36px;height:36px;border:0;border-radius:6px;background:transparent;color:#94a3b8;font-size:34px;font-weight:400;line-height:1;transition:color .18s ease,background-color .18s ease,transform .18s ease}.modal .modal-close:hover,.modal .modal-close:focus-visible{background:rgba(59,130,246,.08);color:#2563eb;transform:rotate(90deg) scale(1.08);outline:none}.modal .modal-close:active{transform:rotate(90deg) scale(.94)}
+/* Keep action buttons within the colored memo card header while editing. */
+.memo-entry.memo-editing .memo-card-actions{top:0;bottom:auto;height:72px}
